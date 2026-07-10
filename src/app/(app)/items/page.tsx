@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma/client";
+import { getSession } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -7,6 +10,14 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 24;
+
+type ItemRow = {
+  id: string;
+  name: string;
+  category: string | null;
+  quantity: number;
+  minStock: number;
+};
 
 export default async function ItemsPage({
   searchParams,
@@ -16,6 +27,8 @@ export default async function ItemsPage({
   const { q, low, page: pageParam } = await searchParams;
   const lowOnly = low === "1";
   const page = Math.max(1, Number(pageParam) || 1);
+  const session = await getSession();
+  const canEdit = hasPermission(session, "EDIT_ITEMS");
 
   const where = {
     deletedAt: null,
@@ -29,25 +42,54 @@ export default async function ItemsPage({
       : {}),
   };
 
-  const [allMatching, total] = await Promise.all([
-    // Low-stock filtering compares two columns, which Prisma can't express
-    // in `where` directly, so filter in JS after a bounded fetch.
-    lowOnly ? prisma.item.findMany({ where, orderBy: { name: "asc" } }) : Promise.resolve(null),
-    lowOnly ? Promise.resolve(0) : prisma.item.count({ where }),
-  ]);
+  let items: ItemRow[];
+  let totalCount: number;
 
-  const lowStockFiltered = lowOnly ? allMatching!.filter((i) => i.quantity < i.minStock) : null;
+  if (lowOnly) {
+    // Low-stock filtering compares two columns of the same row, which
+    // Prisma's query builder can't express in `where` — done as a
+    // parameterized raw query instead, filtered and paginated at the DB
+    // level rather than fetching the whole table into JS.
+    const searchClause = q
+      ? Prisma.sql`AND (name ILIKE ${"%" + q + "%"} OR category ILIKE ${"%" + q + "%"})`
+      : Prisma.empty;
 
-  const items = lowOnly
-    ? lowStockFiltered!.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-    : await prisma.item.findMany({
+    const [rows, countRows] = await Promise.all([
+      prisma.$queryRaw<ItemRow[]>`
+        SELECT id, name, category, quantity, "minStock"
+        FROM "Item"
+        WHERE "deletedAt" IS NULL
+          AND quantity < "minStock"
+          ${searchClause}
+        ORDER BY name ASC
+        LIMIT ${PAGE_SIZE} OFFSET ${(page - 1) * PAGE_SIZE}
+      `,
+      prisma.$queryRaw<{ count: bigint }[]>`
+        SELECT COUNT(*)::bigint AS count
+        FROM "Item"
+        WHERE "deletedAt" IS NULL
+          AND quantity < "minStock"
+          ${searchClause}
+      `,
+    ]);
+
+    items = rows;
+    totalCount = Number(countRows[0]?.count ?? 0);
+  } else {
+    const [rows, count] = await Promise.all([
+      prisma.item.findMany({
         where,
         orderBy: { name: "asc" },
         take: PAGE_SIZE,
         skip: (page - 1) * PAGE_SIZE,
-      });
+        select: { id: true, name: true, category: true, quantity: true, minStock: true },
+      }),
+      prisma.item.count({ where }),
+    ]);
+    items = rows;
+    totalCount = count;
+  }
 
-  const totalCount = lowOnly ? lowStockFiltered!.length : total;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   function pageHref(p: number) {
@@ -68,9 +110,19 @@ export default async function ItemsPage({
             {lowOnly && " · low stock only"}
           </p>
         </div>
-        <Link href="/items/new" className={cn(buttonVariants({ variant: "default" }))}>
-          + Add item
-        </Link>
+        <div className="flex gap-2">
+          <a
+            href="/items/export.csv"
+            className={cn(buttonVariants({ variant: "outline" }))}
+          >
+            Export CSV
+          </a>
+          {canEdit && (
+            <Link href="/items/new" className={cn(buttonVariants({ variant: "default" }))}>
+              + Add item
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

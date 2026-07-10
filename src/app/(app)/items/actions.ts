@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 import {
   createItemFormSchema,
   itemFormSchema,
@@ -27,6 +28,9 @@ export async function createItemAction(
 ): Promise<ActionState> {
   const session = await getSession();
   if (!session) redirect("/login");
+  if (!hasPermission(session, "EDIT_ITEMS")) {
+    return { error: "You don't have permission to add items." };
+  }
 
   const parsed = createItemFormSchema.safeParse({
     name: formData.get("name"),
@@ -75,6 +79,9 @@ export async function updateItemAction(
 ): Promise<ActionState> {
   const session = await getSession();
   if (!session) redirect("/login");
+  if (!hasPermission(session, "EDIT_ITEMS")) {
+    return { error: "You don't have permission to edit items." };
+  }
 
   const parsed = itemFormSchema.safeParse({
     name: formData.get("name"),
@@ -106,6 +113,9 @@ export async function updateItemAction(
 export async function deleteItemAction(itemId: string) {
   const session = await getSession();
   if (!session) redirect("/login");
+  if (!hasPermission(session, "DELETE_ITEMS")) {
+    redirect(`/items/${itemId}?error=forbidden`);
+  }
 
   // Soft delete: preserves movement history for audit purposes instead of
   // cascading it away.
@@ -126,6 +136,9 @@ export async function adjustStockAction(
 ): Promise<ActionState> {
   const session = await getSession();
   if (!session) redirect("/login");
+  if (!hasPermission(session, "ADJUST_STOCK")) {
+    return { error: "You don't have permission to adjust stock." };
+  }
 
   const parsed = movementFormSchema.safeParse({
     type: formData.get("type"),

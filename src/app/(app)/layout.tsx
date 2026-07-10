@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 import { logoutAction } from "@/app/logout/actions";
 import { prisma } from "@/lib/prisma";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -23,6 +24,7 @@ export default async function AppLayout({
     select: { quantity: true, minStock: true },
   });
   const lowStockCount = items.filter((i) => i.quantity < i.minStock).length;
+  const canEdit = hasPermission(session, "EDIT_ITEMS");
 
   const initials = session.name
     .split(" ")
@@ -48,16 +50,24 @@ export default async function AppLayout({
             <Link href="/items" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
               Inventory
             </Link>
+            <Link href="/activity" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
+              Activity
+            </Link>
             {lowStockCount > 0 && (
               <Link href="/items?low=1" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
                 Low stock <Badge variant="warning" className="ml-1">{lowStockCount}</Badge>
               </Link>
             )}
-            <Link
-              href="/items/new"
-              className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-            >
-              Add item
+            {canEdit && (
+              <Link
+                href="/items/new"
+                className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+              >
+                Add item
+              </Link>
+            )}
+            <Link href="/settings" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
+              Settings
             </Link>
           </nav>
           <div className="flex items-center gap-3">

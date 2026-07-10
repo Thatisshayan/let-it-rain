@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -8,33 +10,28 @@ import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { AdjustStockForm } from "./adjust-form";
 import { DeleteItemButton } from "./delete-button";
+import { MovementHistory } from "./movement-history";
 
-const MOVEMENT_LABEL: Record<string, string> = {
-  RECEIVE: "Received",
-  REMOVE: "Removed",
-  ADJUST: "Count adjusted",
-};
-
-const MOVEMENT_DOT: Record<string, string> = {
-  RECEIVE: "bg-success",
-  REMOVE: "bg-warning",
-  ADJUST: "bg-rain",
-};
+const MOVEMENT_PAGE_SIZE = 20;
 
 export default async function ItemDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const { id } = await params;
+  const { error } = await searchParams;
+  const session = await getSession();
 
   const item = await prisma.item.findUnique({
     where: { id, deletedAt: null },
     include: {
       movements: {
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         include: { user: { select: { name: true } } },
-        take: 100,
+        take: MOVEMENT_PAGE_SIZE,
       },
     },
   });
@@ -43,9 +40,23 @@ export default async function ItemDetailPage({
 
   const lowStock = item.quantity < item.minStock;
   const customFields = (item.customFields as Record<string, string> | null) ?? null;
+  const canEdit = hasPermission(session, "EDIT_ITEMS");
+  const canDelete = hasPermission(session, "DELETE_ITEMS");
+  const canAdjust = hasPermission(session, "ADJUST_STOCK");
+
+  const lastMovement = item.movements[item.movements.length - 1];
+  const initialCursor =
+    item.movements.length === MOVEMENT_PAGE_SIZE && lastMovement
+      ? { createdAt: lastMovement.createdAt.toISOString(), id: lastMovement.id }
+      : null;
 
   return (
     <div className="space-y-6">
+      {error === "forbidden" && (
+        <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          You don't have permission to do that.
+        </p>
+      )}
       <div className="flex items-start justify-between gap-4">
         <div>
           <Link href="/items" className="text-sm text-muted-foreground hover:underline">
@@ -58,13 +69,21 @@ export default async function ItemDetailPage({
           {item.category && <p className="text-sm text-muted-foreground">{item.category}</p>}
         </div>
         <div className="flex gap-2">
-          <Link
-            href={`/items/${item.id}/edit`}
+          <a
+            href={`/items/${item.id}/movements/export.csv`}
             className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
           >
-            Edit
-          </Link>
-          <DeleteItemButton itemId={item.id} itemName={item.name} />
+            Export CSV
+          </a>
+          {canEdit && (
+            <Link
+              href={`/items/${item.id}/edit`}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              Edit
+            </Link>
+          )}
+          {canDelete && <DeleteItemButton itemId={item.id} itemName={item.name} />}
         </div>
       </div>
 
@@ -108,48 +127,39 @@ export default async function ItemDetailPage({
               <CardTitle className="text-base">Movement history</CardTitle>
             </CardHeader>
             <CardContent>
-              {item.movements.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No movements recorded yet.</p>
-              ) : (
-                <ul className="divide-y">
-                  {item.movements.map((m) => (
-                    <li key={m.id} className="flex items-center justify-between gap-4 py-3 text-sm">
-                      <div>
-                        <p className="flex items-center gap-2 font-medium">
-                          <span
-                            className={cn(
-                              "size-1.5 shrink-0 rounded-full",
-                              MOVEMENT_DOT[m.type] ?? "bg-muted-foreground"
-                            )}
-                          />
-                          {MOVEMENT_LABEL[m.type] ?? m.type}{" "}
-                          <span className="tabular-nums text-muted-foreground">
-                            ({m.delta > 0 ? "+" : ""}
-                            {m.delta})
-                          </span>
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {m.user.name} · {new Date(m.createdAt).toLocaleString()}
-                        </p>
-                        {m.reason && <p className="mt-1 text-xs">{m.reason}</p>}
-                      </div>
-                      <span className="tabular-nums text-muted-foreground">→ {m.quantityAfter}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <MovementHistory
+                itemId={item.id}
+                initialMovements={item.movements.map((m) => ({
+                  id: m.id,
+                  type: m.type,
+                  delta: m.delta,
+                  quantityAfter: m.quantityAfter,
+                  reason: m.reason,
+                  createdAt: m.createdAt.toISOString(),
+                  user: m.user,
+                }))}
+                initialCursor={initialCursor}
+              />
             </CardContent>
           </Card>
         </div>
 
-        <Card className="h-fit">
-          <CardHeader>
-            <CardTitle className="text-base">Log a movement</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <AdjustStockForm itemId={item.id} currentQuantity={item.quantity} />
-          </CardContent>
-        </Card>
+        {canAdjust ? (
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle className="text-base">Log a movement</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AdjustStockForm itemId={item.id} currentQuantity={item.quantity} />
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="h-fit">
+            <CardContent className="py-6 text-center text-sm text-muted-foreground">
+              You don't have permission to log stock movements.
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

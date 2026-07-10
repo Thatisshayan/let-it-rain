@@ -53,6 +53,15 @@ export async function loginAction(
     return { error: "Invalid email or password." };
   }
 
-  await createSession({ userId: user.id, email: user.email, name: user.name });
+  if (!user.active) {
+    return { error: "Invalid email or password." };
+  }
+
+  await createSession({
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    permissions: user.permissions,
+  });
   redirect("/");
 }

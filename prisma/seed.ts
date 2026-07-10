@@ -18,7 +18,7 @@ async function main() {
       update: {},
       create: { name: u.name, email: u.email, passwordHash },
     });
-    console.log(`Seeded user: ${u.email} / ${u.password}`);
+    console.log(`Seeded user: ${u.email} / ${u.password} (all permissions granted)`);
   }
 }
 
