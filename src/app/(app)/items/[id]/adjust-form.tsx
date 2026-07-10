@@ -34,14 +34,16 @@ export function AdjustStockForm({ itemId, currentQuantity }: { itemId: string; c
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-1 rounded-md bg-muted p-1">
+      <div className="flex gap-1 rounded-lg bg-muted p-1">
         {(Object.keys(MODE_LABEL) as Mode[]).map((m) => (
           <button
             key={m}
             type="button"
             onClick={() => setMode(m)}
-            className={`flex-1 rounded-sm px-3 py-1.5 text-sm font-medium transition-colors ${
-              mode === m ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+            className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+              mode === m
+                ? "bg-gradient-to-br from-primary to-rain text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {MODE_LABEL[m]}

@@ -98,11 +98,11 @@ export default async function ItemsPage({
             const lowStock = item.quantity < item.minStock;
             return (
               <Link key={item.id} href={`/items/${item.id}`}>
-                <Card className="h-full transition-colors hover:border-primary/50">
+                <Card className="h-full transition-all hover:-translate-y-0.5 hover:shadow-lg hover:ring-primary/30">
                   <CardContent className="space-y-2">
                     <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-medium leading-tight">{item.name}</h3>
-                      {lowStock && <Badge variant="destructive">Low stock</Badge>}
+                      <h3 className="font-heading font-medium leading-tight">{item.name}</h3>
+                      {lowStock && <Badge variant="warning">Low stock</Badge>}
                     </div>
                     {item.category && (
                       <p className="text-xs text-muted-foreground">{item.category}</p>

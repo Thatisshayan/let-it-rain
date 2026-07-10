@@ -33,10 +33,12 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-10 border-b bg-background">
+      <header className="sticky top-0 z-10 border-b border-border/60 bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-2 font-semibold">
-            <span>🌧️</span>
+          <Link href="/" className="flex items-center gap-2 font-heading font-semibold">
+            <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-rain text-sm shadow-sm">
+              🌧️
+            </span>
             <span>Let It Rain</span>
           </Link>
           <nav className="flex items-center gap-1 text-sm">
@@ -48,7 +50,7 @@ export default async function AppLayout({
             </Link>
             {lowStockCount > 0 && (
               <Link href="/items?low=1" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
-                Low stock <Badge variant="destructive" className="ml-1">{lowStockCount}</Badge>
+                Low stock <Badge variant="warning" className="ml-1">{lowStockCount}</Badge>
               </Link>
             )}
             <Link
@@ -60,7 +62,9 @@ export default async function AppLayout({
           </nav>
           <div className="flex items-center gap-3">
             <Avatar className="h-8 w-8">
-              <AvatarFallback>{initials}</AvatarFallback>
+              <AvatarFallback className="bg-gradient-to-br from-rain to-primary text-primary-foreground">
+                {initials}
+              </AvatarFallback>
             </Avatar>
             <form action={logoutAction}>
               <Button variant="outline" size="sm" type="submit">

@@ -15,6 +15,12 @@ const MOVEMENT_LABEL: Record<string, string> = {
   ADJUST: "Count adjusted",
 };
 
+const MOVEMENT_DOT: Record<string, string> = {
+  RECEIVE: "bg-success",
+  REMOVE: "bg-warning",
+  ADJUST: "bg-rain",
+};
+
 export default async function ItemDetailPage({
   params,
 }: {
@@ -47,7 +53,7 @@ export default async function ItemDetailPage({
           </Link>
           <div className="mt-1 flex items-center gap-2">
             <h1 className="text-2xl font-semibold">{item.name}</h1>
-            {lowStock && <Badge variant="destructive">Low stock</Badge>}
+            {lowStock && <Badge variant="warning">Low stock</Badge>}
           </div>
           {item.category && <p className="text-sm text-muted-foreground">{item.category}</p>}
         </div>
@@ -70,7 +76,9 @@ export default async function ItemDetailPage({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-semibold tabular-nums">{item.quantity}</span>
+                <span className="bg-gradient-to-br from-primary to-rain bg-clip-text text-3xl font-semibold tabular-nums text-transparent">
+                  {item.quantity}
+                </span>
                 <span className="text-sm text-muted-foreground">in stock</span>
                 {item.minStock > 0 && (
                   <span className="ml-auto text-sm text-muted-foreground">
@@ -107,7 +115,13 @@ export default async function ItemDetailPage({
                   {item.movements.map((m) => (
                     <li key={m.id} className="flex items-center justify-between gap-4 py-3 text-sm">
                       <div>
-                        <p className="font-medium">
+                        <p className="flex items-center gap-2 font-medium">
+                          <span
+                            className={cn(
+                              "size-1.5 shrink-0 rounded-full",
+                              MOVEMENT_DOT[m.type] ?? "bg-muted-foreground"
+                            )}
+                          />
                           {MOVEMENT_LABEL[m.type] ?? m.type}{" "}
                           <span className="tabular-nums text-muted-foreground">
                             ({m.delta > 0 ? "+" : ""}

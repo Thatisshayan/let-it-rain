@@ -59,7 +59,7 @@ export default async function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold tabular-nums text-destructive">
+            <p className="text-3xl font-semibold tabular-nums text-warning-foreground">
               {lowStockItems.length}
             </p>
           </CardContent>
@@ -87,7 +87,7 @@ export default async function DashboardPage() {
                         <span className="tabular-nums text-muted-foreground">
                           {item.quantity} / min {item.minStock}
                         </span>
-                        <Badge variant="destructive">Low</Badge>
+                        <Badge variant="warning">Low</Badge>
                       </span>
                     </Link>
                   </li>

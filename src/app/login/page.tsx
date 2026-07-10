@@ -13,10 +13,13 @@ export default function LoginPage() {
   const [state, formAction, pending] = useActionState(loginAction, initialState);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
+    <div className="flex min-h-screen items-center justify-center px-4">
       <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">🌧️ Let It Rain</CardTitle>
+        <CardHeader className="items-center text-center">
+          <span className="mb-2 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-rain text-2xl shadow-md">
+            🌧️
+          </span>
+          <CardTitle className="text-2xl">Let It Rain</CardTitle>
           <CardDescription>Sign in to manage inventory</CardDescription>
         </CardHeader>
         <CardContent>
