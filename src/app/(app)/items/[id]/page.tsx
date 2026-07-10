@@ -23,7 +23,7 @@ export default async function ItemDetailPage({
   const { id } = await params;
 
   const item = await prisma.item.findUnique({
-    where: { id },
+    where: { id, deletedAt: null },
     include: {
       movements: {
         orderBy: { createdAt: "desc" },

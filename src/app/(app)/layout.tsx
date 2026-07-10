@@ -2,8 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { logoutAction } from "@/app/logout/actions";
+import { prisma } from "@/lib/prisma";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 export default async function AppLayout({
@@ -15,6 +17,12 @@ export default async function AppLayout({
   if (!session) {
     redirect("/login");
   }
+
+  const items = await prisma.item.findMany({
+    where: { deletedAt: null },
+    select: { quantity: true, minStock: true },
+  });
+  const lowStockCount = items.filter((i) => i.quantity < i.minStock).length;
 
   const initials = session.name
     .split(" ")
@@ -38,6 +46,11 @@ export default async function AppLayout({
             <Link href="/items" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
               Inventory
             </Link>
+            {lowStockCount > 0 && (
+              <Link href="/items?low=1" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
+                Low stock <Badge variant="destructive" className="ml-1">{lowStockCount}</Badge>
+              </Link>
+            )}
             <Link
               href="/items/new"
               className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}

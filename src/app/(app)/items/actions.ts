@@ -2,24 +2,23 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import {
+  createItemFormSchema,
+  itemFormSchema,
+  movementFormSchema,
+  parseCustomFields,
+} from "./schemas";
+import { computeMovement } from "./movement";
 
 export type ActionState = {
   error?: string;
 };
 
-function parseCustomFields(raw: string | null): Record<string, string> | undefined {
-  if (!raw || !raw.trim()) return undefined;
-  const entries: [string, string][] = [];
-  for (const line of raw.split("\n")) {
-    const idx = line.indexOf(":");
-    if (idx === -1) continue;
-    const key = line.slice(0, idx).trim();
-    const value = line.slice(idx + 1).trim();
-    if (key) entries.push([key, value]);
-  }
-  return entries.length ? Object.fromEntries(entries) : undefined;
+function firstIssueMessage(error: { issues: { message: string }[] }) {
+  return error.issues[0]?.message ?? "Invalid input.";
 }
 
 export async function createItemAction(
@@ -29,23 +28,26 @@ export async function createItemAction(
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const name = String(formData.get("name") ?? "").trim();
-  if (!name) return { error: "Item name is required." };
+  const parsed = createItemFormSchema.safeParse({
+    name: formData.get("name"),
+    category: formData.get("category"),
+    description: formData.get("description"),
+    minStock: formData.get("minStock"),
+    initialQuantity: formData.get("initialQuantity"),
+    customFields: formData.get("customFields"),
+  });
+  if (!parsed.success) return { error: firstIssueMessage(parsed.error) };
 
-  const category = String(formData.get("category") ?? "").trim() || null;
-  const description = String(formData.get("description") ?? "").trim() || null;
-  const minStock = Number(formData.get("minStock") ?? 0) || 0;
-  const initialQuantity = Number(formData.get("initialQuantity") ?? 0) || 0;
-  const customFields = parseCustomFields(formData.get("customFields") as string | null);
+  const { name, category, description, minStock, initialQuantity, customFields } = parsed.data;
 
   const item = await prisma.item.create({
     data: {
       name,
-      category,
-      description,
+      category: category ?? null,
+      description: description ?? null,
       minStock,
       quantity: initialQuantity,
-      customFields,
+      customFields: parseCustomFields(customFields),
     },
   });
 
@@ -74,17 +76,26 @@ export async function updateItemAction(
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const name = String(formData.get("name") ?? "").trim();
-  if (!name) return { error: "Item name is required." };
+  const parsed = itemFormSchema.safeParse({
+    name: formData.get("name"),
+    category: formData.get("category"),
+    description: formData.get("description"),
+    minStock: formData.get("minStock"),
+    customFields: formData.get("customFields"),
+  });
+  if (!parsed.success) return { error: firstIssueMessage(parsed.error) };
 
-  const category = String(formData.get("category") ?? "").trim() || null;
-  const description = String(formData.get("description") ?? "").trim() || null;
-  const minStock = Number(formData.get("minStock") ?? 0) || 0;
-  const customFields = parseCustomFields(formData.get("customFields") as string | null);
+  const { name, category, description, minStock, customFields } = parsed.data;
 
   await prisma.item.update({
-    where: { id: itemId },
-    data: { name, category, description, minStock, customFields },
+    where: { id: itemId, deletedAt: null },
+    data: {
+      name,
+      category: category ?? null,
+      description: description ?? null,
+      minStock,
+      customFields: parseCustomFields(customFields),
+    },
   });
 
   revalidatePath("/items");
@@ -96,10 +107,17 @@ export async function deleteItemAction(itemId: string) {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  await prisma.item.delete({ where: { id: itemId } });
+  // Soft delete: preserves movement history for audit purposes instead of
+  // cascading it away.
+  await prisma.item.update({
+    where: { id: itemId, deletedAt: null },
+    data: { deletedAt: new Date() },
+  });
   revalidatePath("/items");
   redirect("/items");
 }
+
+const MAX_SERIALIZATION_RETRIES = 3;
 
 export async function adjustStockAction(
   itemId: string,
@@ -109,54 +127,64 @@ export async function adjustStockAction(
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const type = String(formData.get("type") ?? "") as "RECEIVE" | "REMOVE" | "ADJUST";
-  const reason = String(formData.get("reason") ?? "").trim() || null;
+  const parsed = movementFormSchema.safeParse({
+    type: formData.get("type"),
+    amount: formData.get("amount"),
+    counted: formData.get("counted"),
+    reason: formData.get("reason"),
+  });
+  if (!parsed.success) return { error: firstIssueMessage(parsed.error) };
 
-  const item = await prisma.item.findUnique({ where: { id: itemId } });
-  if (!item) return { error: "Item not found." };
+  const input = parsed.data;
+  const reason = input.reason ?? null;
 
-  let delta = 0;
-  let quantityAfter = item.quantity;
+  for (let attempt = 0; attempt < MAX_SERIALIZATION_RETRIES; attempt++) {
+    try {
+      const result = await prisma.$transaction(
+        async (tx) => {
+          const item = await tx.item.findUnique({ where: { id: itemId, deletedAt: null } });
+          if (!item) return { error: "Item not found." } as const;
 
-  if (type === "RECEIVE") {
-    const amount = Number(formData.get("amount") ?? 0);
-    if (!amount || amount <= 0) return { error: "Enter a positive quantity to receive." };
-    delta = amount;
-    quantityAfter = item.quantity + amount;
-  } else if (type === "REMOVE") {
-    const amount = Number(formData.get("amount") ?? 0);
-    if (!amount || amount <= 0) return { error: "Enter a positive quantity to remove." };
-    if (amount > item.quantity) return { error: "Cannot remove more than current stock." };
-    delta = -amount;
-    quantityAfter = item.quantity - amount;
-  } else if (type === "ADJUST") {
-    const counted = Number(formData.get("counted") ?? NaN);
-    if (Number.isNaN(counted) || counted < 0) return { error: "Enter a valid counted quantity." };
-    delta = counted - item.quantity;
-    quantityAfter = counted;
-    if (delta !== 0 && !reason) {
-      return { error: "Please note a reason for the count variance." };
+          const movement = computeMovement(item.quantity, input);
+          if (!movement.ok) return { error: movement.error } as const;
+
+          await tx.item.update({
+            where: { id: itemId },
+            data: { quantity: movement.quantityAfter },
+          });
+          await tx.movement.create({
+            data: {
+              itemId,
+              type: input.type,
+              delta: movement.delta,
+              quantityAfter: movement.quantityAfter,
+              reason,
+              userId: session.userId,
+            },
+          });
+
+          return { error: undefined } as const;
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+      );
+
+      if (result.error) return { error: result.error };
+
+      revalidatePath(`/items/${itemId}`);
+      revalidatePath("/items");
+      revalidatePath("/");
+      return {};
+    } catch (err) {
+      // Postgres aborts one side of a conflicting concurrent transaction
+      // under SERIALIZABLE isolation (error code 40001) — retry it rather
+      // than losing the update.
+      const isSerializationFailure =
+        err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034";
+      if (!isSerializationFailure || attempt === MAX_SERIALIZATION_RETRIES - 1) {
+        throw err;
+      }
     }
-  } else {
-    return { error: "Invalid movement type." };
   }
 
-  await prisma.$transaction([
-    prisma.item.update({ where: { id: itemId }, data: { quantity: quantityAfter } }),
-    prisma.movement.create({
-      data: {
-        itemId,
-        type,
-        delta,
-        quantityAfter,
-        reason,
-        userId: session.userId,
-      },
-    }),
-  ]);
-
-  revalidatePath(`/items/${itemId}`);
-  revalidatePath("/items");
-  revalidatePath("/");
-  return {};
+  return { error: "Could not save movement, please try again." };
 }

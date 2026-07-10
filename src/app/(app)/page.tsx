@@ -11,9 +11,13 @@ const MOVEMENT_LABEL: Record<string, string> = {
 
 export default async function DashboardPage() {
   const [totalItems, items, recentMovements] = await Promise.all([
-    prisma.item.count(),
-    prisma.item.findMany({ select: { id: true, name: true, quantity: true, minStock: true } }),
+    prisma.item.count({ where: { deletedAt: null } }),
+    prisma.item.findMany({
+      where: { deletedAt: null },
+      select: { id: true, name: true, quantity: true, minStock: true },
+    }),
     prisma.movement.findMany({
+      where: { item: { deletedAt: null } },
       orderBy: { createdAt: "desc" },
       take: 10,
       include: { item: { select: { name: true, id: true } }, user: { select: { name: true } } },

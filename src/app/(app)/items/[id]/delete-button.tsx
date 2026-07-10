@@ -25,7 +25,8 @@ export function DeleteItemButton({ itemId, itemName }: { itemId: string; itemNam
         <DialogHeader>
           <DialogTitle>Delete “{itemName}”?</DialogTitle>
           <DialogDescription>
-            This permanently deletes the item and its full movement history. This cannot be undone.
+            This removes the item from the inventory. Its movement history is kept for
+            audit purposes but the item will no longer appear anywhere.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -34,7 +35,7 @@ export function DeleteItemButton({ itemId, itemName }: { itemId: string; itemNam
           </Button>
           <form action={deleteItemAction.bind(null, itemId)}>
             <Button variant="destructive" type="submit">
-              Delete permanently
+              Delete item
             </Button>
           </form>
         </DialogFooter>

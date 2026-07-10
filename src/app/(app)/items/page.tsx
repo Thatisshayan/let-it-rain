@@ -6,24 +6,57 @@ import { Input } from "@/components/ui/input";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+const PAGE_SIZE = 24;
+
 export default async function ItemsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; low?: string; page?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, low, page: pageParam } = await searchParams;
+  const lowOnly = low === "1";
+  const page = Math.max(1, Number(pageParam) || 1);
 
-  const items = await prisma.item.findMany({
-    where: q
+  const where = {
+    deletedAt: null,
+    ...(q
       ? {
           OR: [
-            { name: { contains: q, mode: "insensitive" } },
-            { category: { contains: q, mode: "insensitive" } },
+            { name: { contains: q, mode: "insensitive" as const } },
+            { category: { contains: q, mode: "insensitive" as const } },
           ],
         }
-      : undefined,
-    orderBy: { name: "asc" },
-  });
+      : {}),
+  };
+
+  const [allMatching, total] = await Promise.all([
+    // Low-stock filtering compares two columns, which Prisma can't express
+    // in `where` directly, so filter in JS after a bounded fetch.
+    lowOnly ? prisma.item.findMany({ where, orderBy: { name: "asc" } }) : Promise.resolve(null),
+    lowOnly ? Promise.resolve(0) : prisma.item.count({ where }),
+  ]);
+
+  const lowStockFiltered = lowOnly ? allMatching!.filter((i) => i.quantity < i.minStock) : null;
+
+  const items = lowOnly
+    ? lowStockFiltered!.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+    : await prisma.item.findMany({
+        where,
+        orderBy: { name: "asc" },
+        take: PAGE_SIZE,
+        skip: (page - 1) * PAGE_SIZE,
+      });
+
+  const totalCount = lowOnly ? lowStockFiltered!.length : total;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
+  function pageHref(p: number) {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (lowOnly) params.set("low", "1");
+    params.set("page", String(p));
+    return `/items?${params.toString()}`;
+  }
 
   return (
     <div className="space-y-6">
@@ -31,7 +64,8 @@ export default async function ItemsPage({
         <div>
           <h1 className="text-2xl font-semibold">Inventory</h1>
           <p className="text-sm text-muted-foreground">
-            {items.length} item{items.length === 1 ? "" : "s"}
+            {totalCount} item{totalCount === 1 ? "" : "s"}
+            {lowOnly && " · low stock only"}
           </p>
         </div>
         <Link href="/items/new" className={cn(buttonVariants({ variant: "default" }))}>
@@ -39,18 +73,23 @@ export default async function ItemsPage({
         </Link>
       </div>
 
-      <form className="max-w-sm">
-        <Input
-          name="q"
-          placeholder="Search by name or category…"
-          defaultValue={q ?? ""}
-        />
-      </form>
+      <div className="flex flex-wrap items-center gap-2">
+        <form className="max-w-sm flex-1">
+          <Input name="q" placeholder="Search by name or category…" defaultValue={q ?? ""} />
+          {lowOnly && <input type="hidden" name="low" value="1" />}
+        </form>
+        <Link
+          href={lowOnly ? `/items${q ? `?q=${encodeURIComponent(q)}` : ""}` : `/items?low=1`}
+          className={cn(buttonVariants({ variant: lowOnly ? "default" : "outline", size: "sm" }))}
+        >
+          {lowOnly ? "Showing low stock only ✕" : "Low stock only"}
+        </Link>
+      </div>
 
       {items.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
-            No items yet. Add your first item to get started.
+            No items found.
           </CardContent>
         </Card>
       ) : (
@@ -84,6 +123,34 @@ export default async function ItemsPage({
               </Link>
             );
           })}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <Link
+            href={pageHref(page - 1)}
+            aria-disabled={page <= 1}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              page <= 1 && "pointer-events-none opacity-50"
+            )}
+          >
+            Previous
+          </Link>
+          <span className="text-sm text-muted-foreground">
+            Page {page} of {totalPages}
+          </span>
+          <Link
+            href={pageHref(page + 1)}
+            aria-disabled={page >= totalPages}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              page >= totalPages && "pointer-events-none opacity-50"
+            )}
+          >
+            Next
+          </Link>
         </div>
       )}
     </div>

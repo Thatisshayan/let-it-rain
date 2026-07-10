@@ -32,10 +32,12 @@ model Item {
   customFields Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
 
   movements Movement[]
 
   @@index([name])
+  @@index([deletedAt])
 }
 
 enum MovementType {
