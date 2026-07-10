@@ -60,6 +60,30 @@ export function EditItemForm({
               />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="unitCost">Unit cost</Label>
+              <Input
+                id="unitCost"
+                name="unitCost"
+                type="number"
+                min={0}
+                step="0.01"
+                defaultValue={item.unitCost.toString()}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="unitPrice">Sale price</Label>
+              <Input
+                id="unitPrice"
+                name="unitPrice"
+                type="number"
+                min={0}
+                step="0.01"
+                defaultValue={item.unitPrice.toString()}
+              />
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
             <Textarea

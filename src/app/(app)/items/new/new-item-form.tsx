@@ -39,15 +39,25 @@ export function NewItemForm({ categories }: { categories: string[] }) {
               <Input id="minStock" name="minStock" type="number" min={0} defaultValue={0} />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="initialQuantity">Starting quantity</Label>
-            <Input
-              id="initialQuantity"
-              name="initialQuantity"
-              type="number"
-              min={0}
-              defaultValue={0}
-            />
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="initialQuantity">Starting quantity</Label>
+              <Input
+                id="initialQuantity"
+                name="initialQuantity"
+                type="number"
+                min={0}
+                defaultValue={0}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="unitCost">Unit cost</Label>
+              <Input id="unitCost" name="unitCost" type="number" min={0} step="0.01" defaultValue={0} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="unitPrice">Sale price</Label>
+              <Input id="unitPrice" name="unitPrice" type="number" min={0} step="0.01" defaultValue={0} />
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>

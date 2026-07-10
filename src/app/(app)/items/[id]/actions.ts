@@ -9,6 +9,9 @@ export type MovementRow = {
   delta: number;
   quantityAfter: number;
   reason: string | null;
+  isSale: boolean;
+  unitCostAtTime: number | null;
+  unitPriceAtTime: number | null;
   createdAt: string;
   user: { name: string };
 };
@@ -52,6 +55,9 @@ export async function loadMoreMovementsAction(
       delta: m.delta,
       quantityAfter: m.quantityAfter,
       reason: m.reason,
+      isSale: m.isSale,
+      unitCostAtTime: m.unitCostAtTime ? Number(m.unitCostAtTime) : null,
+      unitPriceAtTime: m.unitPriceAtTime ? Number(m.unitPriceAtTime) : null,
       createdAt: m.createdAt.toISOString(),
       user: m.user,
     })),

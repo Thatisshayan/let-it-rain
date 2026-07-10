@@ -8,17 +8,17 @@ describe("computeMovement", () => {
   });
 
   it("REMOVE decreases quantity by the amount", () => {
-    const result = computeMovement(10, { type: "REMOVE", amount: 4, reason: undefined });
+    const result = computeMovement(10, { type: "REMOVE", amount: 4, isSale: false, reason: undefined });
     expect(result).toEqual({ ok: true, delta: -4, quantityAfter: 6 });
   });
 
   it("REMOVE rejects removing more than current stock", () => {
-    const result = computeMovement(3, { type: "REMOVE", amount: 4, reason: undefined });
+    const result = computeMovement(3, { type: "REMOVE", amount: 4, isSale: false, reason: undefined });
     expect(result).toEqual({ ok: false, error: "Cannot remove more than current stock." });
   });
 
   it("REMOVE allows removing exactly the full stock", () => {
-    const result = computeMovement(4, { type: "REMOVE", amount: 4, reason: undefined });
+    const result = computeMovement(4, { type: "REMOVE", amount: 4, isSale: false, reason: undefined });
     expect(result).toEqual({ ok: true, delta: -4, quantityAfter: 0 });
   });
 

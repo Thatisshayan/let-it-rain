@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 const initialState: ActionState = {};
@@ -63,6 +64,22 @@ export function AdjustStockForm({ itemId, currentQuantity }: { itemId: string; c
           <div className="space-y-2">
             <Label htmlFor="counted">Counted quantity (current: {currentQuantity})</Label>
             <Input id="counted" name="counted" type="number" min={0} required />
+          </div>
+        )}
+
+        {mode === "RECEIVE" && (
+          <div className="space-y-2">
+            <Label htmlFor="unitCost">Unit cost (leave blank to keep current)</Label>
+            <Input id="unitCost" name="unitCost" type="number" min={0} step="0.01" />
+          </div>
+        )}
+
+        {mode === "REMOVE" && (
+          <div className="flex items-center gap-2">
+            <Checkbox id="isSale" name="isSale" value="true" defaultChecked />
+            <Label htmlFor="isSale" className="font-normal">
+              This is a sale (counts toward revenue)
+            </Label>
           </div>
         )}
 

@@ -39,3 +39,18 @@ export function computeMovement(
   }
   return { ok: true, delta, quantityAfter: input.counted };
 }
+
+/**
+ * Weighted-average unit cost after receiving `receivedQty` units at
+ * `receivedCost` each, given the item's current quantity/cost.
+ */
+export function nextWeightedAverageCost(
+  currentQuantity: number,
+  currentCost: number,
+  receivedQty: number,
+  receivedCost: number
+): number {
+  const totalQty = currentQuantity + receivedQty;
+  if (totalQty <= 0) return receivedCost;
+  return (currentQuantity * currentCost + receivedQty * receivedCost) / totalQty;
+}

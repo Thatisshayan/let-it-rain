@@ -6,6 +6,8 @@ const optionalTrimmedString = z
   .transform((v) => (v.length ? v : undefined))
   .optional();
 
+const money = z.coerce.number().min(0).max(999_999_999).default(0);
+
 export const itemFormSchema = z.object({
   name: z
     .string()
@@ -15,6 +17,8 @@ export const itemFormSchema = z.object({
   description: optionalTrimmedString,
   minStock: z.coerce.number().int().min(0).max(1_000_000_000).default(0),
   customFields: optionalTrimmedString,
+  unitCost: money,
+  unitPrice: money,
 });
 
 export const createItemFormSchema = itemFormSchema.extend({
@@ -25,11 +29,13 @@ export const movementFormSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("RECEIVE"),
     amount: z.coerce.number().int().positive("Enter a positive quantity to receive.").max(1_000_000_000),
+    unitCost: money.optional(),
     reason: optionalTrimmedString,
   }),
   z.object({
     type: z.literal("REMOVE"),
     amount: z.coerce.number().int().positive("Enter a positive quantity to remove.").max(1_000_000_000),
+    isSale: z.coerce.boolean().default(false),
     reason: optionalTrimmedString,
   }),
   z.object({

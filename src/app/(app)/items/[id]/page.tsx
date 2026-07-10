@@ -105,6 +105,22 @@ export default async function ItemDetailPage({
                   </span>
                 )}
               </div>
+              <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Unit cost</p>
+                  <p className="tabular-nums font-medium">${Number(item.unitCost).toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Sale price</p>
+                  <p className="tabular-nums font-medium">${Number(item.unitPrice).toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Stock value</p>
+                  <p className="tabular-nums font-medium">
+                    ${(item.quantity * Number(item.unitCost)).toFixed(2)}
+                  </p>
+                </div>
+              </div>
               {item.description && <p className="text-sm">{item.description}</p>}
               {customFields && Object.keys(customFields).length > 0 && (
                 <>
@@ -135,6 +151,9 @@ export default async function ItemDetailPage({
                   delta: m.delta,
                   quantityAfter: m.quantityAfter,
                   reason: m.reason,
+                  isSale: m.isSale,
+                  unitCostAtTime: m.unitCostAtTime ? Number(m.unitCostAtTime) : null,
+                  unitPriceAtTime: m.unitPriceAtTime ? Number(m.unitPriceAtTime) : null,
                   createdAt: m.createdAt.toISOString(),
                   user: m.user,
                 }))}

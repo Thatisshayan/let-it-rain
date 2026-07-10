@@ -12,7 +12,7 @@ import {
   movementFormSchema,
   parseCustomFields,
 } from "./schemas";
-import { computeMovement } from "./movement";
+import { computeMovement, nextWeightedAverageCost } from "./movement";
 
 export type ActionState = {
   error?: string;
@@ -39,10 +39,13 @@ export async function createItemAction(
     minStock: formData.get("minStock"),
     initialQuantity: formData.get("initialQuantity"),
     customFields: formData.get("customFields"),
+    unitCost: formData.get("unitCost"),
+    unitPrice: formData.get("unitPrice"),
   });
   if (!parsed.success) return { error: firstIssueMessage(parsed.error) };
 
-  const { name, category, description, minStock, initialQuantity, customFields } = parsed.data;
+  const { name, category, description, minStock, initialQuantity, customFields, unitCost, unitPrice } =
+    parsed.data;
 
   const item = await prisma.item.create({
     data: {
@@ -52,6 +55,8 @@ export async function createItemAction(
       minStock,
       quantity: initialQuantity,
       customFields: parseCustomFields(customFields),
+      unitCost,
+      unitPrice,
     },
   });
 
@@ -63,6 +68,7 @@ export async function createItemAction(
         delta: initialQuantity,
         quantityAfter: initialQuantity,
         reason: "Initial stock",
+        unitCostAtTime: unitCost,
         userId: session.userId,
       },
     });
@@ -89,10 +95,12 @@ export async function updateItemAction(
     description: formData.get("description"),
     minStock: formData.get("minStock"),
     customFields: formData.get("customFields"),
+    unitCost: formData.get("unitCost"),
+    unitPrice: formData.get("unitPrice"),
   });
   if (!parsed.success) return { error: firstIssueMessage(parsed.error) };
 
-  const { name, category, description, minStock, customFields } = parsed.data;
+  const { name, category, description, minStock, customFields, unitCost, unitPrice } = parsed.data;
 
   await prisma.item.update({
     where: { id: itemId, deletedAt: null },
@@ -102,6 +110,8 @@ export async function updateItemAction(
       description: description ?? null,
       minStock,
       customFields: parseCustomFields(customFields),
+      unitCost,
+      unitPrice,
     },
   });
 
@@ -144,6 +154,8 @@ export async function adjustStockAction(
     type: formData.get("type"),
     amount: formData.get("amount"),
     counted: formData.get("counted"),
+    unitCost: formData.get("unitCost"),
+    isSale: formData.get("isSale"),
     reason: formData.get("reason"),
   });
   if (!parsed.success) return { error: firstIssueMessage(parsed.error) };
@@ -161,9 +173,20 @@ export async function adjustStockAction(
           const movement = computeMovement(item.quantity, input);
           if (!movement.ok) return { error: movement.error } as const;
 
+          const currentCost = Number(item.unitCost);
+          const isReceive = input.type === "RECEIVE";
+          const isSale = input.type === "REMOVE" && input.isSale;
+          const receivedCost = isReceive ? (input.unitCost ?? currentCost) : currentCost;
+          const newAvgCost = isReceive
+            ? nextWeightedAverageCost(item.quantity, currentCost, input.amount, receivedCost)
+            : currentCost;
+
           await tx.item.update({
             where: { id: itemId },
-            data: { quantity: movement.quantityAfter },
+            data: {
+              quantity: movement.quantityAfter,
+              ...(isReceive ? { unitCost: newAvgCost } : {}),
+            },
           });
           await tx.movement.create({
             data: {
@@ -172,6 +195,9 @@ export async function adjustStockAction(
               delta: movement.delta,
               quantityAfter: movement.quantityAfter,
               reason,
+              isSale,
+              unitCostAtTime: isReceive ? receivedCost : isSale ? currentCost : null,
+              unitPriceAtTime: isSale ? item.unitPrice : null,
               userId: session.userId,
             },
           });
