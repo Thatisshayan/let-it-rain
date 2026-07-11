@@ -14,9 +14,14 @@ export default function ItemsScreen() {
 
   return (
     <View style={styles.container}>
-      <Pressable onPress={() => router.push("/settings")} style={styles.settingsLink}>
-        <Text>Settings</Text>
-      </Pressable>
+      <View style={styles.headerLinks}>
+        <Pressable onPress={() => router.push("/activity")}>
+          <Text>Activity</Text>
+        </Pressable>
+        <Pressable onPress={() => router.push("/settings")}>
+          <Text>Settings</Text>
+        </Pressable>
+      </View>
       <TextInput style={styles.search} placeholder="Search items" value={q} onChangeText={setQ} />
       <Pressable onPress={() => setLowOnly((v) => !v)} style={styles.filterButton}>
         <Text>{lowOnly ? "Showing low stock only" : "Show all"}</Text>
@@ -49,7 +54,7 @@ export default function ItemsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, gap: 8 },
-  settingsLink: { alignSelf: "flex-end", padding: 4 },
+  headerLinks: { flexDirection: "row", justifyContent: "flex-end", gap: 12 },
   search: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 10 },
   filterButton: { padding: 8 },
   error: { color: "#c00" },
