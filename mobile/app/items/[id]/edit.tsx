@@ -7,7 +7,10 @@ import { ApiError } from "../../../src/api/client";
 
 export default function EditItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data } = useQuery({ queryKey: ["item", id], queryFn: () => fetchItem(id) });
+  const { data, isLoading, error: loadError } = useQuery({
+    queryKey: ["item", id],
+    queryFn: () => fetchItem(id),
+  });
   const [name, setName] = useState("");
   const [minStock, setMinStock] = useState("0");
   const [unitCost, setUnitCost] = useState("0");
@@ -44,6 +47,9 @@ export default function EditItemScreen() {
     }
   }
 
+  if (isLoading) return <Text style={styles.padded}>Loading...</Text>;
+  if (loadError) return <Text style={[styles.padded, styles.error]}>Could not load this item.</Text>;
+
   return (
     <View style={styles.container}>
       <TextInput style={styles.input} placeholder="Item name" value={name} onChangeText={setName} />
@@ -78,6 +84,7 @@ export default function EditItemScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, gap: 12 },
+  padded: { padding: 16 },
   input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12 },
   error: { color: "#c00" },
   submit: { backgroundColor: "#2563eb", padding: 14, borderRadius: 8, alignItems: "center" },

@@ -15,7 +15,10 @@ import { useAuth } from "../../../src/api/AuthContext";
 export default function UserDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user: currentUser } = useAuth();
-  const { data: users } = useQuery({ queryKey: ["users"], queryFn: fetchUsers });
+  const { data: users, isLoading, error: loadError, refetch } = useQuery({
+    queryKey: ["users"],
+    queryFn: fetchUsers,
+  });
   const target = users?.find((u) => u.id === id);
 
   const [permissions, setPermissions] = useState<string[]>([]);
@@ -66,7 +69,18 @@ export default function UserDetailScreen() {
     }
   }
 
-  if (!target) return <Text style={styles.padded}>Loading...</Text>;
+  if (isLoading) return <Text style={styles.padded}>Loading...</Text>;
+  if (loadError) {
+    return (
+      <View style={styles.padded}>
+        <Text style={styles.error}>Could not load this user.</Text>
+        <Pressable onPress={() => refetch()}>
+          <Text>Retry</Text>
+        </Pressable>
+      </View>
+    );
+  }
+  if (!target) return <Text style={styles.padded}>User not found.</Text>;
 
   const isSelf = target.id === currentUser?.id;
 
