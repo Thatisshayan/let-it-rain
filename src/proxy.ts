@@ -11,7 +11,11 @@ function getSecretKey() {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p)) || pathname.startsWith("/api/auth")) {
+  if (
+    PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/v1")
+  ) {
     return NextResponse.next();
   }
 
