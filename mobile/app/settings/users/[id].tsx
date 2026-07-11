@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +12,8 @@ import {
 import { ApiError } from "../../../src/api/client";
 import { useAuth } from "../../../src/api/AuthContext";
 
+type TargetUser = { id: string; name: string; email: string; active: boolean; permissions: string[] };
+
 export default function UserDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user: currentUser } = useAuth();
@@ -21,15 +23,36 @@ export default function UserDetailScreen() {
   });
   const target = users?.find((u) => u.id === id);
 
-  const [permissions, setPermissions] = useState<string[]>([]);
+  if (isLoading) return <Text style={styles.padded}>Loading...</Text>;
+  if (loadError) {
+    return (
+      <View style={styles.padded}>
+        <Text style={styles.error}>Could not load this user.</Text>
+        <Pressable onPress={() => refetch()}>
+          <Text>Retry</Text>
+        </Pressable>
+      </View>
+    );
+  }
+  if (!target) return <Text style={styles.padded}>User not found.</Text>;
+
+  return <UserDetailForm id={id} target={target} isSelf={target.id === currentUser?.id} />;
+}
+
+function UserDetailForm({
+  id,
+  target,
+  isSelf,
+}: {
+  id: string;
+  target: TargetUser;
+  isSelf: boolean;
+}) {
+  const [permissions, setPermissions] = useState<string[]>(target.permissions);
   const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    if (target) setPermissions(target.permissions);
-  }, [target]);
 
   function togglePermission(p: string) {
     setPermissions((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
@@ -49,7 +72,6 @@ export default function UserDetailScreen() {
   }
 
   async function toggleActive() {
-    if (!target) return;
     setError(null);
     try {
       await setUserActive(id, !target.active);
@@ -68,21 +90,6 @@ export default function UserDetailScreen() {
       setError(err instanceof ApiError ? err.message : "Could not reset password.");
     }
   }
-
-  if (isLoading) return <Text style={styles.padded}>Loading...</Text>;
-  if (loadError) {
-    return (
-      <View style={styles.padded}>
-        <Text style={styles.error}>Could not load this user.</Text>
-        <Pressable onPress={() => refetch()}>
-          <Text>Retry</Text>
-        </Pressable>
-      </View>
-    );
-  }
-  if (!target) return <Text style={styles.padded}>User not found.</Text>;
-
-  const isSelf = target.id === currentUser?.id;
 
   return (
     <View style={styles.container}>

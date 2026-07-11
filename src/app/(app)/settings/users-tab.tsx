@@ -73,7 +73,7 @@ function CreateUserDialog() {
         <DialogHeader>
           <DialogTitle>Create user</DialogTitle>
           <DialogDescription>
-            Set their password directly and share it with them — there's no email delivery.
+            Set their password directly and share it with them — there&apos;s no email delivery.
           </DialogDescription>
         </DialogHeader>
         <form action={formAction} className="space-y-3">

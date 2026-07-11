@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
-import { verifyBearerToken } from "@/lib/auth";
+import { withAuth } from "@/lib/api-auth";
 import { movementFormSchema } from "@/app/(app)/items/schemas";
 import { adjustStock } from "@/app/(app)/items/service";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function POST(req: Request, { params }: Ctx) {
-  const session = await verifyBearerToken(req);
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-
+export const POST = withAuth<Ctx>(async (req, { params }, session) => {
   const { id } = await params;
   const body = await req.json().catch(() => null);
   const parsed = movementFormSchema.safeParse(body);
@@ -30,4 +27,4 @@ export async function POST(req: Request, { params }: Ctx) {
   }
 
   return NextResponse.json({ ok: true });
-}
+});

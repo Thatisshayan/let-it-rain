@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
 import { signSessionToken } from "@/lib/auth";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { attemptLogin, getClientIp } from "@/lib/login";
 
 const loginSchema = z.object({
-  email: z.string().trim().email(),
+  email: z.string().trim().toLowerCase().email(),
   password: z.string().min(1),
 });
-
-const LOGIN_ATTEMPT_LIMIT = 10;
-const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
@@ -24,36 +19,18 @@ export async function POST(req: Request) {
   }
 
   const { email, password } = parsed.data;
-
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const rateLimitKey = `${ip}:${email}`;
-  if (!checkRateLimit(rateLimitKey, LOGIN_ATTEMPT_LIMIT, LOGIN_WINDOW_MS)) {
-    return NextResponse.json(
-      { error: "Too many login attempts. Please try again later." },
-      { status: 429 }
-    );
+  const ip = getClientIp(req.headers);
+  const result = await attemptLogin(email, password, ip);
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || !user.active) {
-    return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
-  }
-
-  const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) {
-    return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
-  }
-
-  const permissions = user.permissions;
   const token = await signSessionToken({
-    userId: user.id,
-    email: user.email,
-    name: user.name,
-    permissions,
+    userId: result.user.id,
+    email: result.user.email,
+    name: result.user.name,
+    permissions: result.user.permissions,
   });
 
-  return NextResponse.json({
-    token,
-    user: { id: user.id, email: user.email, name: user.name, permissions },
-  });
+  return NextResponse.json({ token, user: result.user });
 }

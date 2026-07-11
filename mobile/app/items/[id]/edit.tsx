@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -11,21 +11,28 @@ export default function EditItemScreen() {
     queryKey: ["item", id],
     queryFn: () => fetchItem(id),
   });
-  const [name, setName] = useState("");
-  const [minStock, setMinStock] = useState("0");
-  const [unitCost, setUnitCost] = useState("0");
-  const [unitPrice, setUnitPrice] = useState("0");
+
+  if (isLoading) return <Text style={styles.padded}>Loading...</Text>;
+  if (loadError || !data)
+    return <Text style={[styles.padded, styles.error]}>Could not load this item.</Text>;
+
+  return <EditItemForm id={id} item={data.item} />;
+}
+
+function EditItemForm({
+  id,
+  item,
+}: {
+  id: string;
+  item: { name: string; minStock: number; unitCost: number; unitPrice: number };
+}) {
+  const [name, setName] = useState(item.name);
+  const [minStock, setMinStock] = useState(String(item.minStock));
+  const [unitCost, setUnitCost] = useState(String(item.unitCost));
+  const [unitPrice, setUnitPrice] = useState(String(item.unitPrice));
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    if (!data) return;
-    setName(data.item.name);
-    setMinStock(String(data.item.minStock));
-    setUnitCost(String(data.item.unitCost));
-    setUnitPrice(String(data.item.unitPrice));
-  }, [data]);
 
   async function onSubmit() {
     setError(null);
@@ -46,9 +53,6 @@ export default function EditItemScreen() {
       setSubmitting(false);
     }
   }
-
-  if (isLoading) return <Text style={styles.padded}>Loading...</Text>;
-  if (loadError) return <Text style={[styles.padded, styles.error]}>Could not load this item.</Text>;
 
   return (
     <View style={styles.container}>

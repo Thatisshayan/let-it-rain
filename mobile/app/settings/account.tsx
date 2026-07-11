@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import { updateOwnProfile, changeOwnPassword } from "../../src/api/settings";
 import { ApiError } from "../../src/api/client";
@@ -6,17 +6,19 @@ import { useAuth } from "../../src/api/AuthContext";
 
 export default function AccountScreen() {
   const { user } = useAuth();
-  const [name, setName] = useState(user?.name ?? "");
+  // Remount (and re-derive initial state) whenever the loaded user identity changes,
+  // instead of syncing via an effect.
+  return <AccountForm key={user?.id ?? "loading"} initialName={user?.name ?? ""} />;
+}
+
+function AccountForm({ initialName }: { initialName: string }) {
+  const [name, setName] = useState(initialName);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
   const [nameSuccess, setNameSuccess] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (user) setName(user.name);
-  }, [user]);
 
   async function saveName() {
     setNameError(null);

@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
-import { verifyBearerToken } from "@/lib/auth";
+import { withAuth } from "@/lib/api-auth";
 import { updatePermissionsFormSchema } from "@/app/(app)/settings/schemas";
 import { updateUserPermissions } from "@/app/(app)/settings/service";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function PATCH(req: Request, { params }: Ctx) {
-  const session = await verifyBearerToken(req);
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-
+export const PATCH = withAuth<Ctx>(async (req, { params }, session) => {
   const { id } = await params;
   const body = await req.json().catch(() => null);
   const parsed = updatePermissionsFormSchema.safeParse(body);
@@ -26,4 +23,4 @@ export async function PATCH(req: Request, { params }: Ctx) {
   }
 
   return NextResponse.json({ ok: true });
-}
+});

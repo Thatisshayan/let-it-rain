@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyBearerToken } from "@/lib/auth";
+import { withAuth } from "@/lib/api-auth";
 import { createItemFormSchema } from "@/app/(app)/items/schemas";
 import { createItem } from "@/app/(app)/items/service";
 
-export async function GET(req: Request) {
-  const session = await verifyBearerToken(req);
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-
+export const GET = withAuth(async (req) => {
   const url = new URL(req.url);
   const q = url.searchParams.get("q")?.trim();
   const low = url.searchParams.get("low") === "1";
@@ -34,12 +31,9 @@ export async function GET(req: Request) {
       lowStock: i.quantity < i.minStock,
     })),
   });
-}
+});
 
-export async function POST(req: Request) {
-  const session = await verifyBearerToken(req);
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-
+export const POST = withAuth(async (req, _ctx, session) => {
   const body = await req.json().catch(() => null);
   const parsed = createItemFormSchema.safeParse(body);
   if (!parsed.success) {
@@ -56,4 +50,4 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ itemId: result.itemId }, { status: 201 });
-}
+});

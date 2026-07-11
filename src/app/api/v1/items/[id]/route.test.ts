@@ -9,7 +9,7 @@ vi.mock("@/lib/prisma", () => ({
 }));
 
 import { prisma } from "@/lib/prisma";
-import { GET, PATCH, DELETE } from "./route";
+import { GET, DELETE } from "./route";
 
 const SECRET = "test-secret-at-least-32-chars-long";
 

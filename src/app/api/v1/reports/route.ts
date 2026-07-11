@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyBearerToken } from "@/lib/auth";
+import { withAuth } from "@/lib/api-auth";
 import { parseMonthParam, monthLabel, monthRange } from "@/app/(app)/activity/calendar";
 import {
   totalRevenue,
@@ -10,10 +10,7 @@ import {
   salesByItem,
 } from "@/app/(app)/reports/reports";
 
-export async function GET(req: Request) {
-  const session = await verifyBearerToken(req);
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-
+export const GET = withAuth(async (req) => {
   const url = new URL(req.url);
   const { year, month } = parseMonthParam(url.searchParams.get("month") ?? undefined);
   const { start, end } = monthRange(year, month);
@@ -92,4 +89,4 @@ export async function GET(req: Request) {
     revenueByDay: revenueByDayList,
     salesByItem: byItem,
   });
-}
+});

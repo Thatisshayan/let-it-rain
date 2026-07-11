@@ -113,7 +113,7 @@ export default async function ReportsPage({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Today's revenue</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground">Today&apos;s revenue</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-semibold tabular-nums">{money(todayRevenue)}</p>

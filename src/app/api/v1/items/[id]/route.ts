@@ -1,15 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyBearerToken } from "@/lib/auth";
+import { withAuth } from "@/lib/api-auth";
 import { itemFormSchema } from "@/app/(app)/items/schemas";
 import { updateItem, deleteItem } from "@/app/(app)/items/service";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function GET(req: Request, { params }: Ctx) {
-  const session = await verifyBearerToken(req);
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-
+export const GET = withAuth<Ctx>(async (_req, { params }) => {
   const { id } = await params;
   const item = await prisma.item.findUnique({ where: { id, deletedAt: null } });
   if (!item) return NextResponse.json({ error: "Item not found." }, { status: 404 });
@@ -44,12 +41,9 @@ export async function GET(req: Request, { params }: Ctx) {
       user: m.user,
     })),
   });
-}
+});
 
-export async function PATCH(req: Request, { params }: Ctx) {
-  const session = await verifyBearerToken(req);
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-
+export const PATCH = withAuth<Ctx>(async (req, { params }, session) => {
   const { id } = await params;
   const body = await req.json().catch(() => null);
   const parsed = itemFormSchema.safeParse(body);
@@ -67,15 +61,12 @@ export async function PATCH(req: Request, { params }: Ctx) {
   }
 
   return NextResponse.json({ ok: true });
-}
+});
 
-export async function DELETE(req: Request, { params }: Ctx) {
-  const session = await verifyBearerToken(req);
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-
+export const DELETE = withAuth<Ctx>(async (_req, { params }, session) => {
   const { id } = await params;
   const result = await deleteItem(session, id);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 403 });
 
   return NextResponse.json({ ok: true });
-}
+});

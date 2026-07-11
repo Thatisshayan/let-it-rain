@@ -54,7 +54,7 @@ export default async function ItemDetailPage({
     <div className="space-y-6">
       {error === "forbidden" && (
         <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          You don't have permission to do that.
+          You don&apos;t have permission to do that.
         </p>
       )}
       <div className="flex items-start justify-between gap-4">
@@ -175,7 +175,7 @@ export default async function ItemDetailPage({
         ) : (
           <Card className="h-fit">
             <CardContent className="py-6 text-center text-sm text-muted-foreground">
-              You don't have permission to log stock movements.
+              You don&apos;t have permission to log stock movements.
             </CardContent>
           </Card>
         )}

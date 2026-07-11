@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
-import { verifyBearerToken } from "@/lib/auth";
+import { withAuth } from "@/lib/api-auth";
 import { changeOwnPasswordFormSchema } from "@/app/(app)/settings/schemas";
 import { changeOwnPassword } from "@/app/(app)/settings/service";
 
-export async function POST(req: Request) {
-  const session = await verifyBearerToken(req);
-  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-
+export const POST = withAuth(async (req, _ctx, session) => {
   const body = await req.json().catch(() => null);
   const parsed = changeOwnPasswordFormSchema.safeParse(body);
   if (!parsed.success) {
@@ -20,4 +17,4 @@ export async function POST(req: Request) {
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
 
   return NextResponse.json({ ok: true });
-}
+});
