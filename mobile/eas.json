@@ -34,6 +34,13 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleTeamId": "9Y6GYPM3K5",
+        "ascApiKeyPath": "C:/Users/AgentDev/Downloads/AuthKey_6K75JGP3T4.p8",
+        "ascApiKeyIssuerId": "53ab7137-7ff1-4f89-a821-821a4999901e",
+        "ascApiKeyId": "6K75JGP3T4"
+      }
+    }
   }
 }
