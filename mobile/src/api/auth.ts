@@ -1,4 +1,4 @@
-import { apiFetch, setToken, clearToken } from "./client";
+import { apiFetch, setToken } from "./client";
 
 export type User = { id: string; email: string; name: string; permissions: string[] };
 
@@ -9,9 +9,4 @@ export async function login(email: string, password: string): Promise<User> {
   });
   await setToken(token);
   return user;
-}
-
-export async function logout(): Promise<void> {
-  await apiFetch("/api/v1/auth/logout", { method: "POST" });
-  await clearToken();
 }
