@@ -19,12 +19,30 @@ export type SessionPayload = {
   permissions: string[];
 };
 
-export async function createSession(payload: SessionPayload) {
-  const token = await new SignJWT(payload)
+export async function signSessionToken(payload: SessionPayload): Promise<string> {
+  return new SignJWT(payload)
     .setProtectedHeader({ alg })
     .setIssuedAt()
     .setExpirationTime("30d")
     .sign(getSecretKey());
+}
+
+export async function verifyBearerToken(req: Request): Promise<SessionPayload | null> {
+  const header = req.headers.get("authorization");
+  if (!header?.startsWith("Bearer ")) return null;
+  const token = header.slice("Bearer ".length).trim();
+  if (!token) return null;
+
+  try {
+    const { payload } = await jwtVerify(token, getSecretKey());
+    return payload as unknown as SessionPayload;
+  } catch {
+    return null;
+  }
+}
+
+export async function createSession(payload: SessionPayload) {
+  const token = await signSessionToken(payload);
 
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
