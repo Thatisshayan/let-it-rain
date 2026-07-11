@@ -1,0 +1,81 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { verifyBearerToken } from "@/lib/auth";
+import { itemFormSchema } from "@/app/(app)/items/schemas";
+import { updateItem, deleteItem } from "@/app/(app)/items/service";
+
+type Ctx = { params: Promise<{ id: string }> };
+
+export async function GET(req: Request, { params }: Ctx) {
+  const session = await verifyBearerToken(req);
+  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+
+  const { id } = await params;
+  const item = await prisma.item.findUnique({ where: { id, deletedAt: null } });
+  if (!item) return NextResponse.json({ error: "Item not found." }, { status: 404 });
+
+  const movements = await prisma.movement.findMany({
+    where: { itemId: id },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    include: { user: { select: { name: true } } },
+    take: 20,
+  });
+
+  return NextResponse.json({
+    item: {
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      description: item.description,
+      quantity: item.quantity,
+      minStock: item.minStock,
+      unitCost: Number(item.unitCost),
+      unitPrice: Number(item.unitPrice),
+      customFields: item.customFields,
+    },
+    movements: movements.map((m) => ({
+      id: m.id,
+      type: m.type,
+      delta: m.delta,
+      quantityAfter: m.quantityAfter,
+      reason: m.reason,
+      isSale: m.isSale,
+      createdAt: m.createdAt.toISOString(),
+      user: m.user,
+    })),
+  });
+}
+
+export async function PATCH(req: Request, { params }: Ctx) {
+  const session = await verifyBearerToken(req);
+  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+
+  const { id } = await params;
+  const body = await req.json().catch(() => null);
+  const parsed = itemFormSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Invalid input." },
+      { status: 400 }
+    );
+  }
+
+  const result = await updateItem(session, id, parsed.data);
+  if (!result.ok) {
+    const status = result.error.includes("permission") ? 403 : 400;
+    return NextResponse.json({ error: result.error }, { status });
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(req: Request, { params }: Ctx) {
+  const session = await verifyBearerToken(req);
+  if (!session) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+
+  const { id } = await params;
+  const result = await deleteItem(session, id);
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 403 });
+
+  return NextResponse.json({ ok: true });
+}
