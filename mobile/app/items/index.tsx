@@ -18,6 +18,9 @@ export default function ItemsScreen() {
         <Pressable onPress={() => router.push("/activity")}>
           <Text>Activity</Text>
         </Pressable>
+        <Pressable onPress={() => router.push("/reports")}>
+          <Text>Reports</Text>
+        </Pressable>
         <Pressable onPress={() => router.push("/settings")}>
           <Text>Settings</Text>
         </Pressable>
