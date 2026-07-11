@@ -3,11 +3,15 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { signSessionToken } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const loginSchema = z.object({
   email: z.string().trim().email(),
   password: z.string().min(1),
 });
+
+const LOGIN_ATTEMPT_LIMIT = 10;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
@@ -20,6 +24,16 @@ export async function POST(req: Request) {
   }
 
   const { email, password } = parsed.data;
+
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const rateLimitKey = `${ip}:${email}`;
+  if (!checkRateLimit(rateLimitKey, LOGIN_ATTEMPT_LIMIT, LOGIN_WINDOW_MS)) {
+    return NextResponse.json(
+      { error: "Too many login attempts. Please try again later." },
+      { status: 429 }
+    );
+  }
+
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || !user.active) {
     return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });

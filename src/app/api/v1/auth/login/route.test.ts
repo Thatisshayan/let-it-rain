@@ -63,4 +63,15 @@ describe("POST /api/v1/auth/login", () => {
     expect(body.token).toEqual(expect.any(String));
     expect(body.user).toEqual({ id: "u1", email: "a@b.com", name: "Ada", permissions: ["EDIT_ITEMS"] });
   });
+
+  it("returns 429 after too many attempts for the same IP+email", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue(null);
+    const email = "ratelimit-test@b.com";
+    let lastStatus = 0;
+    for (let i = 0; i < 11; i++) {
+      const res = await POST(req({ email, password: "wrong" }));
+      lastStatus = res.status;
+    }
+    expect(lastStatus).toBe(429);
+  });
 });
