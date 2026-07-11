@@ -2,10 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { hasPermission } from "@/lib/permissions";
-import { hashPassword, verifyPassword } from "@/lib/password";
 import {
   createUserFormSchema,
   updatePermissionsFormSchema,
@@ -13,6 +10,14 @@ import {
   updateOwnProfileFormSchema,
   changeOwnPasswordFormSchema,
 } from "./schemas";
+import {
+  createUser,
+  updateUserPermissions,
+  setUserActive,
+  resetUserPassword,
+  updateOwnProfile,
+  changeOwnPassword,
+} from "./service";
 
 export type ActionState = {
   error?: string;
@@ -29,9 +34,6 @@ export async function createUserAction(
 ): Promise<ActionState> {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (!hasPermission(session, "MANAGE_USERS")) {
-    return { error: "You don't have permission to manage users." };
-  }
 
   const parsed = createUserFormSchema.safeParse({
     name: formData.get("name"),
@@ -41,20 +43,11 @@ export async function createUserAction(
   });
   if (!parsed.success) return { error: firstIssueMessage(parsed.error) };
 
-  const { name, email, password, permissions } = parsed.data;
-
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    return { error: "A user with that email already exists." };
-  }
-
-  const passwordHash = await hashPassword(password);
-  await prisma.user.create({
-    data: { name, email, passwordHash, permissions },
-  });
+  const result = await createUser(session, parsed.data);
+  if (!result.ok) return { error: result.error };
 
   revalidatePath("/settings");
-  return { success: `Created ${name}.` };
+  return { success: `Created ${parsed.data.name}.` };
 }
 
 export async function updateUserPermissionsAction(
@@ -64,22 +57,14 @@ export async function updateUserPermissionsAction(
 ): Promise<ActionState> {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (!hasPermission(session, "MANAGE_USERS")) {
-    return { error: "You don't have permission to manage users." };
-  }
 
   const parsed = updatePermissionsFormSchema.safeParse({
     permissions: formData.getAll("permissions"),
   });
   if (!parsed.success) return { error: firstIssueMessage(parsed.error) };
 
-  const { permissions } = parsed.data;
-
-  if (userId === session.userId && !permissions.includes("MANAGE_USERS")) {
-    return { error: "You can't remove your own ability to manage users." };
-  }
-
-  await prisma.user.update({ where: { id: userId }, data: { permissions } });
+  const result = await updateUserPermissions(session, userId, parsed.data);
+  if (!result.ok) return { error: result.error };
 
   revalidatePath("/settings");
   return { success: "Permissions updated." };
@@ -88,14 +73,10 @@ export async function updateUserPermissionsAction(
 export async function setUserActiveAction(userId: string, active: boolean): Promise<ActionState> {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (!hasPermission(session, "MANAGE_USERS")) {
-    return { error: "You don't have permission to manage users." };
-  }
-  if (userId === session.userId && !active) {
-    return { error: "You can't deactivate your own account." };
-  }
 
-  await prisma.user.update({ where: { id: userId }, data: { active } });
+  const result = await setUserActive(session, userId, active);
+  if (!result.ok) return { error: result.error };
+
   revalidatePath("/settings");
   return {};
 }
@@ -107,15 +88,12 @@ export async function resetUserPasswordAction(
 ): Promise<ActionState> {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (!hasPermission(session, "MANAGE_USERS")) {
-    return { error: "You don't have permission to manage users." };
-  }
 
   const parsed = resetPasswordFormSchema.safeParse({ password: formData.get("password") });
   if (!parsed.success) return { error: firstIssueMessage(parsed.error) };
 
-  const passwordHash = await hashPassword(parsed.data.password);
-  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  const result = await resetUserPassword(session, userId, parsed.data);
+  if (!result.ok) return { error: result.error };
 
   revalidatePath("/settings");
   return { success: "Password reset. Share the new password with them directly." };
@@ -131,7 +109,8 @@ export async function updateOwnProfileAction(
   const parsed = updateOwnProfileFormSchema.safeParse({ name: formData.get("name") });
   if (!parsed.success) return { error: firstIssueMessage(parsed.error) };
 
-  await prisma.user.update({ where: { id: session.userId }, data: { name: parsed.data.name } });
+  const result = await updateOwnProfile(session, parsed.data);
+  if (!result.ok) return { error: result.error };
 
   revalidatePath("/settings");
   return { success: "Profile updated. Sign out and back in to see your new name everywhere." };
@@ -150,17 +129,8 @@ export async function changeOwnPasswordAction(
   });
   if (!parsed.success) return { error: firstIssueMessage(parsed.error) };
 
-  const user = await prisma.user.findUnique({ where: { id: session.userId } });
-  if (!user) redirect("/login");
-
-  const valid = await verifyPassword(parsed.data.currentPassword, user.passwordHash);
-  if (!valid) {
-    return { error: "Current password is incorrect." };
-  }
-
-  const passwordHash = await hashPassword(parsed.data.newPassword);
-  await prisma.user.update({ where: { id: session.userId }, data: { passwordHash } });
+  const result = await changeOwnPassword(session, parsed.data);
+  if (!result.ok) return { error: result.error };
 
   return { success: "Password changed." };
 }
-
