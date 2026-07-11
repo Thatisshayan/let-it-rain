@@ -1,0 +1,66 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+vi.mock("@/lib/prisma", () => ({
+  prisma: { user: { findUnique: vi.fn() } },
+}));
+vi.mock("bcryptjs", () => ({ default: { compare: vi.fn() } }));
+
+import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
+import { POST } from "./route";
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  process.env.SESSION_SECRET = "test-secret-at-least-32-chars-long";
+});
+
+function req(body: unknown) {
+  return new Request("http://localhost/api/v1/auth/login", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+describe("POST /api/v1/auth/login", () => {
+  it("returns 400 for invalid input", async () => {
+    const res = await POST(req({ email: "not-an-email", password: "" }));
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 401 when the user doesn't exist", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue(null);
+    const res = await POST(req({ email: "a@b.com", password: "secret123" }));
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 401 when the password is wrong", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      name: "Ada",
+      passwordHash: "hash",
+      permissions: [],
+      active: true,
+    });
+    (bcrypt.compare as any).mockResolvedValue(false);
+    const res = await POST(req({ email: "a@b.com", password: "wrong" }));
+    expect(res.status).toBe(401);
+  });
+
+  it("returns a token and user on success", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      name: "Ada",
+      passwordHash: "hash",
+      permissions: ["EDIT_ITEMS"],
+      active: true,
+    });
+    (bcrypt.compare as any).mockResolvedValue(true);
+    const res = await POST(req({ email: "a@b.com", password: "secret123" }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.token).toEqual(expect.any(String));
+    expect(body.user).toEqual({ id: "u1", email: "a@b.com", name: "Ada", permissions: ["EDIT_ITEMS"] });
+  });
+});
