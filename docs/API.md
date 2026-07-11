@@ -43,6 +43,7 @@ behavior — each route below does its own `verifyBearerToken` check.
   - `404` — resource not found (or soft-deleted)
   - `409` — a stock-adjustment write lost a `SERIALIZABLE` transaction race after all
     retries were exhausted (rare; safe to retry the request)
+  - `429` — too many login attempts for the same IP+email (see the login endpoint below)
 
 ---
 
@@ -66,6 +67,9 @@ No auth required.
 ```
 
 `401` if the email/password don't match or the user is deactivated (`active: false`).
+`429` if there have been more than 10 attempts for the same IP+email combination within
+a 15-minute window (`src/lib/rate-limit.ts`, an in-memory sliding window — same limiter
+the web login form uses).
 
 ### `POST /api/v1/auth/logout`
 

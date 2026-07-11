@@ -153,14 +153,72 @@ disallowed action always fails server-side with `403` regardless of what the UI 
   closing and reopening the app requires signing in again even though the token is
   technically still valid and stored on-device.
 - **No push notifications.**
-- **No EAS Build / app-store distribution configured.** This app is set up for
-  development via Expo Go only. Setting up `eas.json` and a build profile for internal
-  distribution or app-store submission is future work.
+- **Not yet submitted to TestFlight/the App Store.** `eas.json` and the required
+  `app.json` fields (bundle identifier, build number) are in place — see
+  [Preparing for TestFlight](#preparing-for-testflight) below for what's left, all of
+  which requires your Apple Developer account credentials and can't be done from here.
 - **No automated test suite.** The app is a thin client over an already-tested API
   ([`docs/API.md`](../docs/API.md), 100+ Vitest tests on the API side); mobile
   correctness is currently verified manually via Expo Go against the real API for each
   feature as it's built (see the phase-by-phase spec/plan docs in
   [`docs/superpowers/`](../docs/superpowers/)).
+
+## Preparing for TestFlight
+
+The project is configured for [EAS Build](https://docs.expo.dev/build/introduction/):
+`app.json` has a bundle identifier (`com.letitrain.mobile` — change this if it doesn't
+match your Apple Developer account's convention, before your first build) and
+`eas.json` defines `development`/`preview`/`production` build profiles.
+
+**Before your first build, you must:**
+
+1. **Point the build profiles at a real HTTPS backend.** `eas.json`'s `preview` and
+   `production` profiles currently have `EXPO_PUBLIC_API_BASE_URL` set to a placeholder
+   (`https://REPLACE_WITH_YOUR_DEPLOYED_API_URL`). This is not optional: iOS App
+   Transport Security blocks plain `http://` requests in a standalone (non-Expo-Go)
+   build by default, so a build pointed at a LAN IP or `localhost` will fail every
+   network request with no clear error beyond "could not reach the server." Deploy the
+   web app (see the [repo root README](../README.md#deploy)) and put its real HTTPS URL
+   in both profiles before building `preview` or `production`.
+2. **Log in to EAS and link the project** (requires an Expo account):
+   ```bash
+   npx eas login
+   npx eas init
+   ```
+   `eas init` writes an `extra.eas.projectId` into `app.json` — commit that change.
+3. **Verify/update the bundle identifier** in `app.json` (`ios.bundleIdentifier`) to
+   match an app record you'll create (or have already created) in
+   [App Store Connect](https://appstoreconnect.apple.com/).
+4. **Build:**
+   ```bash
+   npx eas build --platform ios --profile preview   # internal testing build
+   # or
+   npx eas build --platform ios --profile production
+   ```
+   The first iOS build will interactively prompt for your Apple Developer credentials
+   and generate/select signing certificates and provisioning profiles — EAS manages
+   this for you, but it does require an active Apple Developer Program membership.
+5. **Submit to TestFlight:**
+   ```bash
+   npx eas submit --platform ios --latest
+   ```
+   Requires an app record already created in App Store Connect with a matching bundle
+   identifier, and (per `eas.json`'s `ITSAppUsesNonExemptEncryption: false` setting in
+   `app.json`) answers the export-compliance question automatically since the app only
+   uses standard HTTPS/TLS, no custom cryptography.
+
+**What's already handled:**
+- `ios.bundleIdentifier`, `ios.buildNumber`, `android.package`, `android.versionCode` are
+  set in `app.json`.
+- `eas.json`'s `production` profile has `autoIncrement: true`, so you don't need to
+  manually bump the build number between submissions.
+- App icon and splash screen assets exist (currently Expo's generic defaults — replace
+  `assets/icon.png`, `assets/android-icon-*.png`, `assets/splash-icon.png`,
+  `assets/favicon.png` with your own branded assets before shipping to real testers).
+- The app itself: cold-start session persistence (a valid stored token signs you back in
+  automatically), automatic sign-out + redirect to login on a `401` (expired/invalidated
+  token) from any screen, a working sign-out button (Settings → Sign out), and a request
+  timeout so a bad network shows an error instead of an infinite spinner.
 
 ## Troubleshooting
 
