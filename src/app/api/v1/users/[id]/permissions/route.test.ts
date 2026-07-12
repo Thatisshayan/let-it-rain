@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SignJWT } from "jose";
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { user: { update: vi.fn(), findUnique: vi.fn() } },
+  prisma: {
+    user: { update: vi.fn(), findUnique: vi.fn() },
+    auditLog: { create: vi.fn() },
+  },
 }));
 
 import { prisma } from "@/lib/prisma";

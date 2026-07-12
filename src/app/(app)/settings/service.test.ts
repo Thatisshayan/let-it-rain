@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { user: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn() } },
+  prisma: {
+    user: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn() },
+    auditLog: { create: vi.fn() },
+  },
 }));
 vi.mock("@/lib/password", () => ({
   hashPassword: vi.fn(async (p: string) => `hashed:${p}`),

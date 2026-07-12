@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { hasPermission } from "@/lib/permissions";
+import { canManageOrders } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getOrder } from "../service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +24,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const order = await getOrder(session, id);
   if (!order) notFound();
 
-  const canManage = hasPermission(session, "MANAGE_ORDERS");
+  const canManage = canManageOrders(session);
   const isAssignedDriver = order.driverId === session.userId;
   const canAct = canManage || isAssignedDriver;
   const isActive = order.status === "PENDING" || order.status === "OUT_FOR_DELIVERY";

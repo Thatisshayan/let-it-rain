@@ -5,6 +5,7 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     order: { findUnique: vi.fn(), update: vi.fn() },
     user: { findUnique: vi.fn() },
+    auditLog: { create: vi.fn() },
   },
 }));
 
@@ -34,7 +35,7 @@ beforeEach(() => {
 });
 
 describe("PATCH /api/v1/orders/:id/assign", () => {
-  it("returns 403 without MANAGE_ORDERS", async () => {
+  it("returns 403 without ASSIGN_DRIVERS", async () => {
     const token = await tokenFor([]);
     const res = await PATCH(
       new Request("http://localhost/api/v1/orders/o1/assign", {
@@ -47,10 +48,10 @@ describe("PATCH /api/v1/orders/:id/assign", () => {
     expect(res.status).toBe(403);
   });
 
-  it("assigns a driver with MANAGE_ORDERS", async () => {
+  it("assigns a driver with ASSIGN_DRIVERS", async () => {
     (prisma.order.findUnique as any).mockResolvedValue({ id: "o1", status: "PENDING" });
     (prisma.order.update as any).mockResolvedValue({});
-    const token = await tokenFor(["MANAGE_ORDERS"]);
+    const token = await tokenFor(["ASSIGN_DRIVERS"]);
     const res = await PATCH(
       new Request("http://localhost/api/v1/orders/o1/assign", {
         method: "PATCH",

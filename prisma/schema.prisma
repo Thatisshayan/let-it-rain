@@ -17,13 +17,17 @@ model User {
   name         String
   email        String   @unique
   passwordHash String
-  permissions  String[] @default(["MANAGE_USERS", "DELETE_ITEMS", "EDIT_ITEMS", "ADJUST_STOCK", "MANAGE_ORDERS"])
+  permissions  String[] @default(["MANAGE_USERS", "DELETE_ITEMS", "EDIT_ITEMS", "ADJUST_STOCK", "MANAGE_ORDERS", "VIEW_REPORTS", "VIEW_COSTS"])
   active       Boolean  @default(true)
+  tokenVersion Int      @default(0)
   createdAt    DateTime @default(now())
 
-  movements      Movement[]
-  createdOrders  Order[]   @relation("OrderCreatedBy")
-  driverOrders   Order[]   @relation("OrderDriver")
+  movements       Movement[]
+  createdOrders   Order[]   @relation("OrderCreatedBy")
+  driverOrders    Order[]   @relation("OrderDriver")
+  cancelledOrders Order[]   @relation("OrderCancelledBy")
+  auditLogs       AuditLog[] @relation("AuditLogActor")
+  auditLogTargets AuditLog[] @relation("AuditLogTargetUser")
 }
 
 model Item {
@@ -33,6 +37,7 @@ model Item {
   description String?
   quantity    Int      @default(0)
   minStock    Int      @default(0)
+  location    String?
   customFields Json?
   unitCost    Decimal  @default(0) @db.Decimal(12, 2)
   unitPrice   Decimal  @default(0) @db.Decimal(12, 2)
@@ -93,13 +98,18 @@ model Order {
   createdById      String
   driver           User?         @relation("OrderDriver", fields: [driverId], references: [id])
   driverId         String?
+  cancelledBy      User?         @relation("OrderCancelledBy", fields: [cancelledById], references: [id])
+  cancelledById    String?
+  cancelledAt      DateTime?
   lineItems        OrderLineItem[]
+  auditLogs        AuditLog[]    @relation("AuditLogOrder")
   createdAt        DateTime      @default(now())
   outForDeliveryAt DateTime?
   deliveredAt      DateTime?
 
   @@index([status])
   @@index([driverId])
+  @@index([cancelledById])
 }
 
 model OrderLineItem {
@@ -111,4 +121,30 @@ model OrderLineItem {
   quantity Int
 
   @@index([orderId])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  actor       User     @relation("AuditLogActor", fields: [actorId], references: [id], onDelete: Restrict)
+  actorId     String
+  action      String
+  targetUser  User?    @relation("AuditLogTargetUser", fields: [targetUserId], references: [id], onDelete: SetNull)
+  targetUserId String?
+  order       Order?   @relation("AuditLogOrder", fields: [orderId], references: [id], onDelete: SetNull)
+  orderId     String?
+  detail      String?
+  createdAt   DateTime @default(now())
+
+  @@index([actorId])
+  @@index([targetUserId])
+  @@index([orderId])
+  @@index([createdAt])
+}
+
+model AppConfig {
+  id              Int    @id @default(1)
+  businessName    String?
+  defaultLowStock Int    @default(0)
+
+  @@unique([id])
 }

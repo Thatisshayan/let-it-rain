@@ -5,7 +5,7 @@ import { assignDriver } from "@/app/(app)/orders/service";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export const PATCH = withPermission<Ctx>("MANAGE_ORDERS", async (req, { params }, session) => {
+export const PATCH = withPermission<Ctx>("ASSIGN_DRIVERS", async (req, { params }, session) => {
   const { id } = await params;
   const body = await req.json().catch(() => null);
   const parsed = assignDriverFormSchema.safeParse(body);

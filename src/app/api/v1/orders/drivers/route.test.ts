@@ -33,7 +33,7 @@ beforeEach(() => {
 });
 
 describe("GET /api/v1/orders/drivers", () => {
-  it("returns 403 without MANAGE_ORDERS", async () => {
+  it("returns 403 without ASSIGN_DRIVERS", async () => {
     const token = await tokenFor([]);
     const res = await GET(
       new Request("http://localhost/api/v1/orders/drivers", { headers: { authorization: `Bearer ${token}` } })
@@ -41,9 +41,9 @@ describe("GET /api/v1/orders/drivers", () => {
     expect(res.status).toBe(403);
   });
 
-  it("returns active users with MANAGE_ORDERS", async () => {
+  it("returns active users with ASSIGN_DRIVERS", async () => {
     (prisma.user.findMany as any).mockResolvedValue([{ id: "u2", name: "Driver" }]);
-    const token = await tokenFor(["MANAGE_ORDERS"]);
+    const token = await tokenFor(["ASSIGN_DRIVERS"]);
     const res = await GET(
       new Request("http://localhost/api/v1/orders/drivers", { headers: { authorization: `Bearer ${token}` } })
     );

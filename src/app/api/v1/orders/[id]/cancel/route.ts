@@ -4,7 +4,7 @@ import { cancelOrder } from "@/app/(app)/orders/service";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export const POST = withPermission<Ctx>("MANAGE_ORDERS", async (_req, { params }, session) => {
+export const POST = withPermission<Ctx>("CANCEL_ORDERS", async (_req, { params }, session) => {
   const { id } = await params;
   const result = await cancelOrder(session, id);
   if (!result.ok) {

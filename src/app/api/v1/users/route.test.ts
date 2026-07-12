@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SignJWT } from "jose";
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { user: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn() } },
+  prisma: {
+    user: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
+    auditLog: { create: vi.fn() },
+  },
 }));
 vi.mock("@/lib/password", () => ({
   hashPassword: vi.fn(async (p: string) => `hashed:${p}`),

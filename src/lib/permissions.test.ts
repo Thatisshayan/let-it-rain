@@ -8,9 +8,13 @@ describe("PERMISSIONS", () => {
       "DELETE_ITEMS",
       "EDIT_ITEMS",
       "ADJUST_STOCK",
-      "MANAGE_ORDERS",
+      "CREATE_ORDERS",
+      "ASSIGN_DRIVERS",
+      "CANCEL_ORDERS",
       "VIEW_REPORTS",
       "VIEW_COSTS",
+      "VIEW_AUDIT_LOG",
+      "MANAGE_SETTINGS",
     ]);
   });
 });

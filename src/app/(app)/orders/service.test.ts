@@ -5,6 +5,8 @@ vi.mock("@/lib/prisma", () => ({
     order: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), findMany: vi.fn() },
     item: { findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     movement: { create: vi.fn() },
+    user: { findUnique: vi.fn() },
+    auditLog: { create: vi.fn() },
     $transaction: vi.fn(),
   },
 }));
@@ -23,7 +25,7 @@ const manager = {
   userId: "u1",
   email: "manager@b.com",
   name: "Manager",
-  permissions: ["MANAGE_ORDERS"],
+  permissions: ["CREATE_ORDERS", "ASSIGN_DRIVERS", "CANCEL_ORDERS"],
 };
 const driver = {
   userId: "u2",
@@ -35,7 +37,7 @@ const driver = {
 beforeEach(() => vi.clearAllMocks());
 
 describe("createOrder", () => {
-  it("rejects without MANAGE_ORDERS permission", async () => {
+  it("rejects without CREATE_ORDERS permission", async () => {
     const result = await createOrder(driver, {
       customerName: "Acme",
       lineItems: [{ itemId: "i1", quantity: 2 }],
@@ -65,14 +67,15 @@ describe("createOrder", () => {
 });
 
 describe("assignDriver", () => {
-  it("rejects without MANAGE_ORDERS permission", async () => {
+  it("rejects without ASSIGN_DRIVERS permission", async () => {
     const result = await assignDriver(driver, "o1", { driverId: "u2" });
     expect(result.ok).toBe(false);
   });
 
   it("assigns a driver to a pending order", async () => {
-    (prisma.order.findUnique as any).mockResolvedValue({ id: "o1", status: "PENDING" });
+    (prisma.order.findUnique as any).mockResolvedValue({ id: "o1", status: "PENDING", customerName: "Acme" });
     (prisma.order.update as any).mockResolvedValue({});
+    (prisma.user.findUnique as any).mockResolvedValue({ name: "Driver" });
     const result = await assignDriver(manager, "o1", { driverId: "u2" });
     expect(result.ok).toBe(true);
   });
@@ -192,14 +195,14 @@ describe("markDelivered", () => {
 });
 
 describe("cancelOrder", () => {
-  it("rejects without MANAGE_ORDERS permission", async () => {
+  it("rejects without CANCEL_ORDERS permission", async () => {
     const result = await cancelOrder(driver, "o1");
     expect(result.ok).toBe(false);
   });
 });
 
 describe("listOrders", () => {
-  it("scopes to the caller's own assigned orders without MANAGE_ORDERS", async () => {
+  it("scopes to the caller's own assigned orders without order permissions", async () => {
     (prisma.order.findMany as any).mockResolvedValue([]);
     await listOrders(driver);
     expect(prisma.order.findMany).toHaveBeenCalledWith(
@@ -207,7 +210,7 @@ describe("listOrders", () => {
     );
   });
 
-  it("returns everything for a MANAGE_ORDERS holder", async () => {
+  it("returns everything for a CREATE_ORDERS holder", async () => {
     (prisma.order.findMany as any).mockResolvedValue([]);
     await listOrders(manager);
     expect(prisma.order.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: {} }));

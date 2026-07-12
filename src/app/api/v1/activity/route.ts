@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-auth";
-import { hasPermission } from "@/lib/permissions";
+import { canManageOrders } from "@/lib/permissions";
 import type { SessionPayload } from "@/lib/auth";
 import type { Prisma } from "@/generated/prisma/client";
 import {
@@ -13,7 +13,7 @@ import {
 } from "@/app/(app)/activity/calendar";
 
 async function getMovements(session: SessionPayload, start: Date, end: Date) {
-  const canManage = hasPermission(session, "MANAGE_ORDERS");
+  const canManage = canManageOrders(session);
   const where: Prisma.MovementWhereInput = {
     createdAt: { gte: start, lt: end },
   };

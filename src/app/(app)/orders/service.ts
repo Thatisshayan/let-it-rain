@@ -4,6 +4,7 @@ import { hasPermission } from "@/lib/permissions";
 import type { SessionPayload } from "@/lib/auth";
 import { computeMovement } from "../items/movement";
 import type { CreateOrderInput, AssignDriverInput, DeliverOrderInput } from "./schemas";
+import { writeAuditLog } from "@/lib/audit";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
@@ -13,7 +14,7 @@ export async function createOrder(
   session: SessionPayload,
   input: CreateOrderInput
 ): Promise<Result<{ orderId: string }>> {
-  if (!hasPermission(session, "MANAGE_ORDERS")) {
+  if (!hasPermission(session, "CREATE_ORDERS")) {
     return { ok: false, error: "You don't have permission to create orders." };
   }
 
@@ -40,6 +41,13 @@ export async function createOrder(
     },
   });
 
+  await writeAuditLog({
+    actor: session,
+    action: "ORDER_CREATED",
+    orderId: order.id,
+    detail: `Created order for ${input.customerName} with ${input.lineItems.length} item(s)`,
+  });
+
   return { ok: true, orderId: order.id };
 }
 
@@ -48,7 +56,7 @@ export async function assignDriver(
   orderId: string,
   input: AssignDriverInput
 ): Promise<Result> {
-  if (!hasPermission(session, "MANAGE_ORDERS")) {
+  if (!hasPermission(session, "ASSIGN_DRIVERS")) {
     return { ok: false, error: "You don't have permission to assign drivers." };
   }
 
@@ -59,11 +67,23 @@ export async function assignDriver(
   }
 
   await prisma.order.update({ where: { id: orderId }, data: { driverId: input.driverId } });
+
+  await writeAuditLog({
+    actor: session,
+    action: "ORDER_ASSIGNED",
+    orderId,
+    detail: `Assigned driver ${input.driverId} to order for ${order.customerName}`,
+  });
+
   return { ok: true };
 }
 
+function canManageOrders(session: SessionPayload): boolean {
+  return hasPermission(session, "CREATE_ORDERS") || hasPermission(session, "ASSIGN_DRIVERS") || hasPermission(session, "CANCEL_ORDERS");
+}
+
 function canActOnOrder(session: SessionPayload, order: { driverId: string | null }): boolean {
-  return hasPermission(session, "MANAGE_ORDERS") || order.driverId === session.userId;
+  return canManageOrders(session) || order.driverId === session.userId;
 }
 
 export async function markOutForDelivery(session: SessionPayload, orderId: string): Promise<Result> {
@@ -182,7 +202,7 @@ export async function markDelivered(
 }
 
 export async function cancelOrder(session: SessionPayload, orderId: string): Promise<Result> {
-  if (!hasPermission(session, "MANAGE_ORDERS")) {
+  if (!hasPermission(session, "CANCEL_ORDERS")) {
     return { ok: false, error: "You don't have permission to cancel orders." };
   }
 
@@ -192,12 +212,27 @@ export async function cancelOrder(session: SessionPayload, orderId: string): Pro
     return { ok: false, error: "This order is already completed or cancelled." };
   }
 
-  await prisma.order.update({ where: { id: orderId }, data: { status: "CANCELLED" } });
+  await prisma.order.update({
+    where: { id: orderId },
+    data: {
+      status: "CANCELLED",
+      cancelledAt: new Date(),
+      cancelledById: session.userId,
+    },
+  });
+
+  await writeAuditLog({
+    actor: session,
+    action: "ORDER_CANCELLED",
+    orderId,
+    detail: `Cancelled order for ${order.customerName}`,
+  });
+
   return { ok: true };
 }
 
 export async function listOrders(session: SessionPayload) {
-  const canManage = hasPermission(session, "MANAGE_ORDERS");
+  const canManage = canManageOrders(session);
   return prisma.order.findMany({
     where: canManage ? {} : { driverId: session.userId },
     orderBy: { createdAt: "desc" },
@@ -218,6 +253,6 @@ export async function getOrder(session: SessionPayload, orderId: string) {
     },
   });
   if (!order) return null;
-  if (!hasPermission(session, "MANAGE_ORDERS") && order.driverId !== session.userId) return null;
+  if (!canManageOrders(session) && order.driverId !== session.userId) return null;
   return order;
 }

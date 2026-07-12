@@ -27,7 +27,7 @@ export const GET = withAuth(async (_req, _ctx, session) => {
   });
 });
 
-export const POST = withPermission("MANAGE_ORDERS", async (req, _ctx, session) => {
+export const POST = withPermission("CREATE_ORDERS", async (req, _ctx, session) => {
   const body = await req.json().catch(() => null);
   const parsed = createOrderFormSchema.safeParse(body);
   if (!parsed.success) {

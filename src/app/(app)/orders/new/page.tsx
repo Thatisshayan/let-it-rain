@@ -8,7 +8,7 @@ import { NewOrderForm } from "./new-order-form";
 export default async function NewOrderPage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (!hasPermission(session, "MANAGE_ORDERS")) redirect("/orders");
+  if (!hasPermission(session, "CREATE_ORDERS")) redirect("/orders");
 
   const items = await prisma.item.findMany({
     where: { deletedAt: null },

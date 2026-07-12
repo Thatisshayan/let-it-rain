@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { hasPermission } from "@/lib/permissions";
+import { canManageOrders } from "@/lib/permissions";
 import { listOrders } from "./service";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +28,7 @@ export default async function OrdersPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const canManage = hasPermission(session, "MANAGE_ORDERS");
+  const canManage = canManageOrders(session);
   const orders = await listOrders(session);
 
   return (

@@ -10,6 +10,7 @@ import type {
   updateOwnProfileFormSchema,
   changeOwnPasswordFormSchema,
 } from "./schemas";
+import { writeAuditLog } from "@/lib/audit";
 
 type CreateUserInput = z.infer<typeof createUserFormSchema>;
 type UpdatePermissionsInput = z.infer<typeof updatePermissionsFormSchema>;
@@ -39,6 +40,13 @@ export async function createUser(
     data: { name, email, passwordHash, permissions },
   });
 
+  await writeAuditLog({
+    actor: session,
+    action: "USER_CREATED",
+    targetUserId: user.id,
+    detail: `Created user ${name} (${email}) with permissions: ${permissions.join(", ")}`,
+  });
+
   return { ok: true, userId: user.id };
 }
 
@@ -55,7 +63,17 @@ export async function updateUserPermissions(
     return { ok: false, error: "You can't remove your own ability to manage users." };
   }
 
+  const oldUser = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true, permissions: true } });
+
   await prisma.user.update({ where: { id: userId }, data: { permissions: input.permissions } });
+
+  await writeAuditLog({
+    actor: session,
+    action: "USER_PERMISSIONS_CHANGED",
+    targetUserId: userId,
+    detail: `Updated permissions for ${oldUser?.name} (${oldUser?.email}): ${oldUser?.permissions.join(", ")} -> ${input.permissions.join(", ")}`,
+  });
+
   return { ok: true };
 }
 
@@ -71,7 +89,17 @@ export async function setUserActive(
     return { ok: false, error: "You can't deactivate your own account." };
   }
 
+  const oldUser = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true, active: true } });
+
   await prisma.user.update({ where: { id: userId }, data: { active } });
+
+  await writeAuditLog({
+    actor: session,
+    action: active ? "USER_ACTIVATED" : "USER_DEACTIVATED",
+    targetUserId: userId,
+    detail: `${active ? "Activated" : "Deactivated"} user ${oldUser?.name} (${oldUser?.email})`,
+  });
+
   return { ok: true };
 }
 
@@ -86,6 +114,16 @@ export async function resetUserPassword(
 
   const passwordHash = await hashPassword(input.password);
   await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+
+  const targetUser = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } });
+
+  await writeAuditLog({
+    actor: session,
+    action: "USER_PASSWORD_RESET",
+    targetUserId: userId,
+    detail: `Reset password for ${targetUser?.name} (${targetUser?.email})`,
+  });
+
   return { ok: true };
 }
 

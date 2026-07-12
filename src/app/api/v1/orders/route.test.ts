@@ -6,6 +6,7 @@ vi.mock("@/lib/prisma", () => ({
     order: { create: vi.fn(), findMany: vi.fn() },
     item: { findMany: vi.fn() },
     user: { findUnique: vi.fn() },
+    auditLog: { create: vi.fn() },
   },
 }));
 
@@ -48,7 +49,7 @@ describe("GET /api/v1/orders", () => {
 });
 
 describe("POST /api/v1/orders", () => {
-  it("returns 403 without MANAGE_ORDERS", async () => {
+  it("returns 403 without CREATE_ORDERS", async () => {
     const token = await tokenFor([]);
     const res = await POST(
       new Request("http://localhost/api/v1/orders", {
@@ -60,10 +61,10 @@ describe("POST /api/v1/orders", () => {
     expect(res.status).toBe(403);
   });
 
-  it("creates an order with MANAGE_ORDERS", async () => {
+  it("creates an order with CREATE_ORDERS", async () => {
     (prisma.item.findMany as any).mockResolvedValue([{ id: "i1" }]);
     (prisma.order.create as any).mockResolvedValue({ id: "o1" });
-    const token = await tokenFor(["MANAGE_ORDERS"]);
+    const token = await tokenFor(["CREATE_ORDERS"]);
     const res = await POST(
       new Request("http://localhost/api/v1/orders", {
         method: "POST",
@@ -75,7 +76,7 @@ describe("POST /api/v1/orders", () => {
   });
 
   it("returns 400 with no line items", async () => {
-    const token = await tokenFor(["MANAGE_ORDERS"]);
+    const token = await tokenFor(["CREATE_ORDERS"]);
     const res = await POST(
       new Request("http://localhost/api/v1/orders", {
         method: "POST",
