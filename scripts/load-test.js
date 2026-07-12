@@ -28,7 +28,7 @@ const HEADERS = {
   "Content-Type": "application/json",
 };
 
-export default function () {
+export default function loadTest() {
   const itemsRes = http.get(`${BASE_URL}/api/v1/items`, { headers: HEADERS });
   check(itemsRes, { "items status 200": (r) => r.status === 200 });
 
