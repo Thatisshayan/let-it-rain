@@ -1,15 +1,17 @@
 import { useState } from "react";
-import { View, Text, Pressable, FlatList, StyleSheet } from "react-native";
+import { View, Text, Pressable, FlatList, StyleSheet, ScrollView, RefreshControl } from "react-native";
 import { useQuery } from "@tanstack/react-query";
-import { fetchActivity, adjacentMonthParam } from "../src/api/activity";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { fetchActivity, adjacentMonthParam } from "../../src/api/activity";
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function ActivityScreen() {
+  const insets = useSafeAreaInsets();
   const [month, setMonth] = useState<string | undefined>(undefined);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, isRefetching, error, refetch } = useQuery({
     queryKey: ["activity", month],
     queryFn: () => fetchActivity(month),
   });
@@ -26,7 +28,10 @@ export default function ActivityScreen() {
   const dayMovements = selectedDay ? data.movements.filter((m) => m.createdAt.startsWith(selectedDay)) : [];
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={[styles.container, { paddingTop: insets.top + 16 }]}
+      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+    >
       <View style={styles.header}>
         <Pressable onPress={() => goToMonth(-1)}>
           <Text>← Prev</Text>
@@ -85,6 +90,7 @@ export default function ActivityScreen() {
             <FlatList
               data={dayMovements}
               keyExtractor={(m) => m.id}
+              scrollEnabled={false}
               renderItem={({ item: m }) => (
                 <View style={styles.movementRow}>
                   <Text>
@@ -98,12 +104,12 @@ export default function ActivityScreen() {
           )}
         </View>
       ) : null}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, gap: 8 },
+  container: { flex: 1, paddingHorizontal: 16, gap: 8 },
   padded: { padding: 16 },
   error: { color: "#c00" },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
@@ -126,7 +132,7 @@ const styles = StyleSheet.create({
   cellNeutral: { backgroundColor: "#e0f2fe" },
   cellDay: { fontSize: 12, fontWeight: "500" },
   cellNet: { fontSize: 9, fontWeight: "600" },
-  dayDetail: { marginTop: 12, gap: 4 },
+  dayDetail: { marginTop: 12, gap: 4, paddingBottom: 24 },
   dayTitle: { fontWeight: "600" },
   movementRow: { paddingVertical: 6, borderBottomWidth: 1, borderColor: "#eee" },
   movementReason: { fontSize: 12, color: "#666" },

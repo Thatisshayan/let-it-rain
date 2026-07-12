@@ -19,6 +19,8 @@ export type ReportsMonth = {
   monthRevenue: number;
   monthCogs: number;
   monthProfit: number;
+  monthCash: number;
+  monthInterac: number;
   monthRestockCost: number;
   inventoryValuation: number;
   revenueByDay: RevenueByDayEntry[];

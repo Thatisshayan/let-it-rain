@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -11,10 +11,17 @@ export default function AdjustStockScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [type, setType] = useState<(typeof TYPES)[number]>("RECEIVE");
   const [amount, setAmount] = useState("");
+  const [cashAmount, setCashAmount] = useState("");
+  const [interacAmount, setInteracAmount] = useState("");
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const queryClient = useQueryClient();
+
+  const total = useMemo(
+    () => (Number(cashAmount) || 0) + (Number(interacAmount) || 0),
+    [cashAmount, interacAmount]
+  );
 
   async function onSubmit() {
     setError(null);
@@ -27,6 +34,14 @@ export default function AdjustStockScreen() {
     try {
       if (type === "ADJUST") {
         await adjustStock(id, { type: "ADJUST", counted: numeric, reason: reason || undefined });
+      } else if (type === "REMOVE") {
+        await adjustStock(id, {
+          type: "REMOVE",
+          amount: numeric,
+          cashAmount: Number(cashAmount) || 0,
+          interacAmount: Number(interacAmount) || 0,
+          reason: reason || undefined,
+        });
       } else {
         await adjustStock(id, { type, amount: numeric, reason: reason || undefined });
       }
@@ -60,6 +75,30 @@ export default function AdjustStockScreen() {
         value={amount}
         onChangeText={setAmount}
       />
+      {type === "REMOVE" && (
+        <View style={styles.paymentBox}>
+          <View style={styles.paymentRow}>
+            <TextInput
+              style={[styles.input, styles.paymentInput]}
+              placeholder="Cash received"
+              keyboardType="decimal-pad"
+              value={cashAmount}
+              onChangeText={setCashAmount}
+            />
+            <TextInput
+              style={[styles.input, styles.paymentInput]}
+              placeholder="Interac received"
+              keyboardType="decimal-pad"
+              value={interacAmount}
+              onChangeText={setInteracAmount}
+            />
+          </View>
+          <Text style={styles.paymentTotal}>
+            Total: ${total.toFixed(2)}
+            {total === 0 && " — leave blank for a non-sale removal"}
+          </Text>
+        </View>
+      )}
       <TextInput style={styles.input} placeholder="Reason (optional)" value={reason} onChangeText={setReason} />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Pressable style={styles.submit} onPress={onSubmit} disabled={submitting}>
@@ -76,6 +115,10 @@ const styles = StyleSheet.create({
   typeButtonActive: { backgroundColor: "#2563eb", borderColor: "#2563eb" },
   typeTextActive: { color: "#fff" },
   input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12 },
+  paymentBox: { gap: 8 },
+  paymentRow: { flexDirection: "row", gap: 8 },
+  paymentInput: { flex: 1 },
+  paymentTotal: { fontSize: 12, color: "#666" },
   error: { color: "#c00" },
   submit: { backgroundColor: "#2563eb", padding: 14, borderRadius: 8, alignItems: "center" },
   submitText: { color: "#fff", fontWeight: "600" },

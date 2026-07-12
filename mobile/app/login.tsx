@@ -19,7 +19,7 @@ export default function LoginScreen() {
     try {
       const user = await login(email, password);
       setUser(user);
-      router.replace("/items");
+      router.replace("/dashboard");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not sign in.");
     } finally {

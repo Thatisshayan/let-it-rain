@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, TextInput, FlatList, Text, Pressable, StyleSheet } from "react-native";
+import { View, TextInput, FlatList, Text, Pressable, StyleSheet, RefreshControl } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -9,24 +9,13 @@ export default function ItemsScreen() {
   const [q, setQ] = useState("");
   const [lowOnly, setLowOnly] = useState(false);
   const insets = useSafeAreaInsets();
-  const { data: items, isLoading, error, refetch } = useQuery({
+  const { data: items, isLoading, isRefetching, error, refetch } = useQuery({
     queryKey: ["items", q, lowOnly],
     queryFn: () => fetchItems({ q, low: lowOnly }),
   });
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
-      <View style={styles.headerLinks}>
-        <Pressable onPress={() => router.push("/activity")}>
-          <Text>Activity</Text>
-        </Pressable>
-        <Pressable onPress={() => router.push("/reports")}>
-          <Text>Reports</Text>
-        </Pressable>
-        <Pressable onPress={() => router.push("/settings")}>
-          <Text>Settings</Text>
-        </Pressable>
-      </View>
       <TextInput style={styles.search} placeholder="Search items" value={q} onChangeText={setQ} />
       <Pressable onPress={() => setLowOnly((v) => !v)} style={styles.filterButton}>
         <Text>{lowOnly ? "Showing low stock only" : "Show all"}</Text>
@@ -43,6 +32,7 @@ export default function ItemsScreen() {
       <FlatList
         data={items ?? []}
         keyExtractor={(item) => item.id}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
         renderItem={({ item }) => (
           <Pressable style={styles.row} onPress={() => router.push(`/items/${item.id}`)}>
             <Text style={styles.rowName}>{item.name}</Text>
@@ -59,7 +49,6 @@ export default function ItemsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, gap: 8 },
-  headerLinks: { flexDirection: "row", justifyContent: "flex-end", gap: 12 },
   search: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 10 },
   filterButton: { padding: 8 },
   error: { color: "#c00" },

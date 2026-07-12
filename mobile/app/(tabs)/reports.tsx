@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { View, Text, Pressable, FlatList, StyleSheet } from "react-native";
 import { useQuery } from "@tanstack/react-query";
-import { fetchReports, formatMoney } from "../src/api/reports";
-import { adjacentMonthParam } from "../src/api/activity";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { fetchReports, formatMoney } from "../../src/api/reports";
+import { adjacentMonthParam } from "../../src/api/activity";
 
 export default function ReportsScreen() {
+  const insets = useSafeAreaInsets();
   const [month, setMonth] = useState<string | undefined>(undefined);
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, isRefetching, error, refetch } = useQuery({
     queryKey: ["reports", month],
     queryFn: () => fetchReports(month),
     staleTime: 30_000,
@@ -24,18 +26,24 @@ export default function ReportsScreen() {
   const cards: { label: string; value: string; negative?: boolean }[] = [
     { label: "Today's revenue", value: formatMoney(data.todayRevenue) },
     { label: `${data.monthLabel} revenue`, value: formatMoney(data.monthRevenue) },
+    { label: "Cash this month", value: formatMoney(data.monthCash) },
+    { label: "Interac this month", value: formatMoney(data.monthInterac) },
     { label: "Cost of goods sold", value: formatMoney(data.monthCogs) },
     { label: "Gross profit", value: formatMoney(data.monthProfit), negative: data.monthProfit < 0 },
     { label: "Restock cost", value: formatMoney(data.monthRestockCost) },
     { label: "Inventory valuation", value: formatMoney(data.inventoryValuation) },
   ];
 
+  const maxRevenue = Math.max(...data.revenueByDay.map((d) => d.revenue), 0.01);
+
   return (
     <FlatList
-      style={styles.container}
+      style={[styles.container, { paddingTop: insets.top }]}
       data={[]}
       keyExtractor={() => "x"}
       renderItem={null}
+      onRefresh={refetch}
+      refreshing={isRefetching}
       ListHeaderComponent={
         <View style={styles.content}>
           <View style={styles.header}>
@@ -62,9 +70,14 @@ export default function ReportsScreen() {
             <Text style={styles.empty}>No sales recorded this month.</Text>
           ) : (
             data.revenueByDay.map((d) => (
-              <View key={d.date} style={styles.row}>
-                <Text>{d.date}</Text>
-                <Text style={styles.rowValue}>{formatMoney(d.revenue)}</Text>
+              <View key={d.date} style={styles.chartRow}>
+                <Text style={styles.chartLabel}>{d.date.slice(5)}</Text>
+                <View style={styles.chartTrack}>
+                  <View
+                    style={[styles.chartBar, { width: `${Math.max(4, (d.revenue / maxRevenue) * 100)}%` }]}
+                  />
+                </View>
+                <Text style={styles.chartValue}>{formatMoney(d.revenue)}</Text>
               </View>
             ))
           )}
@@ -106,6 +119,11 @@ const styles = StyleSheet.create({
   negative: { color: "#c00" },
   sectionTitle: { fontWeight: "600", marginTop: 16 },
   empty: { color: "#666", fontSize: 13 },
+  chartRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4 },
+  chartLabel: { width: 48, fontSize: 11, color: "#666" },
+  chartTrack: { flex: 1, height: 8, backgroundColor: "#eee", borderRadius: 4, overflow: "hidden" },
+  chartBar: { height: "100%", backgroundColor: "#2563eb", borderRadius: 4 },
+  chartValue: { width: 64, textAlign: "right", fontSize: 11, fontWeight: "600" },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",

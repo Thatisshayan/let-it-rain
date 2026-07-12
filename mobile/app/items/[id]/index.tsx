@@ -1,11 +1,11 @@
-import { View, Text, FlatList, Pressable, StyleSheet } from "react-native";
+import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { fetchItem } from "../../../src/api/items";
 
 export default function ItemDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, isRefetching, error, refetch } = useQuery({
     queryKey: ["item", id],
     queryFn: () => fetchItem(id),
   });
@@ -31,6 +31,7 @@ export default function ItemDetailScreen() {
       <FlatList
         data={data.movements}
         keyExtractor={(m) => m.id}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
         renderItem={({ item: m }) => (
           <View style={styles.movementRow}>
             <Text>
@@ -40,6 +41,11 @@ export default function ItemDetailScreen() {
             <Text style={styles.movementMeta}>
               {m.user.name} · {new Date(m.createdAt).toLocaleString()}
             </Text>
+            {m.isSale && (m.cashAmount != null || m.interacAmount != null) && (
+              <Text style={styles.saleMeta}>
+                Sold for ${((m.cashAmount ?? 0) + (m.interacAmount ?? 0)).toFixed(2)} (${(m.cashAmount ?? 0).toFixed(2)} cash, ${(m.interacAmount ?? 0).toFixed(2)} Interac)
+              </Text>
+            )}
           </View>
         )}
       />
@@ -59,4 +65,5 @@ const styles = StyleSheet.create({
   sectionTitle: { fontWeight: "600", marginTop: 8 },
   movementRow: { paddingVertical: 8, borderBottomWidth: 1, borderColor: "#eee" },
   movementMeta: { color: "#666", fontSize: 12 },
+  saleMeta: { color: "#059669", fontSize: 12, marginTop: 2 },
 });

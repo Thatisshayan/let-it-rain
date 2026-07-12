@@ -1,8 +1,10 @@
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../src/api/AuthContext";
 
 export default function SettingsScreen() {
+  const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
   const canManageUsers = user?.permissions.includes("MANAGE_USERS");
 
@@ -15,7 +17,7 @@ export default function SettingsScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
       {canManageUsers ? (
         <Pressable style={styles.row} onPress={() => router.push("/settings/users")}>
           <Text style={styles.rowText}>Users</Text>

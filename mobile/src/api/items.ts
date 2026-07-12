@@ -18,6 +18,8 @@ export type Movement = {
   quantityAfter: number;
   reason: string | null;
   isSale: boolean;
+  cashAmount: number | null;
+  interacAmount: number | null;
   createdAt: string;
   user: { name: string };
 };
@@ -66,7 +68,7 @@ export async function adjustStock(
   id: string,
   input:
     | { type: "RECEIVE"; amount: number; unitCost?: number; reason?: string }
-    | { type: "REMOVE"; amount: number; isSale?: boolean; reason?: string }
+    | { type: "REMOVE"; amount: number; cashAmount?: number; interacAmount?: number; reason?: string }
     | { type: "ADJUST"; counted: number; reason?: string }
 ): Promise<{ ok: true }> {
   return apiFetch(`/api/v1/items/${id}/movements`, { method: "POST", body: JSON.stringify(input) });

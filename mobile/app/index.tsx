@@ -14,5 +14,5 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={user ? "/items" : "/login"} />;
+  return <Redirect href={user ? "/dashboard" : "/login"} />;
 }
