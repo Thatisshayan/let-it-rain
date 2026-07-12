@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { View, TextInput, Text, Pressable, StyleSheet } from "react-native";
 import { router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { login } from "../src/api/auth";
 import { useAuth } from "../src/api/AuthContext";
 import { ApiError } from "../src/api/client";
@@ -27,7 +28,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Let It Rain</Text>
       <TextInput
         style={styles.input}
@@ -48,7 +49,7 @@ export default function LoginScreen() {
       <Pressable style={styles.button} onPress={onSubmit} disabled={loading}>
         <Text style={styles.buttonText}>{loading ? "Signing in..." : "Sign in"}</Text>
       </Pressable>
-    </View>
+    </SafeAreaView>
   );
 }
 

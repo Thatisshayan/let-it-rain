@@ -1,5 +1,6 @@
-import { View, ActivityIndicator } from "react-native";
+import { ActivityIndicator } from "react-native";
 import { Redirect } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../src/api/AuthContext";
 
 export default function Index() {
@@ -7,9 +8,9 @@ export default function Index() {
 
   if (isBootstrapping) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+      <SafeAreaView style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator />
-      </View>
+      </SafeAreaView>
     );
   }
 

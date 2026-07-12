@@ -2,18 +2,20 @@ import { useState } from "react";
 import { View, TextInput, FlatList, Text, Pressable, StyleSheet } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchItems } from "../../src/api/items";
 
 export default function ItemsScreen() {
   const [q, setQ] = useState("");
   const [lowOnly, setLowOnly] = useState(false);
+  const insets = useSafeAreaInsets();
   const { data: items, isLoading, error, refetch } = useQuery({
     queryKey: ["items", q, lowOnly],
     queryFn: () => fetchItems({ q, low: lowOnly }),
   });
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
       <View style={styles.headerLinks}>
         <Pressable onPress={() => router.push("/activity")}>
           <Text>Activity</Text>
