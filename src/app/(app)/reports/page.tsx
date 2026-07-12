@@ -105,7 +105,7 @@ export default async function ReportsPage({
   const byDay = revenueByDay(monthSales);
   const byItem = salesByItem(monthSales);
 
-  const daysWithSales = [...byDay.entries()].sort(([a], [b]) => (a < b ? 1 : -1));
+  const daysWithSales = [...byDay.entries()].sort(([a], [b]) => (a < b ? 1 : a > b ? -1 : 0));
 
   return (
     <div className="space-y-6">

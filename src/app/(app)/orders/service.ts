@@ -66,6 +66,11 @@ export async function assignDriver(
     return { ok: false, error: "Can't reassign a completed or cancelled order." };
   }
 
+  if (input.driverId) {
+    const driver = await prisma.user.findUnique({ where: { id: input.driverId }, select: { id: true } });
+    if (!driver) return { ok: false, error: "Driver not found." };
+  }
+
   await prisma.order.update({ where: { id: orderId }, data: { driverId: input.driverId } });
 
   await writeAuditLog({
@@ -192,7 +197,7 @@ export async function markDelivered(
     } catch (err) {
       const isSerializationFailure =
         err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034";
-      if (!isSerializationFailure || attempt === MAX_SERIALIZATION_RETRIES - 1) {
+      if (!isSerializationFailure) {
         throw err;
       }
     }
@@ -206,29 +211,49 @@ export async function cancelOrder(session: SessionPayload, orderId: string): Pro
     return { ok: false, error: "You don't have permission to cancel orders." };
   }
 
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
-  if (!order) return { ok: false, error: "Order not found." };
-  if (order.status === "DELIVERED" || order.status === "CANCELLED") {
-    return { ok: false, error: "This order is already completed or cancelled." };
+  for (let attempt = 0; attempt < MAX_SERIALIZATION_RETRIES; attempt++) {
+    try {
+      const result = await prisma.$transaction(
+        async (tx) => {
+          const order = await tx.order.findUnique({ where: { id: orderId } });
+          if (!order) return { error: "Order not found." } as const;
+          if (order.status === "DELIVERED" || order.status === "CANCELLED") {
+            return { error: "This order is already completed or cancelled." } as const;
+          }
+
+          await tx.order.update({
+            where: { id: orderId },
+            data: {
+              status: "CANCELLED",
+              cancelledAt: new Date(),
+              cancelledById: session.userId,
+            },
+          });
+
+          await tx.auditLog.create({
+            data: {
+              actorId: session.userId,
+              action: "ORDER_CANCELLED",
+              orderId,
+              detail: `Cancelled order for ${order.customerName}`,
+            },
+          });
+
+          return { error: undefined } as const;
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+      );
+
+      if (result.error) return { ok: false, error: result.error };
+      return { ok: true };
+    } catch (err) {
+      const isSerializationFailure =
+        err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034";
+      if (!isSerializationFailure) throw err;
+    }
   }
 
-  await prisma.order.update({
-    where: { id: orderId },
-    data: {
-      status: "CANCELLED",
-      cancelledAt: new Date(),
-      cancelledById: session.userId,
-    },
-  });
-
-  await writeAuditLog({
-    actor: session,
-    action: "ORDER_CANCELLED",
-    orderId,
-    detail: `Cancelled order for ${order.customerName}`,
-  });
-
-  return { ok: true };
+  return { ok: false, error: "Could not cancel order, please try again." };
 }
 
 export async function listOrders(session: SessionPayload) {

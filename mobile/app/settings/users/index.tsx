@@ -8,7 +8,7 @@ import { hasPermission } from "../../../src/lib/permissions";
 
 export default function UsersScreen() {
   const theme = useTheme();
-  const { session } = useAuth();
+  const { user: session } = useAuth();
   const canManageUsers = hasPermission(session, "MANAGE_USERS");
 
   const { data: users, isLoading, error, refetch } = useQuery({

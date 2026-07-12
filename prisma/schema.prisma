@@ -76,6 +76,7 @@ model Movement {
   createdAt DateTime     @default(now())
 
   @@index([itemId])
+  @@index([userId])
   @@index([createdAt])
   @@index([isSale, createdAt])
 }
@@ -108,6 +109,7 @@ model Order {
   deliveredAt      DateTime?
 
   @@index([status])
+  @@index([createdById])
   @@index([driverId])
   @@index([cancelledById])
 }
@@ -121,6 +123,7 @@ model OrderLineItem {
   quantity Int
 
   @@index([orderId])
+  @@index([itemId])
 }
 
 model AuditLog {
@@ -146,5 +149,4 @@ model AppConfig {
   businessName    String?
   defaultLowStock Int    @default(0)
 
-  @@unique([id])
 }

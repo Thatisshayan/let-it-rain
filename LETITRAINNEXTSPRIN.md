@@ -118,6 +118,28 @@ In TestFlight review. See root `README.md`/`docs/API.md` for what's live.
 ---
 
 ## Phase 3 — Owner analytics
+- [ ] 🔴 **Revoke sessions on password change/reset** — increment `tokenVersion` in both
+      password mutation paths so the revocation model already in the app actually
+      applies after credentials change.
+- [ ] 🔴 **Add tests for password-change session invalidation** — prove both admin reset
+      and self-service password change revoke old JWTs on web and mobile.
+- [ ] 🔴 **Decide and implement audit-log failure semantics** — either make audit writes
+      transactional with the main mutation or explicitly best-effort/non-fatal, but do
+      not leave the current half-in/half-out behavior in place.
+- [ ] 🟠 **Update Prisma's default permission set** — sync `User.permissions` default in
+      `prisma/schema.prisma` with the canonical list in `src/lib/permissions.ts`.
+- [ ] 🟠 **Backfill existing users for new permissions** — make sure seeded/admin users
+      and any existing accounts get `VIEW_AUDIT_LOG` / `MANAGE_SETTINGS` where intended.
+- [ ] 🟠 **Fix the mobile Vitest + React Native parsing issue** — stop importing raw
+      `react-native` Flow syntax into the Node test runtime.
+- [ ] 🟠 **Add failure-path tests for audit logging** — verify what happens when audit
+      persistence fails so regressions are explicit instead of accidental.
+- [ ] 🟠 **Centralize mutation + audit behavior** — reduce the chance that future write
+      paths mutate data without the intended audit trail or transactional wrapper.
+- [ ] 🟡 **Add CI gating for root and mobile test suites** — run both suites separately so
+      the broken mobile test pipeline cannot hide behind a passing root suite.
+- [ ] 🟡 **Audit production rate-limit configuration** — ensure the in-memory fallback is
+      never relied on in a multi-instance deployment unless that tradeoff is deliberate.
 
 - [ ] 🟠 **Reorder suggestions** — avg weekly consumption from existing Movement data,
       next to the low-stock badge. Zero schema, prevents stockouts. Highest ROI item in

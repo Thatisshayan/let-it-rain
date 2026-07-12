@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -55,12 +56,14 @@ function PermissionCheckboxes({ defaultPermissions }: { defaultPermissions: Perm
 
 function CreateUserDialog() {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     async (prev, formData) => {
       const result = await createUserAction(prev, formData);
       if (result.success) {
         toast.success(result.success);
         setOpen(false);
+        router.refresh();
       }
       return result;
     },
@@ -105,10 +108,14 @@ function CreateUserDialog() {
 
 function EditUserDialog({ user }: { user: UserRow }) {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
   const [permState, permAction, permPending] = useActionState<ActionState, FormData>(
     async (prev, formData) => {
       const result = await updateUserPermissionsAction(user.id, prev, formData);
-      if (result.success) toast.success(result.success);
+      if (result.success) {
+        toast.success(result.success);
+        router.refresh();
+      }
       return result;
     },
     initialState
@@ -162,6 +169,7 @@ function EditUserDialog({ user }: { user: UserRow }) {
 
 function DeactivateButton({ user }: { user: UserRow }) {
   const [pending, setPending] = useState(false);
+  const router = useRouter();
 
   return (
     <Button
@@ -171,8 +179,9 @@ function DeactivateButton({ user }: { user: UserRow }) {
       onClick={async () => {
         setPending(true);
         const result = await setUserActiveAction(user.id, !user.active);
-        setPending(false);
         if (result.error) toast.error(result.error);
+        else router.refresh();
+        setPending(false);
       }}
     >
       {user.active ? "Deactivate" : "Reactivate"}

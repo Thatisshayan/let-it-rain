@@ -13,7 +13,7 @@ export default function DashboardScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
-  const { session } = useAuth();
+  const { user: session } = useAuth();
 
   const canViewReports = hasPermission(session, "VIEW_REPORTS");
 

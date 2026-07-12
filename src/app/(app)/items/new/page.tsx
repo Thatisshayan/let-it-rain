@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
@@ -5,6 +6,7 @@ import { NewItemForm } from "./new-item-form";
 
 export default async function NewItemPage() {
   const session = await getSession();
+  if (!hasPermission(session, "EDIT_ITEMS")) redirect("/items");
   const canViewCosts = hasPermission(session, "VIEW_COSTS");
 
   const distinctCategories = await prisma.item.findMany({

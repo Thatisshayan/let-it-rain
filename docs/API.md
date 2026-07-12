@@ -445,6 +445,10 @@ the `:id` is taken from `session.userId`). Same effect as the admin endpoint abo
 caller-side: it powers the "Sign out everywhere" button in Account settings. Always
 returns `200`.
 
+---
+
+## Users
+
 ### `GET /api/v1/users`
 
 Requires `MANAGE_USERS`.

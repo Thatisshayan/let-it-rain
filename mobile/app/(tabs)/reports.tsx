@@ -11,7 +11,7 @@ import { hasPermission } from "../../src/lib/permissions";
 export default function ReportsScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { session } = useAuth();
+  const { user: session } = useAuth();
   const [month, setMonth] = useState<string | undefined>(undefined);
 
   const canViewReports = hasPermission(session, "VIEW_REPORTS");

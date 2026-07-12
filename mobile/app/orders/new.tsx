@@ -15,7 +15,7 @@ let rowKey = 0;
 export default function NewOrderScreen() {
   const theme = useTheme();
   const queryClient = useQueryClient();
-  const { session } = useAuth();
+  const { user: session } = useAuth();
   const canManageOrders = hasPermission(session, "MANAGE_ORDERS");
 
   const { data: items } = useQuery({ queryKey: ["items", "", false], queryFn: () => fetchItems() });

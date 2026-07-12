@@ -171,7 +171,7 @@ export async function adjustStock(
     } catch (err) {
       const isSerializationFailure =
         err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034";
-      if (!isSerializationFailure || attempt === MAX_SERIALIZATION_RETRIES - 1) {
+      if (!isSerializationFailure) {
         throw err;
       }
     }

@@ -12,7 +12,7 @@ import { hasPermission } from "../../../src/lib/permissions";
 
 export default function EditItemScreen() {
   const theme = useTheme();
-  const { session } = useAuth();
+  const { user: session } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data, isLoading, error: loadError } = useQuery({
     queryKey: ["item", id],

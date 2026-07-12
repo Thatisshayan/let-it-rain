@@ -12,7 +12,7 @@ import { hasPermission } from "../../src/lib/permissions";
 
 export default function NewItemScreen() {
   const theme = useTheme();
-  const { session } = useAuth();
+  const { user: session } = useAuth();
   const toast = useToast();
   const [name, setName] = useState("");
   const [minStock, setMinStock] = useState("0");

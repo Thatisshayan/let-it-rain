@@ -6,6 +6,19 @@ vi.mock("@/lib/prisma", () => ({
     order: { findUnique: vi.fn(), update: vi.fn() },
     user: { findUnique: vi.fn() },
     auditLog: { create: vi.fn() },
+    $transaction: vi.fn(async (fn: any) =>
+      fn({
+        order: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: "o1",
+            customerName: "Acme",
+            status: "PENDING",
+          }),
+          update: vi.fn(),
+        },
+        auditLog: { create: vi.fn() },
+      })
+    ),
   },
 }));
 
@@ -48,8 +61,6 @@ describe("POST /api/v1/orders/:id/cancel", () => {
   });
 
   it("cancels with CANCEL_ORDERS", async () => {
-    (prisma.order.findUnique as any).mockResolvedValue({ id: "o1", status: "PENDING" });
-    (prisma.order.update as any).mockResolvedValue({});
     const token = await tokenFor(["CANCEL_ORDERS"]);
     const res = await POST(
       new Request("http://localhost/api/v1/orders/o1/cancel", {

@@ -57,6 +57,7 @@ export async function revokeOwnSessions(): Promise<{ ok: true }> {
 
 export const ALL_PERMISSIONS = [
   "MANAGE_USERS",
+  "MANAGE_ORDERS",
   "DELETE_ITEMS",
   "EDIT_ITEMS",
   "ADJUST_STOCK",

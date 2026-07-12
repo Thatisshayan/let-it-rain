@@ -4,13 +4,14 @@ import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { createUser, ALL_PERMISSIONS } from "../../../src/api/settings";
 import { ApiError } from "../../../src/api/client";
+import { useToast } from "../../../src/toast";
 import { useTheme } from "../../../src/theme";
 import { useAuth } from "../../../src/api/AuthContext";
 import { hasPermission } from "../../../src/lib/permissions";
 
 export default function NewUserScreen() {
   const theme = useTheme();
-  const { session } = useAuth();
+  const { user: session } = useAuth();
   const canManageUsers = hasPermission(session, "MANAGE_USERS");
   const toast = useToast();
   const [name, setName] = useState("");

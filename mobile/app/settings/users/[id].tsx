@@ -19,8 +19,8 @@ type TargetUser = { id: string; name: string; email: string; active: boolean; pe
 export default function UserDetailScreen() {
   const theme = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { user: currentUser, session } = useAuth();
-  const canManageUsers = hasPermission(session, "MANAGE_USERS");
+  const { user: currentUser } = useAuth();
+  const canManageUsers = hasPermission(currentUser, "MANAGE_USERS");
   const { data: users, isLoading, error: loadError, refetch } = useQuery({
     queryKey: ["users"],
     queryFn: fetchUsers,

@@ -64,12 +64,11 @@ export default async function UserDetailPage({
               </span>
             </div>
             <div className="flex gap-2">
-              <Link
-                href={`/api/v1/users/${user.id}/revoke-sessions`}
-                className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-              >
-                Sign out everywhere
-              </Link>
+              <form method="POST" action={`/api/v1/users/${user.id}/revoke-sessions`}>
+                <button type="submit" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+                  Sign out everywhere
+                </button>
+              </form>
             </div>
           </div>
 

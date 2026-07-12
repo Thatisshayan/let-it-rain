@@ -38,11 +38,15 @@ echo "Size: $(numfmt --to=iec $SIZE 2>/dev/null || echo $SIZE bytes)"
 
 if [ -n "${BACKUP_BUCKET_URL:-}" ]; then
   echo "Uploading to backup bucket..."
-  curl -X PUT \
+  if curl -X PUT \
     -H "Content-Type: application/gzip" \
     --data-binary "@${BACKUP_DIR}/${FILENAME}" \
-    "${BACKUP_BUCKET_URL}/${FILENAME}"
-  echo "Upload complete."
+    "${BACKUP_BUCKET_URL}/${FILENAME}"; then
+    echo "Upload complete."
+  else
+    echo "ERROR: Upload failed. Backup file remains at ${BACKUP_DIR}/${FILENAME}." >&2
+    exit 1
+  fi
 fi
 
 echo "Cleaning up backups older than ${RETENTION_DAYS} days..."

@@ -37,7 +37,7 @@ export default function () {
     const item = items[Math.floor(Math.random() * items.length)];
     const movRes = http.post(
       `${BASE_URL}/api/v1/items/${item.id}/movements`,
-      JSON.stringify({ type: "RECEIVE", delta: 1 }),
+      JSON.stringify({ type: "RECEIVE", amount: 1 }),
       { headers: HEADERS }
     );
     check(movRes, {
