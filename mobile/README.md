@@ -249,7 +249,7 @@ that made the manual route necessary).
    URL (`https://letitrain-jade.vercel.app`) — required because iOS App Transport
    Security blocks plain `http://` requests in a standalone (non-Expo-Go) build.
 2. **EAS project is linked.** `app.json`'s `extra.eas.projectId` and `owner` are set
-   (`obsidianstudio/letitrain-mobile`).
+   (`obsidianmedia/letitrain-mobile`).
 3. **Bundle identifier** (`ios.bundleIdentifier`: `com.letitrain.mobile`) matches the app
    record in [App Store Connect](https://appstoreconnect.apple.com/) (App ID `6790051300`).
 4. `ios.buildNumber`, `android.package`, `android.versionCode` are set in `app.json`, and
