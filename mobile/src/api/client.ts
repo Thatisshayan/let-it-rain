@@ -1,5 +1,6 @@
 import * as SecureStore from "expo-secure-store";
 import { router } from "expo-router";
+import * as Sentry from "@sentry/react-native";
 
 const TOKEN_KEY = "litr_token";
 const FACE_ID_ENABLED_KEY = "litr_face_id_enabled";
@@ -62,6 +63,11 @@ async function authedFetch(path: string, init?: RequestInit): Promise<Response> 
       },
     });
   } catch (err) {
+    Sentry.addBreadcrumb({
+      category: "api",
+      message: `Connectivity error for ${path}: ${err instanceof Error ? err.message : "unknown"}`,
+      level: "error",
+    });
     if (err instanceof Error && err.name === "AbortError") {
       throw new ApiError(0, "The request timed out. Check your connection and try again.");
     }
@@ -83,8 +89,20 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   }
 
   if (!res.ok) {
+    Sentry.addBreadcrumb({
+      category: "api",
+      message: `${init?.method ?? "GET"} ${path} → ${res.status}`,
+      level: "error",
+      data: { body, status: res.status },
+    });
     throw new ApiError(res.status, body.error ?? "Something went wrong.");
   }
+
+  Sentry.addBreadcrumb({
+    category: "api",
+    message: `${init?.method ?? "GET"} ${path} → ${res.status}`,
+    level: "info",
+  });
 
   return body as T;
 }

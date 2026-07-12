@@ -20,7 +20,8 @@
         "resourceClass": "m-medium"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://letitrain-jade.vercel.app"
+        "EXPO_PUBLIC_API_BASE_URL": "https://letitrain-jade.vercel.app",
+        "EXPO_PUBLIC_APP_ENVIRONMENT": "preview"
       }
     },
     "production": {
@@ -29,7 +30,8 @@
         "resourceClass": "m-medium"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://letitrain-jade.vercel.app"
+        "EXPO_PUBLIC_API_BASE_URL": "https://letitrain-jade.vercel.app",
+        "EXPO_PUBLIC_APP_ENVIRONMENT": "production"
       }
     }
   },

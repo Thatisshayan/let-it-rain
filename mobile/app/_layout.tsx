@@ -8,6 +8,9 @@ import { AuthGate } from "../src/api/AuthGate";
 import { ToastProvider, useToast } from "../src/toast";
 import { useTheme } from "../src/theme";
 import { startOrderQueueAutoFlush, stopOrderQueueAutoFlush } from "../src/offlineQueue";
+import { initSentry } from "../src/sentry";
+
+initSentry();
 
 const queryClient = new QueryClient();
 

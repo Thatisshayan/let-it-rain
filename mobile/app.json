@@ -33,7 +33,8 @@
       "expo-router",
       "expo-secure-store",
       "expo-status-bar",
-      "expo-sharing"
+      "expo-sharing",
+      "sentry-expo"
     ],
     "scheme": "letitrain",
     "extra": {
