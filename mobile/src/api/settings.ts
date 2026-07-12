@@ -51,4 +51,10 @@ export async function changeOwnPassword(currentPassword: string, newPassword: st
   });
 }
 
-export const ALL_PERMISSIONS = ["MANAGE_USERS", "DELETE_ITEMS", "EDIT_ITEMS", "ADJUST_STOCK"] as const;
+export const ALL_PERMISSIONS = [
+  "MANAGE_USERS",
+  "DELETE_ITEMS",
+  "EDIT_ITEMS",
+  "ADJUST_STOCK",
+  "MANAGE_ORDERS",
+] as const;
