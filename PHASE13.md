@@ -6,10 +6,40 @@ touching code. Do not re-derive architecture decisions already made here — fol
 and only deviate if you find a concrete correctness problem, in which case stop and
 flag it rather than silently going a different direction.
 
-**Do not start this work on `master`.** Create a dedicated branch (e.g.
-`phase-13-saas-foundation`) and work there. This phase touches nearly every query in
-the codebase; it must be reviewable as a coherent diff, not mixed into unrelated
-commits.
+**Do not start this work on `master`.** Each sub-phase (13a, 13b, 13c, 13d) gets its
+**own branch**, branched from `master` (or from the previous sub-phase's branch after
+it has merged — not from an unmerged in-progress branch), e.g.:
+- `phase-13a-saas-foundation`
+- `phase-13b-saas-org-auth`
+- `phase-13c-saas-selfserve-start`
+- `phase-13d-saas-billing`
+
+Do not combine multiple sub-phases into one branch, even if it feels efficient — each
+sub-phase has its own acceptance criteria (see `PHASE13ACCEPTANCELIST.md`) and must be
+reviewable and mergeable independently. This phase touches nearly every query in the
+codebase; each sub-phase must land as a coherent, independently-verifiable diff, not
+mixed into unrelated commits or bundled with the next sub-phase's work.
+
+**Full checklist lives in a separate file:** `PHASE13ACCEPTANCELIST.md` (repo root) is
+the authoritative, checkable acceptance-criteria list for every sub-phase. This
+document (`PHASE13.md`) is the narrative spec/context; that file is what you actually
+check off. Do not consider a sub-phase done based on this document's prose
+"acceptance criteria" summaries alone — the full checklist in
+`PHASE13ACCEPTANCELIST.md` governs.
+
+### Branching & completion reporting
+
+For every sub-phase, before merging its branch to `master`:
+1. Every box in that sub-phase's section of `PHASE13ACCEPTANCELIST.md` is checked and
+   actually verified true (tests run and passing, not assumed).
+2. A dated "Completion Report" section — same format as Phase 0/1/11's reports
+   already in `LETITRAINNEXTSPRIN.md` (summary table, new/modified files,
+   verification results, notes/open items) — is appended to **all three** of:
+   - `PHASE13.md` (this file)
+   - `LETITRAINNEXTSPRIN.md`
+   - `PHASE13ACCEPTANCELIST.md`
+3. Only then does the branch get merged, and only then does the next sub-phase's
+   branch get started.
 
 ---
 
@@ -305,14 +335,16 @@ Follow the same discipline already established by Phase 0/1/2/11 in this codebas
 
 ## 7. Suggested execution order
 
-1. `13a` in full (schema, migration, session, exhaustive query-scoping pass,
-   cross-org test suite) — commit and verify as its own unit before moving on, same
-   pattern as every other phase in this codebase (Phase 2's incremental
-   backend→web→mobile commit-and-verify rhythm is the model to follow).
-2. `13b` — org-aware login + service-layer consistency pass.
-3. `13c` — org creation flow, org-level settings, CI-integrated safety tests.
-4. **Stop.** Do not proceed to `13d` without checking back in — it's gated on a real
-   trigger event, not on 13c simply being finished.
+1. `13a` on its own branch (`phase-13a-saas-foundation`): schema, migration, session,
+   exhaustive query-scoping pass, cross-org test suite. Check every box in
+   `PHASE13ACCEPTANCELIST.md`'s 13a section, write the three completion reports (§6
+   above), merge.
+2. `13b` on its own branch, started fresh from `master` after 13a merges. Same
+   check-report-merge discipline.
+3. `13c` on its own branch, same discipline.
+4. **Stop.** Do not start `13d`'s branch without checking back in — it's gated on a
+   real trigger event (recorded in `PHASE13ACCEPTANCELIST.md`'s 13d section), not on
+   13c simply being finished.
 
 ---
 
@@ -324,6 +356,12 @@ findings against real files/grep rather than assuming, commit each verified chun
 separately with a clear message, and write a completion report (see
 `LETITRAINNEXTSPRIN.md`'s "Phase 1 — Completion Report" section as the template) at
 the end summarizing what shipped, what files changed, and what was explicitly
-deferred. Follow that same pattern here — append your own "Phase 13 — Completion
-Report" section to this file (`PHASE13.md`) when each sub-phase finishes, rather than
-only reporting back informally.
+deferred. Follow that same pattern here — write that completion report **three
+times** (once each into `PHASE13.md`, `LETITRAINNEXTSPRIN.md`, and
+`PHASE13ACCEPTANCELIST.md`, per §"Branching & completion reporting" above) for every
+sub-phase, rather than only reporting back informally.
+
+If you are picking this up as a fresh agent with no prior context on this repo, also
+read `PHASE13_INIT.md` (repo root) first — it's a condensed technical onboarding doc
+written specifically to get you productive on this codebase without needing to
+re-explore it from scratch.
