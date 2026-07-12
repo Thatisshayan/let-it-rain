@@ -30,6 +30,7 @@ type DecodedToken = {
   email: string;
   name: string;
   permissions: string[];
+  tokenVersion?: number;
   exp?: number;
 };
 

@@ -43,6 +43,7 @@ export async function loginAction(
     email: result.user.email,
     name: result.user.name,
     permissions: result.user.permissions,
+    tokenVersion: result.user.tokenVersion,
   });
   redirect("/");
 }

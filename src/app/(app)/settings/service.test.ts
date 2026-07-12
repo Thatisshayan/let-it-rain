@@ -27,6 +27,7 @@ const admin = {
   email: "admin@x.com",
   name: "Admin",
   permissions: ["MANAGE_USERS"],
+  tokenVersion: 0,
 };
 
 beforeEach(() => vi.clearAllMocks());

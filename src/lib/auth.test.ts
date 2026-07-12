@@ -40,6 +40,7 @@ describe("verifyBearerToken", () => {
       name: "Ada",
       permissions: ["EDIT_ITEMS"],
       active: true,
+      tokenVersion: 0,
     });
     const secret = new TextEncoder().encode(process.env.SESSION_SECRET);
     const token = await new SignJWT({
@@ -47,6 +48,7 @@ describe("verifyBearerToken", () => {
       email: "a@b.com",
       name: "Ada",
       permissions: ["EDIT_ITEMS"],
+      tokenVersion: 0,
     })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
@@ -71,6 +73,7 @@ describe("verifyBearerToken", () => {
       name: "Ada",
       permissions: [], // revoked since the token was issued
       active: true,
+      tokenVersion: 0,
     });
     const secret = new TextEncoder().encode(process.env.SESSION_SECRET);
     const token = await new SignJWT({
@@ -78,6 +81,7 @@ describe("verifyBearerToken", () => {
       email: "a@b.com",
       name: "Ada",
       permissions: ["EDIT_ITEMS"],
+      tokenVersion: 0,
     })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
@@ -95,6 +99,7 @@ describe("verifyBearerToken", () => {
       name: "Ada",
       permissions: ["EDIT_ITEMS"],
       active: false,
+      tokenVersion: 0,
     });
     const secret = new TextEncoder().encode(process.env.SESSION_SECRET);
     const token = await new SignJWT({
@@ -102,6 +107,7 @@ describe("verifyBearerToken", () => {
       email: "a@b.com",
       name: "Ada",
       permissions: ["EDIT_ITEMS"],
+      tokenVersion: 0,
     })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
@@ -119,6 +125,32 @@ describe("verifyBearerToken", () => {
       email: "a@b.com",
       name: "Ada",
       permissions: ["EDIT_ITEMS"],
+      tokenVersion: 0,
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setIssuedAt()
+      .setExpirationTime("30d")
+      .sign(secret);
+
+    expect(await verifyBearerToken(makeRequest(`Bearer ${token}`))).toBeNull();
+  });
+
+  it("returns null when tokenVersion has been revoked (sign-out-everywhere)", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      name: "Ada",
+      permissions: ["EDIT_ITEMS"],
+      active: true,
+      tokenVersion: 1, // token was issued with version 0
+    });
+    const secret = new TextEncoder().encode(process.env.SESSION_SECRET);
+    const token = await new SignJWT({
+      userId: "u1",
+      email: "a@b.com",
+      name: "Ada",
+      permissions: ["EDIT_ITEMS"],
+      tokenVersion: 0,
     })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()

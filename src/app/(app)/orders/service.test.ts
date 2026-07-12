@@ -26,12 +26,14 @@ const manager = {
   email: "manager@b.com",
   name: "Manager",
   permissions: ["CREATE_ORDERS", "ASSIGN_DRIVERS", "CANCEL_ORDERS"],
+  tokenVersion: 0,
 };
 const driver = {
   userId: "u2",
   email: "driver@b.com",
   name: "Driver",
   permissions: [] as string[],
+  tokenVersion: 0,
 };
 
 beforeEach(() => vi.clearAllMocks());

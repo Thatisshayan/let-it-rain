@@ -30,6 +30,7 @@ export async function POST(req: Request) {
     email: result.user.email,
     name: result.user.name,
     permissions: result.user.permissions,
+    tokenVersion: result.user.tokenVersion,
   });
 
   return NextResponse.json({ token, user: result.user });

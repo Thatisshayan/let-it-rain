@@ -13,7 +13,7 @@ export const LOGIN_IP_WINDOW_MS = 15 * 60 * 1000;
 export type LoginResult =
   | {
       ok: true;
-      user: { id: string; email: string; name: string; permissions: string[] };
+      user: { id: string; email: string; name: string; permissions: string[]; tokenVersion: number };
     }
   | { ok: false; error: string; status: 401 | 429 };
 
@@ -59,6 +59,6 @@ export async function attemptLogin(
 
   return {
     ok: true,
-    user: { id: user.id, email: user.email, name: user.name, permissions: user.permissions },
+    user: { id: user.id, email: user.email, name: user.name, permissions: user.permissions, tokenVersion: user.tokenVersion },
   };
 }

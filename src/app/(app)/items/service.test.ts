@@ -16,6 +16,7 @@ const session = {
   email: "a@b.com",
   name: "Ada",
   permissions: ["EDIT_ITEMS", "DELETE_ITEMS", "ADJUST_STOCK"],
+  tokenVersion: 0,
 };
 
 beforeEach(() => vi.clearAllMocks());
