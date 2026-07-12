@@ -1,8 +1,10 @@
 import { Stack } from "expo-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider } from "../src/api/AuthContext";
 import { AuthGate } from "../src/api/AuthGate";
+import { ToastProvider } from "../src/toast";
 import { useTheme } from "../src/theme";
 
 const queryClient = new QueryClient();
@@ -34,14 +36,18 @@ function ThemedStack() {
 
 export default function RootLayout() {
   return (
-    <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <AuthGate>
-            <ThemedStack />
-          </AuthGate>
-        </AuthProvider>
-      </QueryClientProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <AuthGate>
+              <ToastProvider>
+                <ThemedStack />
+              </ToastProvider>
+            </AuthGate>
+          </AuthProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

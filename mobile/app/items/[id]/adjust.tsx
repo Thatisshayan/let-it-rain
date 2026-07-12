@@ -2,14 +2,17 @@ import { useMemo, useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
+import * as Haptics from "expo-haptics";
 import { adjustStock } from "../../../src/api/items";
 import { ApiError } from "../../../src/api/client";
 import { useTheme } from "../../../src/theme";
+import { useToast } from "../../../src/toast";
 
 const TYPES = ["RECEIVE", "REMOVE", "ADJUST"] as const;
 
 export default function AdjustStockScreen() {
   const theme = useTheme();
+  const toast = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [type, setType] = useState<(typeof TYPES)[number]>("RECEIVE");
   const [amount, setAmount] = useState("");
@@ -49,8 +52,11 @@ export default function AdjustStockScreen() {
       }
       await queryClient.invalidateQueries({ queryKey: ["item", id] });
       await queryClient.invalidateQueries({ queryKey: ["items"] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      toast.show("Stock adjusted");
       router.back();
     } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError(err instanceof ApiError ? err.message : "Could not save.");
     } finally {
       setSubmitting(false);

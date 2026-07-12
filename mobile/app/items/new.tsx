@@ -2,12 +2,15 @@ import { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
+import * as Haptics from "expo-haptics";
 import { createItem } from "../../src/api/items";
 import { ApiError } from "../../src/api/client";
 import { useTheme } from "../../src/theme";
+import { useToast } from "../../src/toast";
 
 export default function NewItemScreen() {
   const theme = useTheme();
+  const toast = useToast();
   const [name, setName] = useState("");
   const [minStock, setMinStock] = useState("0");
   const [initialQuantity, setInitialQuantity] = useState("0");
@@ -29,8 +32,11 @@ export default function NewItemScreen() {
         unitPrice: Number(unitPrice) || 0,
       });
       await queryClient.invalidateQueries({ queryKey: ["items"] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      toast.show("Item created");
       router.replace(`/items/${itemId}`);
     } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError(err instanceof ApiError ? err.message : "Could not create item.");
     } finally {
       setSubmitting(false);

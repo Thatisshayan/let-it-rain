@@ -2,9 +2,11 @@ import { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import * as Haptics from "expo-haptics";
 import { fetchItem, updateItem } from "../../../src/api/items";
 import { ApiError } from "../../../src/api/client";
 import { useTheme } from "../../../src/theme";
+import { useToast } from "../../../src/toast";
 
 export default function EditItemScreen() {
   const theme = useTheme();
@@ -34,6 +36,7 @@ function EditItemForm({
   item: { name: string; minStock: number; unitCost: number; unitPrice: number };
 }) {
   const theme = useTheme();
+  const toast = useToast();
   const [name, setName] = useState(item.name);
   const [minStock, setMinStock] = useState(String(item.minStock));
   const [unitCost, setUnitCost] = useState(String(item.unitCost));
@@ -54,8 +57,11 @@ function EditItemForm({
       });
       await queryClient.invalidateQueries({ queryKey: ["item", id] });
       await queryClient.invalidateQueries({ queryKey: ["items"] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      toast.show("Item updated");
       router.back();
     } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError(err instanceof ApiError ? err.message : "Could not save changes.");
     } finally {
       setSubmitting(false);

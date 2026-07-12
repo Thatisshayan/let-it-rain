@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
+import * as Haptics from "expo-haptics";
 import { updateOwnProfile, changeOwnPassword } from "../../src/api/settings";
 import { ApiError } from "../../src/api/client";
 import { useAuth } from "../../src/api/AuthContext";
@@ -28,7 +29,9 @@ function AccountForm({ initialName }: { initialName: string }) {
     try {
       await updateOwnProfile(name);
       setNameSuccess("Name updated.");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setNameError(err instanceof ApiError ? err.message : "Could not update name.");
     }
   }
@@ -41,7 +44,9 @@ function AccountForm({ initialName }: { initialName: string }) {
       setCurrentPassword("");
       setNewPassword("");
       setPasswordSuccess("Password changed.");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setPasswordError(err instanceof ApiError ? err.message : "Could not change password.");
     }
   }

@@ -1,11 +1,14 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { View, TextInput, FlatList, Text, Pressable, StyleSheet, RefreshControl, Alert } from "react-native";
+import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
+import type { SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchItems, type Item } from "../../src/api/items";
 import { exportItemsCsv } from "../../src/api/export";
 import { useTheme } from "../../src/theme";
+import { Skeleton } from "../../src/Skeleton";
 
 const SORTS = ["name", "quantity", "value"] as const;
 type Sort = (typeof SORTS)[number];
@@ -41,6 +44,8 @@ export default function ItemsScreen() {
     else sorted.sort((a, b) => b.quantity * b.unitCost - a.quantity * a.unitCost);
     return sorted;
   }, [items, category, sort]);
+
+  const swipeRefs = useRef<Map<string, SwipeableMethods>>(new Map());
 
   async function onExport() {
     setExporting(true);
@@ -113,7 +118,13 @@ export default function ItemsScreen() {
         ))}
       </View>
 
-      {isLoading ? <Text style={{ color: theme.foreground }}>Loading...</Text> : null}
+      {isLoading ? (
+        <View style={styles.skeletonList}>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} style={styles.skeletonRow} />
+          ))}
+        </View>
+      ) : null}
       {error ? (
         <View>
           <Text style={[styles.error, { color: theme.destructive }]}>Could not load items.</Text>
@@ -127,12 +138,33 @@ export default function ItemsScreen() {
         keyExtractor={(item: Item) => item.id}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={theme.primary} />}
         renderItem={({ item }) => (
-          <Pressable style={[styles.row, { borderColor: theme.border }]} onPress={() => router.push(`/items/${item.id}`)}>
-            <Text style={[styles.rowName, { color: theme.foreground }]}>{item.name}</Text>
-            <Text style={{ color: item.lowStock ? theme.destructive : theme.foreground, fontWeight: item.lowStock ? "600" : "400" }}>
-              {item.quantity} in stock
-            </Text>
-          </Pressable>
+          <Swipeable
+            ref={(ref) => {
+              if (ref) swipeRefs.current.set(item.id, ref);
+              else swipeRefs.current.delete(item.id);
+            }}
+            renderRightActions={() => (
+              <Pressable
+                style={[styles.swipeAction, { backgroundColor: theme.primary }]}
+                onPress={() => {
+                  swipeRefs.current.get(item.id)?.close();
+                  router.push(`/items/${item.id}/adjust`);
+                }}
+              >
+                <Text style={[styles.swipeActionText, { color: theme.primaryForeground }]}>Adjust</Text>
+              </Pressable>
+            )}
+          >
+            <Pressable
+              style={[styles.row, { borderColor: theme.border, backgroundColor: theme.background }]}
+              onPress={() => router.push(`/items/${item.id}`)}
+            >
+              <Text style={[styles.rowName, { color: theme.foreground }]}>{item.name}</Text>
+              <Text style={{ color: item.lowStock ? theme.destructive : theme.foreground, fontWeight: item.lowStock ? "600" : "400" }}>
+                {item.quantity} in stock
+              </Text>
+            </Pressable>
+          </Swipeable>
         )}
       />
       <Pressable style={[styles.addButton, { backgroundColor: theme.primary }]} onPress={() => router.push("/items/new")}>
@@ -165,4 +197,8 @@ const styles = StyleSheet.create({
   rowName: { fontWeight: "500" },
   addButton: { padding: 14, borderRadius: 8, alignItems: "center", marginTop: 8 },
   addButtonText: { fontWeight: "600" },
+  skeletonList: { gap: 8, marginTop: 8 },
+  skeletonRow: { height: 44 },
+  swipeAction: { justifyContent: "center", alignItems: "center", width: 88 },
+  swipeActionText: { fontWeight: "600" },
 });
