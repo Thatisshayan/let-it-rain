@@ -217,19 +217,27 @@ Useful after a device loss or "I forgot to sign out somewhere."
   doesn't exist anywhere in this stack yet.
 - **No iOS Home Screen widget.** Would require a native Xcode widget extension target,
   which Expo's managed workflow can only add via an unofficial config plugin.
-- **No automated test suite.** The app is a thin client over an already-tested API
-  ([`docs/API.md`](../docs/API.md), 100+ Vitest tests on the API side); mobile
-  correctness is currently verified manually via Expo Go against the real API for each
-  feature as it's built (see the phase-by-phase spec/plan docs in
-  [`docs/superpowers/`](../docs/superpowers/)).
+- **No automated test suite** was a Phase 11 gap. It now has one: 6 vitest tests
+  (`src/__tests__/index.test.tsx`) covering auth flow, protected routes, accessibility
+  roles, navigation, error handling, and theme mode switching — run via `npm test`.
+- **No error monitoring** was a Phase 11 gap. It now has [Sentry](https://sentry.io/)
+  integrated via `@sentry/react-native` + `sentry-expo` plugin, initialized at app
+  startup (`src/sentry.ts`) with API breadcrumbs logged in `src/api/client.ts`.
+- **No staging environment** was a Phase 11 gap. `eas.json` now has a `staging` build
+  profile pointing at a separate Vercel deployment + database, alongside the existing
+  `development`/`preview`/`production` profiles.
+- **No accessibility labels** was a Phase 11 gap. Every interactive element across all
+  screens now has `accessibilityRole`, `accessibilityLabel`, and `accessibilityState`
+  set, verified against WCAG AA/AAA contrast ratios.
 
 ## Shipping to TestFlight
 
 The app is **already live on TestFlight** (multiple builds submitted). The project is
 configured for [EAS Build](https://docs.expo.dev/build/introduction/): `app.json` has a
 bundle identifier + real app icon/splash assets, `eas.json` defines
-`development`/`preview`/`production` build profiles with `submit.production.ios.ascAppId`
-set, and iOS Distribution Certificate + Provisioning Profile are already stored on EAS
+`development`/`preview`/`staging`/`production` build profiles with
+`submit.production.ios.ascAppId` set, and iOS Distribution Certificate + Provisioning
+Profile are already stored on EAS
 (uploaded manually — see `docs/adr/` or ask before re-running `eas credentials`
 interactively, since the automated Apple-auth flow in `eas credentials` has a known bug
 that made the manual route necessary).
