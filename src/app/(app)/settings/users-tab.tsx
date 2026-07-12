@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -194,7 +195,13 @@ export function UsersTab({ users, currentUserId }: { users: UserRow[]; currentUs
           >
             <div>
               <p className="font-medium">
-                {user.name} {user.id === currentUserId && <span className="text-xs text-muted-foreground">(you)</span>}
+                <Link
+                  href={`/settings/users/${user.id}`}
+                  className="hover:underline focus:underline focus:outline-none"
+                >
+                  {user.name}
+                </Link>{" "}
+                {user.id === currentUserId && <span className="text-xs text-muted-foreground">(you)</span>}
               </p>
               <p className="text-xs text-muted-foreground">{user.email}</p>
               <div className="mt-1 flex flex-wrap gap-1">

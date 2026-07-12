@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,8 @@ import { updateOwnProfileAction, changeOwnPasswordAction, type ActionState } fro
 const initialState: ActionState = {};
 
 export function AccountTab({ name }: { name: string }) {
+  const router = useRouter();
+  const [signingOutEverywhere, setSigningOutEverywhere] = useState(false);
   const [profileState, profileAction, profilePending] = useActionState<ActionState, FormData>(
     async (prev, formData) => {
       const result = await updateOwnProfileAction(prev, formData);
@@ -27,6 +30,32 @@ export function AccountTab({ name }: { name: string }) {
     },
     initialState
   );
+
+  async function handleSignOutEverywhere() {
+    if (signingOutEverywhere) return;
+    const confirmed = window.confirm(
+      "Sign out of every device? You'll need to sign in again to continue using the app."
+    );
+    if (!confirmed) return;
+
+    setSigningOutEverywhere(true);
+    try {
+      const res = await fetch("/api/v1/me/sessions", { method: "POST" });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        toast.error(body.error ?? "Could not sign out everywhere.");
+        setSigningOutEverywhere(false);
+        return;
+      }
+      // Hit /api/v1/auth/logout to clear the cookie, then redirect.
+      await fetch("/api/v1/auth/logout", { method: "POST" });
+      toast.success("Signed out everywhere. Please sign in again.");
+      router.push("/login");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not sign out everywhere.");
+      setSigningOutEverywhere(false);
+    }
+  }
 
   return (
     <div className="space-y-6 max-w-lg">
@@ -67,6 +96,26 @@ export function AccountTab({ name }: { name: string }) {
               {pwPending ? "Saving…" : "Change password"}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Sessions</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Force all browsers and devices to sign out of your account. You&apos;ll need to
+            sign in again here.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={signingOutEverywhere}
+            onClick={handleSignOutEverywhere}
+          >
+            {signingOutEverywhere ? "Signing out…" : "Sign out everywhere"}
+          </Button>
         </CardContent>
       </Card>
     </div>

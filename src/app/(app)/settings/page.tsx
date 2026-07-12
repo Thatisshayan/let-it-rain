@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { UsersTab } from "./users-tab";
 import { AccountTab } from "./account-tab";
+import { AuditLogTab } from "./audit-log-tab";
 
 export default async function SettingsPage({
   searchParams,
@@ -17,8 +18,21 @@ export default async function SettingsPage({
   if (!session) redirect("/login");
 
   const canManageUsers = hasPermission(session, "MANAGE_USERS");
+  const canViewAudit = hasPermission(session, "VIEW_AUDIT_LOG");
   const { tab: tabParam } = await searchParams;
-  const tab = tabParam === "users" && canManageUsers ? "users" : tabParam === "account" ? "account" : canManageUsers ? "users" : "account";
+
+  const allowed =
+    tabParam === "users" && canManageUsers
+      ? "users"
+      : tabParam === "account"
+        ? "account"
+        : tabParam === "audit" && canViewAudit
+          ? "audit"
+          : canManageUsers
+            ? "users"
+            : canViewAudit
+              ? "audit"
+              : "account";
 
   const users = canManageUsers
     ? await prisma.user.findMany({
@@ -31,31 +45,44 @@ export default async function SettingsPage({
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Settings</h1>
 
-      <div className="flex gap-1 rounded-lg bg-muted p-1 w-fit">
+      <div className="flex flex-wrap gap-1 rounded-lg bg-muted p-1 w-fit">
         {canManageUsers && (
           <Link
             href="/settings?tab=users"
             className={cn(
-              buttonVariants({ variant: tab === "users" ? "default" : "ghost", size: "sm" }),
-              tab !== "users" && "shadow-none"
+              buttonVariants({ variant: allowed === "users" ? "default" : "ghost", size: "sm" }),
+              allowed !== "users" && "shadow-none"
             )}
           >
             Users
           </Link>
         )}
+        {canViewAudit && (
+          <Link
+            href="/settings?tab=audit"
+            className={cn(
+              buttonVariants({ variant: allowed === "audit" ? "default" : "ghost", size: "sm" }),
+              allowed !== "audit" && "shadow-none"
+            )}
+          >
+            Audit log
+          </Link>
+        )}
         <Link
           href="/settings?tab=account"
           className={cn(
-            buttonVariants({ variant: tab === "account" ? "default" : "ghost", size: "sm" }),
-            tab !== "account" && "shadow-none"
+            buttonVariants({ variant: allowed === "account" ? "default" : "ghost", size: "sm" }),
+            allowed !== "account" && "shadow-none"
           )}
         >
           My account
         </Link>
       </div>
 
-      {tab === "users" && canManageUsers ? (
+      {allowed === "users" && canManageUsers ? (
         <UsersTab users={users} currentUserId={session.userId} />
+      ) : allowed === "audit" && canViewAudit ? (
+        <AuditLogTab />
       ) : (
         <AccountTab name={session.name} />
       )}
