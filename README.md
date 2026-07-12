@@ -163,9 +163,10 @@ Expo Go.
   `Movement` history is preserved for audit purposes rather than being cascade-deleted.
 - **Movement** — an immutable log row created whenever stock is received, removed, or
   count-adjusted. This is the audit trail; it is never edited or deleted directly. Also
-  carries `isSale`/`unitCostAtTime`/`unitPriceAtTime` for the accounting reports (a
-  `REMOVE` movement can be flagged as a sale, snapshotting the item's price/cost at that
-  moment so later cost changes don't retroactively distort historical reports).
+  carries `isSale`/`cashAmount`/`interacAmount`/`unitCostAtTime`/`unitPriceAtTime` for the
+  accounting reports (a `REMOVE` movement is a sale whenever `cashAmount + interacAmount`
+  is greater than `0`; both amounts and the item's cost are snapshotted at that moment so
+  later price/cost changes don't retroactively distort historical reports).
 
 ## Authorization model
 
@@ -227,12 +228,24 @@ user.
   who did it, when).
 
 ### Accounting / reports (web + mobile)
-- Today's revenue, this month's revenue/COGS/gross profit, this month's restock cost,
-  and current inventory valuation (across all non-deleted items).
-- Revenue-by-day and sales-by-item breakdowns for the selected month.
+- Today's revenue, this month's revenue/COGS/gross profit, this month's Cash/Interac
+  breakdown, this month's restock cost, and current inventory valuation (across all
+  non-deleted items).
+- Revenue-by-day (rendered as a lightweight bar chart on both web and mobile — plain
+  `<div>`/`View` width percentages, no charting library) and sales-by-item breakdowns for
+  the selected month.
 - "Revenue" here means sale-flagged `REMOVE` movements (`isSale: true`) valued at the
-  item's price *at the time of the sale* (`unitPriceAtTime`), not its current price —
-  so re-pricing an item doesn't rewrite history.
+  *effective* price actually paid (`(cashAmount + interacAmount) / units`), snapshotted as
+  `unitPriceAtTime` at the moment of sale — so re-pricing an item doesn't rewrite history,
+  and the figure reflects what was actually collected even if it differs from the item's
+  list price.
+
+### Mobile-only extras
+The mobile app has a few things the web app doesn't: a Dashboard landing screen
+(today's revenue, low-stock items, recent activity in one view), a bottom tab bar, OS-
+following dark mode, optional Face ID app lock, category filter chips + sort on the items
+list, swipe-to-adjust on item rows, and haptic feedback. See
+[`mobile/README.md`](mobile/README.md) for details.
 
 ## The `/api/v1` layer
 
@@ -336,8 +349,8 @@ migrations have been applied to the target database before the app receives traf
 Deploying the web app also deploys the `/api/v1` layer — there's nothing separate to
 stand up for the mobile app's backend.
 
-**Mobile app:** this repo currently only supports development builds via Expo Go (no
-EAS Build / app-store submission configured). Point `EXPO_PUBLIC_API_BASE_URL` at your
-deployed web app's URL to use the mobile app against production data. Setting up EAS
-Build for internal distribution or app-store submission is a separate, not-yet-started
-piece of work.
+**Mobile app:** builds via Expo Go work out of the box for local development (point
+`EXPO_PUBLIC_API_BASE_URL` at your deployed web app's URL to run against production
+data). Beyond that, the app is **already configured for EAS Build and shipping to
+TestFlight** — see [`mobile/README.md`](mobile/README.md#shipping-to-testflight) for the
+full build/submit flow, current status, and credential-troubleshooting notes.

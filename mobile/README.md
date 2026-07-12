@@ -1,8 +1,10 @@
 # Let It Rain — Mobile
 
-An Expo (React Native + TypeScript) app with full feature parity with the
-[Let It Rain](../README.md) web app: inventory management, settings/user management, an
-activity calendar, and accounting reports. It's a thin client over the
+An Expo (React Native + TypeScript) app with feature parity with the
+[Let It Rain](../README.md) web app — inventory management, settings/user management, an
+activity calendar, and accounting reports — plus a few mobile-only extras the web app
+doesn't have: Face ID app lock, a Dashboard landing screen, CSV export via the native
+share sheet, and OS-following dark mode. It's a thin client over the
 [`/api/v1`](../docs/API.md) JSON API served by the Next.js app in the repo root — this
 app has no backend of its own.
 
@@ -65,34 +67,42 @@ routing under `app/`, the same mental model as the web app's Next.js App Router.
 ```
 mobile/
 ├── app/                          # screens (file-based routing)
-│   ├── _layout.tsx                # root layout: React Query provider, AuthProvider, Stack navigator
-│   ├── index.tsx                  # redirects to /login or /items depending on auth state
+│   ├── _layout.tsx                # root layout: GestureHandlerRootView, providers, themed Stack
+│   ├── index.tsx                  # redirects to /login or /dashboard depending on auth state
 │   ├── login.tsx
+│   ├── (tabs)/                     # bottom tab bar group — none of these segments appear in the URL
+│   │   ├── _layout.tsx               # Tabs navigator: Dashboard/Items/Activity/Reports/Settings
+│   │   ├── dashboard.tsx             # landing screen: today's revenue, low stock, recent activity
+│   │   ├── items.tsx                 # items list: search, category chips, sort, swipe-to-adjust
+│   │   ├── activity.tsx              # month-grid calendar with day drill-down
+│   │   ├── reports.tsx               # revenue/COGS/profit/valuation + bar-chart revenue-by-day
+│   │   └── settings.tsx              # Users (if MANAGE_USERS) + Account + Face ID toggle + sign out
 │   ├── items/
-│   │   ├── index.tsx               # items list: search, low-stock filter, header nav links
 │   │   ├── new.tsx                 # create item
 │   │   └── [id]/
-│   │       ├── index.tsx           # item detail + movement history
+│   │       ├── index.tsx           # item detail + movement history + CSV export
 │   │       ├── edit.tsx
-│   │       └── adjust.tsx          # receive / remove / adjust stock
-│   ├── settings/
-│   │   ├── index.tsx               # entry point: Users (if MANAGE_USERS) + Account
-│   │   ├── account.tsx             # own name + password
-│   │   └── users/
-│   │       ├── index.tsx           # user list
-│   │       ├── new.tsx             # create user
-│   │       └── [id].tsx            # edit permissions, activate/deactivate, reset password
-│   ├── activity.tsx                # month-grid calendar with day drill-down
-│   └── reports.tsx                 # revenue/COGS/profit/valuation + breakdowns
+│   │       └── adjust.tsx          # receive / remove (Cash/Interac split) / adjust stock
+│   └── settings/
+│       ├── account.tsx             # own name + password
+│       └── users/
+│           ├── index.tsx           # user list
+│           ├── new.tsx             # create user
+│           └── [id].tsx            # edit permissions, activate/deactivate, reset password
 ├── src/
+│   ├── theme.ts                    # light/dark color tokens (hand-matched to web's globals.css)
+│   ├── toast.tsx                   # minimal custom toast (no library — sonner isn't RN-usable)
+│   ├── Skeleton.tsx                 # pulsing loading placeholder
 │   └── api/                        # typed API client — one file per feature area
-│       ├── client.ts                 # apiFetch() wrapper: attaches bearer token, throws ApiError
+│       ├── client.ts                 # apiFetch()/apiFetchText() wrappers: bearer token, ApiError
 │       ├── auth.ts                   # login/logout
-│       ├── AuthContext.tsx           # React context holding the signed-in user
+│       ├── AuthContext.tsx           # React context holding the signed-in user + Face ID lock state
+│       ├── AuthGate.tsx              # renders a Face ID lock screen over the whole navigator
 │       ├── items.ts
 │       ├── settings.ts
 │       ├── activity.ts
-│       └── reports.ts
+│       ├── reports.ts
+│       └── export.ts                 # CSV export via expo-file-system + expo-sharing
 ├── app.json                        # Expo config (name, scheme, plugins)
 ├── .env.example
 └── package.json
@@ -157,52 +167,51 @@ disallowed action always fails server-side with `403` regardless of what the UI 
 
 - **No offline support.** Every screen requires network connectivity; failed requests
   show an inline error with no local queueing or retry-on-reconnect.
-- **No push notifications.**
-- **Not yet submitted to TestFlight/the App Store.** `eas.json` and the required
-  `app.json` fields (bundle identifier, build number) are in place — see
-  [Preparing for TestFlight](#preparing-for-testflight) below for what's left, all of
-  which requires your Apple Developer account credentials and can't be done from here.
+- **No push notifications.** Explicitly deferred — would need a new Apple Push
+  Notifications capability, an APNs key, and server-side infrastructure to send them on
+  inventory changes, not just mobile-side work.
+- **No item photos.** Would need a file-storage decision (Vercel Blob, S3, etc.) that
+  doesn't exist anywhere in this stack yet.
+- **No iOS Home Screen widget.** Would require a native Xcode widget extension target,
+  which Expo's managed workflow can only add via an unofficial config plugin.
 - **No automated test suite.** The app is a thin client over an already-tested API
   ([`docs/API.md`](../docs/API.md), 100+ Vitest tests on the API side); mobile
   correctness is currently verified manually via Expo Go against the real API for each
   feature as it's built (see the phase-by-phase spec/plan docs in
   [`docs/superpowers/`](../docs/superpowers/)).
 
-## Preparing for TestFlight
+## Shipping to TestFlight
 
-The project is configured for [EAS Build](https://docs.expo.dev/build/introduction/):
-`app.json` has a bundle identifier and `eas.json` defines
-`development`/`preview`/`production` build profiles.
+The app is **already live on TestFlight** (multiple builds submitted). The project is
+configured for [EAS Build](https://docs.expo.dev/build/introduction/): `app.json` has a
+bundle identifier + real app icon/splash assets, `eas.json` defines
+`development`/`preview`/`production` build profiles with `submit.production.ios.ascAppId`
+set, and iOS Distribution Certificate + Provisioning Profile are already stored on EAS
+(uploaded manually — see `docs/adr/` or ask before re-running `eas credentials`
+interactively, since the automated Apple-auth flow in `eas credentials` has a known bug
+that made the manual route necessary).
 
-**Already done:**
+**Everything needed for a build + submit is already in place:**
 
 1. **Build profiles point at the real deployed API.** `eas.json`'s `preview` and
    `production` profiles set `EXPO_PUBLIC_API_BASE_URL` to the deployed web app's HTTPS
    URL (`https://letitrain-jade.vercel.app`) — required because iOS App Transport
    Security blocks plain `http://` requests in a standalone (non-Expo-Go) build.
 2. **EAS project is linked.** `app.json`'s `extra.eas.projectId` and `owner` are set
-   (`obsidianstudio/letitrain-mobile`); `eas init`/`eas login` don't need to be re-run
-   unless you're switching Expo accounts.
-3. **Bundle identifier is set** in `app.json` (`ios.bundleIdentifier`:
-   `com.letitrain.mobile`) — verify this still matches the app record in
-   [App Store Connect](https://appstoreconnect.apple.com/) before submitting.
+   (`obsidianstudio/letitrain-mobile`).
+3. **Bundle identifier** (`ios.bundleIdentifier`: `com.letitrain.mobile`) matches the app
+   record in [App Store Connect](https://appstoreconnect.apple.com/) (App ID `6790051300`).
 4. `ios.buildNumber`, `android.package`, `android.versionCode` are set in `app.json`, and
    `eas.json`'s `production` profile has `autoIncrement: true` so the build number bumps
-   automatically between submissions.
-5. The app itself: cold-start session persistence (a valid stored token signs you back in
-   automatically — see `AuthProvider` in `src/api/AuthContext.tsx`), automatic sign-out +
-   redirect to login on a `401` (expired/invalidated token) from any screen, a working
-   sign-out button (Settings → Sign out), and a request timeout so a bad network shows an
-   error instead of an infinite spinner.
+   automatically between submissions — commit that bump after every build.
+5. Real app icon/splash/favicon/Android adaptive-icon assets are in `assets/`.
+6. The app itself: cold-start session persistence, automatic sign-out + redirect to login
+   on a `401` (expired/invalidated token) from any screen, a working sign-out button
+   (Settings → Sign out), a request timeout so a bad network shows an error instead of an
+   infinite spinner, and optional Face ID app-lock.
 
-**Still needed before shipping to real testers:**
-- App icon and splash screen assets are currently Expo's generic defaults — replace
-  `assets/icon.png`, `assets/android-icon-*.png`, `assets/splash-icon.png`,
-  `assets/favicon.png` with your own branded assets.
-- An app record in App Store Connect with a matching bundle identifier (needed for
-  `eas submit`, not for `eas build` itself).
-
-**To build and submit:**
+**To build and submit** (both run fully non-interactively now that credentials are
+stored on EAS):
 ```bash
 npx eas build --platform ios --profile preview     # internal testing build (ad hoc)
 # or
@@ -211,12 +220,23 @@ npx eas build --platform ios --profile production  # TestFlight/App Store build
 npx eas submit --platform ios --latest              # upload the most recent build to
                                                       # App Store Connect / TestFlight
 ```
-The first iOS build will interactively prompt for your Apple Developer credentials and
-generate/select signing certificates and provisioning profiles — EAS manages this for
-you, but it does require an active Apple Developer Program membership. `eas.json`'s
+Add `--non-interactive` to either command once credentials are stored on EAS (already the
+case for this project) to run fully unattended — useful for scripting/CI, or for an agent
+driving the build without a live terminal. `eas.json`'s
 `ITSAppUsesNonExemptEncryption: false` setting (in `app.json`) answers the App Store
 Connect export-compliance question automatically, since the app only uses standard
 HTTPS/TLS and no custom cryptography.
+
+**If iOS credentials ever need to be regenerated** (new device, revoked cert, etc.):
+`eas credentials --platform ios` has a known bug ([expo/eas-cli#2913](https://github.com/expo/eas-cli/issues/2913))
+where Apple auth can fail with a cryptic "Apple 401 detected" error even with valid
+credentials. If that happens, generate the Distribution Certificate and Provisioning
+Profile manually via developer.apple.com (CSR → certificate → profile, entirely outside
+EAS's Apple-auth code path) and upload them to EAS as "own files" instead of letting EAS
+generate them automatically. Also watch for an OpenSSL 3.x gotcha if you export a `.p12`
+yourself: OpenSSL 3's default PKCS#12 cipher isn't readable by Apple's Keychain on EAS's
+build workers — re-export with `openssl pkcs12 -export -legacy ...` if you hit
+"Distribution Certificate hasn't been imported successfully" during a build.
 
 ## Troubleshooting
 
