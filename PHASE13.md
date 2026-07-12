@@ -1,0 +1,329 @@
+# Phase 13 — Multi-Tenant SaaS Foundation: Full Agent Handoff
+
+**Audience:** this document is written for an autonomous coding agent picking this up
+with zero prior context on this conversation. Read this file top to bottom before
+touching code. Do not re-derive architecture decisions already made here — follow them,
+and only deviate if you find a concrete correctness problem, in which case stop and
+flag it rather than silently going a different direction.
+
+**Do not start this work on `master`.** Create a dedicated branch (e.g.
+`phase-13-saas-foundation`) and work there. This phase touches nearly every query in
+the codebase; it must be reviewable as a coherent diff, not mixed into unrelated
+commits.
+
+---
+
+## 1. Why this exists (read this before writing code)
+
+`letitrain` is currently a **single-tenant** inventory/order management app (Next.js
+web + Expo/React Native mobile, one shared Postgres/Neon DB via Prisma). One business
+("Let It Rain") uses it. There is a real near-term possibility of:
+
+- Going live on the App Store as a product other businesses could adopt, and/or
+- Selling access to a second business directly.
+
+Neither of those situations tolerates "wait a couple weeks while we retrofit
+multi-tenancy" — by the time someone wants in, the foundation needs to already exist.
+At the same time, building a **full SaaS product** (self-serve signup, billing, tiers,
+support tooling) before there is an actual second customer is premature — that work is
+deliberately deferred to sub-phase 13d, gated on a real trigger event, not built
+speculatively now.
+
+**The core problem today:** grep the schema (`prisma/schema.prisma`) and you will find
+zero tenant/org concept. Every model — `User`, `Item`, `Movement`, `Order`,
+`OrderLineItem`, `AuditLog`, `AppConfig` — implicitly assumes one business owns all
+rows in the table. Every query in every `service.ts` file, every API route under
+`src/app/api/v1/*/route.ts`, and every mobile screen that fetches data does so with
+**no tenant filter at all**, because there is no column to filter on. This is fine
+today because there is exactly one tenant. It becomes an active security bug the
+moment a second organization's data lands in the same tables — the failure mode is
+"Company A sees Company B's inventory/orders/revenue," which is categorically worse
+than the Phase 0 findings (those were wrong-role-sees-data-within-one-company; this
+would be wrong-company-sees-data-at-all).
+
+This phase is explicitly **not** "build a SaaS platform." It is: make the data model
+and every query path aware of tenant boundaries, prove that boundary can't be crossed,
+and stop there until there's a real second customer.
+
+---
+
+## 2. Relevant prior work (context, already shipped, do not redo)
+
+These are already complete on `master` as of this handoff — read them, don't rebuild
+them:
+
+- **Phase 0** — fixed 5 read-side permission-gate bugs (page/screen level checks
+  missing despite correct API-layer and service-layer protection). Established the
+  pattern: **the service layer is the source of truth for data access**, page/screen
+  UI checks are a secondary fast-path, not the real guard. Phase 13 must follow the
+  same pattern: tenant scoping belongs in the service layer (and ultimately the
+  Prisma query itself), not just at the UI.
+- **Phase 1** — added `AuditLog`, `User.tokenVersion` (session revocation), split
+  `MANAGE_ORDERS` into `CREATE_ORDERS`/`ASSIGN_DRIVERS`/`CANCEL_ORDERS`, added
+  `VIEW_REPORTS`/`VIEW_COSTS`/`VIEW_AUDIT_LOG`/`MANAGE_SETTINGS`, added `AppConfig`
+  singleton (currently `id=1`, hardcoded single-row — **this singleton assumption is
+  exactly the kind of thing Phase 13 needs to break**, see §5).
+- **Phase 2** — Orders & Deliveries, shipped, in TestFlight.
+- **Phase 11** — mobile test suite, Sentry, staging EAS profile, nightly backups,
+  accessibility pass. The **staging environment pattern** (`eas.json`'s `staging`
+  profile, `EXPO_PUBLIC_APP_ENVIRONMENT`) is a useful reference for how environment
+  separation is already done in this codebase — Phase 13 is tenant separation
+  *within* one environment, not another environment.
+
+Full detail on all of the above: `LETITRAINNEXTSPRIN.md` (repo root) — read its Phase
+0/1/11 "Completion Report" sections if you need file-level specifics on what already
+shipped.
+
+---
+
+## 3. Current architecture facts (verified, as of this handoff)
+
+**Stack:** Next.js App Router (web, `src/app/`) + Expo Router (mobile, `mobile/app/`),
+one shared Postgres (Neon) via Prisma, `/api/v1` JSON API is the bridge both web and
+mobile call through. Web also has server components that call `service.ts` functions
+directly (no HTTP round-trip) for some pages — **both paths need tenant scoping**, not
+just the API routes.
+
+**Auth model** (`src/lib/auth.ts`, 93 lines, read in full before editing):
+- JWT-based session (`jose` library), `SessionPayload = { userId, email, name,
+  permissions, tokenVersion }`.
+- `resolveCurrentSession()` **re-fetches the user from the DB on every request** (not
+  trusting the JWT's embedded permissions) — checks `active` and `tokenVersion`. This
+  is the natural place to also attach `organizationId` to the session, so it's always
+  fresh even if the user is ever moved between orgs (unlikely, but the pattern is
+  already there).
+- `verifyBearerToken()` — mobile's auth path (Bearer token in `Authorization` header).
+- `getSession()` — web's auth path (httpOnly cookie).
+- Both funnel through the same `resolveCurrentSession()`.
+
+**Permissions model** (`src/lib/permissions.ts`, 43 lines): flat array of permission
+strings on `User.permissions`, checked via `hasPermission(session, PERMISSION)`. This
+is **user-level**, not org-level — it stays that way in Phase 13 (permissions describe
+what a user can do *within their org*; org membership is a separate, new concept).
+
+**Service layer files** (the actual data-access boundary — this is where tenant
+scoping must be enforced, per the Phase 0 lesson that route-level checks alone are not
+sufficient):
+- `src/app/(app)/items/service.ts`
+- `src/app/(app)/orders/service.ts`
+- `src/app/(app)/settings/service.ts`
+- `src/app/(app)/accounts/service.ts`
+- `src/app/(app)/audit-log/service.ts`
+
+**API routes:** `src/app/api/v1/*/route.ts` — 22+ routes as of Phase 0's audit, all
+wrapped in `withAuth`/`withPermission`. These call into the service layer above; they
+do not talk to Prisma directly (confirm this still holds before assuming it — if any
+route bypasses the service layer and queries Prisma inline, it needs the same fix).
+
+**Mobile:** `mobile/app/` (Expo Router screens) + `mobile/src/api/*.ts` (HTTP client
+wrappers calling the same `/api/v1` routes). No separate tenant-scoping work needed on
+mobile beyond passing through whatever the API returns — the API is the enforcement
+boundary, mobile is a client of it.
+
+---
+
+## 4. What "done" looks like for each sub-phase
+
+### 13a — Foundation (schema + query scoping)
+
+**This is the expensive, hard-to-retrofit-later part. Do this first, and do it
+thoroughly — the whole point of doing Phase 13 "early" is that this sub-phase is cheap
+now (one tenant's data) and gets exponentially more painful once there's real
+multi-tenant data to migrate around.**
+
+1. **New `Organization` model** in `prisma/schema.prisma`:
+   ```prisma
+   model Organization {
+     id        String   @id @default(uuid())
+     name      String
+     createdAt DateTime @default(now())
+
+     users     User[]
+     items     Item[]
+     orders    Order[]
+     auditLogs AuditLog[]
+     appConfig AppConfig?
+   }
+   ```
+   (Exact field list can grow — e.g. a `slug` for future subdomain routing — but don't
+   add speculative fields not needed by 13a/13b; add them in 13c/13d if/when actually
+   needed.)
+
+2. **Add `organizationId` to every tenant-scoped table**: `User`, `Item`, `Movement`
+   (via its `Item`/`User` relations — decide whether `Movement` needs its own
+   `organizationId` column directly for query efficiency, or whether joining through
+   `Item`/`User` is acceptable; given `Movement` is queried heavily for
+   activity/reports, a direct denormalized `organizationId` column with its own index
+   is almost certainly worth the redundancy), `Order`, `OrderLineItem` (via `Order`),
+   `AuditLog`, `AppConfig` (this singleton becomes **one row per org**, not one row
+   globally — `id` can no longer be hardcoded to `1`; use org-scoped lookup or make
+   `organizationId` the effective key with a `@@unique` or make it the primary key
+   directly).
+
+3. **Migration for existing data**: write a Prisma migration that (a) adds the new
+   columns as nullable first, (b) creates one `Organization` row representing the
+   current single tenant ("Let It Rain"), (c) backfills every existing row's
+   `organizationId` to that org's id, (d) then alters the columns to `NOT NULL` in a
+   follow-up migration once backfill is confirmed. Follow the same
+   "nullable-then-backfill-then-required" pattern Phase 1 already used successfully
+   for its own migration (see `prisma/migrations/20260712150000_phase1_permissions_audit/`
+   for the precedent) — **test this migration against a local copy of the DB first**,
+   same standing rule Phase 1's plan already established for risky migrations.
+
+4. **Session carries org context**: extend `SessionPayload` in `src/lib/auth.ts` to
+   include `organizationId`. `resolveCurrentSession()` already re-fetches from the DB
+   every request — extend its `select` to include `organizationId` and thread it
+   through. This means org membership changes take effect immediately, same guarantee
+   the existing `active`/`tokenVersion` checks already provide.
+
+5. **Every service-layer query gets an org filter.** This is the bulk of the work and
+   the part most likely to have a missed spot — treat it exactly like Phase 0's audit:
+   go through `items/service.ts`, `orders/service.ts`, `settings/service.ts`,
+   `accounts/service.ts`, `audit-log/service.ts` function by function, and confirm
+   every `prisma.<model>.findMany/findUnique/create/update/delete` call includes
+   `organizationId: session.organizationId` in its `where` (for reads) or its data (for
+   writes). Do not rely on "I added it to the obvious ones" — this needs the same
+   systematic, exhaustive pass Phase 0 did, because a single missed query is a
+   cross-tenant data leak, not a cosmetic bug.
+
+6. **Acceptance criteria for 13a:**
+   - Schema migration applies cleanly to a local DB copy with existing data intact.
+   - Every existing row is backfilled to the single "Let It Rain" org with no data
+     loss.
+   - Session payload includes `organizationId`; verified by a new/updated auth test.
+   - A new integration test suite exists that creates **two organizations**, seeds
+     each with data, and asserts that a session for Org A can *never* retrieve Org B's
+     items/orders/movements/audit logs/users through any service function or API
+     route — this is the multi-tenant equivalent of Phase 0's audit and is the single
+     most important test in this entire phase.
+   - Full existing test suite (web + mobile) still passes with zero regressions.
+
+### 13b — Core necessities (org-aware auth + data access layer)
+
+Builds directly on 13a's schema. Scope:
+
+- **Login resolves org membership.** `POST /api/v1/auth/login` (see
+  `src/app/api/v1/auth/login/route.ts` and `src/lib/login.ts`) currently looks up a
+  user by email globally. Decide and implement: is email unique per-org, or globally
+  unique across the whole product? Given `User.email` currently has a global
+  `@unique` constraint in the schema, the simplest correct choice consistent with
+  today's schema is **email stays globally unique, and a user belongs to exactly one
+  org** (no multi-org membership in this phase — that's a 13c/later concern if ever
+  needed). Document this decision in code comments at the point of the constraint,
+  since it's a real product decision, not just an implementation detail.
+- **Every existing service function signature reviewed**: functions like
+  `listOrders(session, ...)` already take the session and derive scoping from it
+  (e.g. driver-scoping from Phase 0) — extend that existing pattern to also derive
+  `organizationId` from the same session object, rather than inventing a parallel
+  scoping mechanism. Consistency with the existing driver-scoping pattern in
+  `orders/service.ts` matters more than any specific implementation detail here.
+- **Credential/environment separation per org** where it matters — e.g. if/when push
+  notification tokens (Phase 6, not yet built) or Sentry contexts need to distinguish
+  which org an event belongs to, that plumbing should exist by the time those features
+  land. Don't build push infra now; just don't paint yourself into a corner where
+  adding `organizationId` to those later is hard.
+
+**Acceptance criteria for 13b:**
+- Login correctly resolves and attaches org context; a user from Org A cannot
+  authenticate into Org B's context under any circumstance.
+- Service-layer signatures are consistent (session-derived org scoping, matching the
+  existing session-derived permission/driver-scoping pattern already in the codebase).
+
+### 13c — Broader necessities + start of self-serve
+
+- **Org creation flow** — does not need to be public/self-serve yet; an
+  admin-only/invite-based "create a new organization + its first admin user" flow is
+  sufficient for this sub-phase. This unblocks actually testing with a second real
+  org without needing 13d's full signup UX.
+- **Org-level settings**, separate from the existing per-user `settings/account-tab.tsx`
+  — e.g. `AppConfig`'s `businessName`/`defaultLowStock` naturally become org-scoped
+  settings (this is exactly why 13a's `AppConfig` schema change matters).
+- **Cross-org safety test suite** — if 13a's acceptance criteria only got a minimal
+  version of this, this is where it gets built out properly and kept running in CI
+  going forward, not just as a one-time verification.
+
+**Acceptance criteria for 13c:**
+- A second organization can be created and used end-to-end (login, create items,
+  create orders, view reports) with zero data crossover with the first org, verified
+  by the automated cross-org test suite running in CI.
+
+### 13d — Sell-ready (deferred, gated on a real trigger)
+
+**Do not start this sub-phase speculatively.** It is scoped here so the plan exists,
+not so it gets built now. Start it only when one of these becomes true: (a) App Store
+go-live is actually imminent and needs a real signup path, or (b) a specific paying
+customer is lined up and needs onboarding.
+
+- Pricing tiers (data model + enforcement — e.g. seat limits, feature gating by tier).
+- Stripe billing integration (subscription creation, webhook handling for
+  payment/cancellation events, dunning).
+- Self-serve signup flow (public org creation, email verification, initial admin
+  account setup) — builds on 13c's admin-created-org flow but makes it public.
+- Customer support tooling (at minimum: a way for you to see which orgs exist, their
+  plan, and basic usage — doesn't need to be fancy).
+
+No further detail is scoped here deliberately — by the time this sub-phase starts, the
+actual trigger event (App Store terms, or a specific customer's requirements) will
+shape the real requirements more usefully than speculation would now.
+
+---
+
+## 5. Explicit non-goals for this phase
+
+Do not build these as part of Phase 13, even if they seem related — they're separately
+scoped elsewhere in `LETITRAINNEXTSPRIN.md` and pulling them in here just bloats scope:
+
+- **Multi-location within one org** (Phase 10 in the roadmap) — a different axis of
+  scoping (one business, many warehouses) than multi-tenancy (many businesses). Don't
+  conflate the two; `organizationId` and a future `locationId` are independent
+  dimensions.
+- **White-label / custom branding per org** — cosmetic, not foundational; skip.
+- **Public API / integrations / webhooks** — unrelated to tenant isolation; skip.
+- **Role/permission model changes beyond what's needed for org context** — Phase 1's
+  permission set stays as-is; this phase adds org *membership*, not new permission
+  types.
+
+---
+
+## 6. Verification requirements (apply at the end of every sub-phase, not just 13a)
+
+Follow the same discipline already established by Phase 0/1/2/11 in this codebase:
+- `prisma migrate dev` (or equivalent) applies cleanly; run against a **local copy**
+  of the DB first for any migration touching existing data, never directly against
+  the real Neon database without that dry run.
+- Full lint (`eslint`), typecheck (`tsc`), and test suite (web `vitest` + mobile
+  `vitest`/jest) all pass with zero regressions before considering a sub-phase done.
+- The cross-org data-isolation test suite (§4, 13a) must exist and pass before 13a is
+  considered complete — this is the load-bearing verification for this entire phase,
+  more important than any other single test.
+- Do not run any migration or seed script against the production database without
+  explicit confirmation from the human owner of this project first — same standing
+  rule already documented in `LETITRAINNEXTSPRIN.md`'s Phase 1 section for its own
+  migration script.
+
+---
+
+## 7. Suggested execution order
+
+1. `13a` in full (schema, migration, session, exhaustive query-scoping pass,
+   cross-org test suite) — commit and verify as its own unit before moving on, same
+   pattern as every other phase in this codebase (Phase 2's incremental
+   backend→web→mobile commit-and-verify rhythm is the model to follow).
+2. `13b` — org-aware login + service-layer consistency pass.
+3. `13c` — org creation flow, org-level settings, CI-integrated safety tests.
+4. **Stop.** Do not proceed to `13d` without checking back in — it's gated on a real
+   trigger event, not on 13c simply being finished.
+
+---
+
+## 8. A note on working style, since this may be picked up by an unfamiliar agent
+
+This codebase's existing phases (0, 1, 2, 11) were all built with a specific
+discipline worth matching: read the actual code before making claims about it, verify
+findings against real files/grep rather than assuming, commit each verified chunk
+separately with a clear message, and write a completion report (see
+`LETITRAINNEXTSPRIN.md`'s "Phase 1 — Completion Report" section as the template) at
+the end summarizing what shipped, what files changed, and what was explicitly
+deferred. Follow that same pattern here — append your own "Phase 13 — Completion
+Report" section to this file (`PHASE13.md`) when each sub-phase finishes, rather than
+only reporting back informally.

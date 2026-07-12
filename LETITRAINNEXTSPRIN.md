@@ -1,6 +1,10 @@
 # Let It Rain — Next Sprint(s), Arranged by Phase & Priority
 
-Status: Phase 2 (Orders & Deliveries) shipped, in TestFlight review. This file is a mixed roadmap: Phase 0, Phase 1, and Phase 11 are completed below, while later phases remain backlog.
+Status: **Phase 0 = DONE. Phase 1 = DONE. Phase 2 = DONE (shipped, in TestFlight). Phase 11 = DONE.**
+One additional debugging session has been completed on top of the above. All other
+phases remain backlog. Phase 13 (SaaS foundation) is scoped in detail in the
+companion handoff doc `PHASE13.md` — read that file for the full agent brief;
+the summary below is kept here only for consistency with the rest of this roadmap.
 
 ## Priority legend
 
@@ -281,8 +285,8 @@ All of these are **decide-early** items — several change the schema fundamenta
 pursued, so worth a deliberate go/no-go conversation before any of them get scoped, not
 something to drift into.
 
-- [ ] ⚪ **Multi-tenant SaaS pivot** — only if there's real appetite to sell this to other
-      businesses; needs `businessId` on nearly everything. Decide early.
+- [ ] ⚪ **Multi-tenant SaaS pivot** — superseded by the dedicated **Phase 13** plan below
+      (and its full handoff doc, `PHASE13.md`). Kept here as a cross-reference only.
 - [ ] ⚪ **Multi-location** — foundational rearchitecture (already deferred since day one), unlocks per-location stock/permissions/reporting.
 - [ ] ⚪ **Public API / Zapier-style integrations, accounting sync (QuickBooks/Xero), payment processor integration, webhook system** — bundle as one "integrations" scoping pass if/when there's a concrete need, not four separate builds.
 - [ ] ⚪ **White-label mode** — lighter than full multi-tenancy, same underlying question.
@@ -340,6 +344,37 @@ these are close to buildable. No priority tags beyond ⚪; think of this as "som
 - ⚪ Wearable/smartwatch driver quick-actions
 - ⚪ Fully offline-first app (not just the delivery actions already covered)
 - ⚪ NFC bin tags / printed pick lists
+
+---
+
+## Phase 13 — SaaS foundation (multi-tenant): plan ahead now, activate later
+
+**Trigger:** you can't tell App Store review "wait a couple weeks" and you can't tell a
+prospective customer "wait until it's ready" — so the foundational (schema + data
+isolation) work has to be done **before** either event, while there's still only one
+tenant's worth of data to migrate. This does **not** mean building a full SaaS product
+now — billing, self-serve signup, and support tooling (13d) stay parked until an actual
+paying customer is in hand. This entry is a summary only; the full agent-ready spec
+lives in **`PHASE13.md`** at the repo root — hand that file, not this section, to
+whichever agent implements it.
+
+- [ ] ⚪ **13a — Foundation**: `Organization` model, `organizationId` on every
+      tenant-scoped table, single-org data migration, session/JWT carries org context.
+      Prerequisite for everything else in this phase.
+- [ ] ⚪ **13b — Core necessities**: org-scoped auth (login resolves org), org-scoped
+      DB access layer (every existing service function takes/derives `organizationId`),
+      credentials/environment separation per org where relevant (e.g. push tokens).
+- [ ] ⚪ **13c — Broader necessities + start of self-serve**: org creation flow (even if
+      invite-only/manual at first), org-level settings separate from user settings,
+      cross-org safety tests (the multi-tenant equivalent of Phase 0's audit — prove no
+      query ever crosses org boundaries).
+- [ ] ⚪ **13d — Sell-ready**: pricing tiers, Stripe billing, self-serve signup, customer
+      support tooling. **Do not start this sub-phase until a real customer or App Store
+      go-live is actually imminent** — this is the part that's fine to delay, unlike 13a.
+
+**If picking this up:** start with `PHASE13.md`, not this list — it has the schema
+design, migration plan, cross-cutting file list, and phased acceptance criteria needed
+for an agent to execute this end-to-end without re-deriving architecture decisions.
 
 ---
 
