@@ -2,8 +2,14 @@ import { describe, it, expect } from "vitest";
 import { hasPermission, isValidPermission, PERMISSIONS } from "./permissions";
 
 describe("PERMISSIONS", () => {
-  it("contains exactly the four expected keys", () => {
-    expect(PERMISSIONS).toEqual(["MANAGE_USERS", "DELETE_ITEMS", "EDIT_ITEMS", "ADJUST_STOCK"]);
+  it("contains exactly the five expected keys", () => {
+    expect(PERMISSIONS).toEqual([
+      "MANAGE_USERS",
+      "DELETE_ITEMS",
+      "EDIT_ITEMS",
+      "ADJUST_STOCK",
+      "MANAGE_ORDERS",
+    ]);
   });
 });
 

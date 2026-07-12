@@ -17,11 +17,13 @@ model User {
   name         String
   email        String   @unique
   passwordHash String
-  permissions  String[] @default(["MANAGE_USERS", "DELETE_ITEMS", "EDIT_ITEMS", "ADJUST_STOCK"])
+  permissions  String[] @default(["MANAGE_USERS", "DELETE_ITEMS", "EDIT_ITEMS", "ADJUST_STOCK", "MANAGE_ORDERS"])
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
 
-  movements Movement[]
+  movements      Movement[]
+  createdOrders  Order[]   @relation("OrderCreatedBy")
+  driverOrders   Order[]   @relation("OrderDriver")
 }
 
 model Item {
@@ -38,7 +40,8 @@ model Item {
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
 
-  movements Movement[]
+  movements      Movement[]
+  orderLineItems OrderLineItem[]
 
   @@index([name])
   @@index([deletedAt])
@@ -70,4 +73,42 @@ model Movement {
   @@index([itemId])
   @@index([createdAt])
   @@index([isSale, createdAt])
+}
+
+enum OrderStatus {
+  PENDING
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+model Order {
+  id               String        @id @default(uuid())
+  customerName     String
+  customerAddress  String?
+  customerPhone    String?
+  status           OrderStatus   @default(PENDING)
+  notes            String?
+  createdBy        User          @relation("OrderCreatedBy", fields: [createdById], references: [id])
+  createdById      String
+  driver           User?         @relation("OrderDriver", fields: [driverId], references: [id])
+  driverId         String?
+  lineItems        OrderLineItem[]
+  createdAt        DateTime      @default(now())
+  outForDeliveryAt DateTime?
+  deliveredAt      DateTime?
+
+  @@index([status])
+  @@index([driverId])
+}
+
+model OrderLineItem {
+  id       String @id @default(uuid())
+  order    Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId  String
+  item     Item   @relation(fields: [itemId], references: [id])
+  itemId   String
+  quantity Int
+
+  @@index([orderId])
 }
