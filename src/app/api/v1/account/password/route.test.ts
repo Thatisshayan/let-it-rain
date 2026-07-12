@@ -28,7 +28,14 @@ beforeEach(() => {
 
 describe("POST /api/v1/account/password", () => {
   it("returns 400 when the current password is wrong", async () => {
-    (prisma.user.findUnique as any).mockResolvedValue({ id: "u1", passwordHash: "h" });
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      name: "Ada",
+      permissions: [],
+      active: true,
+      passwordHash: "h",
+    });
     (verifyPassword as any).mockResolvedValue(false);
     const t = await token();
     const res = await POST(
@@ -42,7 +49,14 @@ describe("POST /api/v1/account/password", () => {
   });
 
   it("returns 200 on a valid password change", async () => {
-    (prisma.user.findUnique as any).mockResolvedValue({ id: "u1", passwordHash: "h" });
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      name: "Ada",
+      permissions: [],
+      active: true,
+      passwordHash: "h",
+    });
     (verifyPassword as any).mockResolvedValue(true);
     const t = await token();
     const res = await POST(

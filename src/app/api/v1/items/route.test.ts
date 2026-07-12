@@ -2,7 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SignJWT } from "jose";
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { item: { findMany: vi.fn(), create: vi.fn() }, movement: { create: vi.fn() } },
+  prisma: {
+    item: { findMany: vi.fn(), create: vi.fn() },
+    movement: { create: vi.fn() },
+    user: { findUnique: vi.fn() },
+  },
 }));
 
 import { prisma } from "@/lib/prisma";
@@ -11,6 +15,13 @@ import { GET, POST } from "./route";
 const SECRET = "test-secret-at-least-32-chars-long";
 
 async function tokenFor(permissions: string[]) {
+  (prisma.user.findUnique as any).mockResolvedValue({
+    id: "u1",
+    email: "a@b.com",
+    name: "Ada",
+    permissions,
+    active: true,
+  });
   return new SignJWT({ userId: "u1", email: "a@b.com", name: "Ada", permissions })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()

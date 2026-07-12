@@ -15,6 +15,15 @@ import { GET, POST } from "./route";
 const SECRET = "test-secret-at-least-32-chars-long";
 
 async function tokenFor(permissions: string[]) {
+  // findUnique is called both to resolve the caller's current session (by id)
+  // and, inside createUser, to check for an existing user by email — branch
+  // on the where-clause so both call sites get the right answer.
+  (prisma.user.findUnique as any).mockImplementation(async ({ where }: any) => {
+    if (where.id === "admin-1") {
+      return { id: "admin-1", email: "admin@x.com", name: "Admin", permissions, active: true };
+    }
+    return null;
+  });
   return new SignJWT({ userId: "admin-1", email: "admin@x.com", name: "Admin", permissions })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -64,7 +73,6 @@ describe("POST /api/v1/users", () => {
   });
 
   it("creates a user with MANAGE_USERS", async () => {
-    (prisma.user.findUnique as any).mockResolvedValue(null);
     (prisma.user.create as any).mockResolvedValue({ id: "u2" });
     const token = await tokenFor(["MANAGE_USERS"]);
     const res = await POST(

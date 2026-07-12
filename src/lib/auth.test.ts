@@ -1,9 +1,17 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 import { SignJWT } from "jose";
+
+vi.mock("@/lib/prisma", () => ({ prisma: { user: { findUnique: vi.fn() } } }));
+
+import { prisma } from "@/lib/prisma";
 import { verifyBearerToken } from "./auth";
 
 beforeAll(() => {
   process.env.SESSION_SECRET = "test-secret-at-least-32-chars-long";
+});
+
+beforeEach(() => {
+  vi.clearAllMocks();
 });
 
 function makeRequest(header?: string) {
@@ -25,7 +33,14 @@ describe("verifyBearerToken", () => {
     expect(await verifyBearerToken(makeRequest("Bearer not-a-real-token"))).toBeNull();
   });
 
-  it("returns the session payload for a valid token", async () => {
+  it("returns the session payload, sourced from the current DB row, for a valid token", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      name: "Ada",
+      permissions: ["EDIT_ITEMS"],
+      active: true,
+    });
     const secret = new TextEncoder().encode(process.env.SESSION_SECRET);
     const token = await new SignJWT({
       userId: "u1",
@@ -47,5 +62,69 @@ describe("verifyBearerToken", () => {
         permissions: ["EDIT_ITEMS"],
       })
     );
+  });
+
+  it("returns null when the token's permissions are stale (DB has since changed them)", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      name: "Ada",
+      permissions: [], // revoked since the token was issued
+      active: true,
+    });
+    const secret = new TextEncoder().encode(process.env.SESSION_SECRET);
+    const token = await new SignJWT({
+      userId: "u1",
+      email: "a@b.com",
+      name: "Ada",
+      permissions: ["EDIT_ITEMS"],
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setIssuedAt()
+      .setExpirationTime("30d")
+      .sign(secret);
+
+    const session = await verifyBearerToken(makeRequest(`Bearer ${token}`));
+    expect(session?.permissions).toEqual([]);
+  });
+
+  it("returns null when the user has been deactivated since the token was issued", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      name: "Ada",
+      permissions: ["EDIT_ITEMS"],
+      active: false,
+    });
+    const secret = new TextEncoder().encode(process.env.SESSION_SECRET);
+    const token = await new SignJWT({
+      userId: "u1",
+      email: "a@b.com",
+      name: "Ada",
+      permissions: ["EDIT_ITEMS"],
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setIssuedAt()
+      .setExpirationTime("30d")
+      .sign(secret);
+
+    expect(await verifyBearerToken(makeRequest(`Bearer ${token}`))).toBeNull();
+  });
+
+  it("returns null when the user no longer exists", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue(null);
+    const secret = new TextEncoder().encode(process.env.SESSION_SECRET);
+    const token = await new SignJWT({
+      userId: "deleted-user",
+      email: "a@b.com",
+      name: "Ada",
+      permissions: ["EDIT_ITEMS"],
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setIssuedAt()
+      .setExpirationTime("30d")
+      .sign(secret);
+
+    expect(await verifyBearerToken(makeRequest(`Bearer ${token}`))).toBeNull();
   });
 });

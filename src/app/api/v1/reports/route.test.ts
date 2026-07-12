@@ -2,7 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SignJWT } from "jose";
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { movement: { findMany: vi.fn() }, item: { findMany: vi.fn() } },
+  prisma: {
+    movement: { findMany: vi.fn() },
+    item: { findMany: vi.fn() },
+    user: { findUnique: vi.fn() },
+  },
 }));
 
 import { prisma } from "@/lib/prisma";
@@ -21,6 +25,13 @@ async function token() {
 beforeEach(() => {
   vi.clearAllMocks();
   process.env.SESSION_SECRET = SECRET;
+  (prisma.user.findUnique as any).mockResolvedValue({
+    id: "u1",
+    email: "a@b.com",
+    name: "Ada",
+    permissions: [],
+    active: true,
+  });
 });
 
 describe("GET /api/v1/reports", () => {

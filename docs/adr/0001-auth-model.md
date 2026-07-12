@@ -18,6 +18,18 @@ and permission model without duplicating business rules.
 - `signSessionToken()` (`src/lib/auth.ts`) issues one HS256 JWT containing
   `{ userId, email, name, permissions }`, signed with `SESSION_SECRET`,
   30-day expiry.
+- The JWT's `permissions`/`name`/`email` claims are only used to authenticate
+  *that a valid session for `userId` exists* — `getSession()` and
+  `verifyBearerToken()` both re-fetch the `User` row by `userId` on every
+  call and return the **current** DB permissions/active status, not the
+  claims embedded in the token. This closes a stale-authorization gap: with
+  a 30-day token lifetime, trusting the embedded permissions would mean a
+  revoked permission (or a deactivated account) stayed effective for up to
+  30 days or until the user's next login. The tradeoff is one extra
+  `User` lookup per authenticated request/page load; if that becomes a
+  bottleneck, revisit with a short-TTL cache keyed by `userId` (invalidated
+  on any `User.permissions`/`User.active` write) rather than reverting to
+  trusting the token's claims outright.
 - **Web**: the token is set as an `httpOnly`, `sameSite=lax`, `secure`
   (in prod) cookie (`createSession`/`destroySession`). `src/proxy.ts`
   (Next.js middleware) verifies this cookie for all non-public, non-API

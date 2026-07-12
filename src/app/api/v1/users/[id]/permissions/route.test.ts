@@ -1,13 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SignJWT } from "jose";
 
-vi.mock("@/lib/prisma", () => ({ prisma: { user: { update: vi.fn() } } }));
+vi.mock("@/lib/prisma", () => ({
+  prisma: { user: { update: vi.fn(), findUnique: vi.fn() } },
+}));
 
+import { prisma } from "@/lib/prisma";
 import { PATCH } from "./route";
 
 const SECRET = "test-secret-at-least-32-chars-long";
 
 async function tokenFor(permissions: string[]) {
+  (prisma.user.findUnique as any).mockResolvedValue({
+    id: "admin-1",
+    email: "admin@x.com",
+    name: "Admin",
+    permissions,
+    active: true,
+  });
   return new SignJWT({ userId: "admin-1", email: "admin@x.com", name: "Admin", permissions })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()

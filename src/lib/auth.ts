@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { prisma } from "@/lib/prisma";
 
 const SESSION_COOKIE = "litr_session";
 const alg = "HS256";
@@ -27,6 +28,18 @@ export async function signSessionToken(payload: SessionPayload): Promise<string>
     .sign(getSecretKey());
 }
 
+/**
+ * Re-fetches the user's current permissions/active status from the DB
+ * instead of trusting the JWT's embedded (possibly stale, up to 30 days
+ * old) permissions snapshot. Returns null if the user no longer exists or
+ * has been deactivated since the token was issued.
+ */
+async function resolveCurrentSession(userId: string): Promise<SessionPayload | null> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || !user.active) return null;
+  return { userId: user.id, email: user.email, name: user.name, permissions: user.permissions };
+}
+
 export async function verifyBearerToken(req: Request): Promise<SessionPayload | null> {
   const header = req.headers.get("authorization");
   if (!header?.startsWith("Bearer ")) return null;
@@ -35,7 +48,7 @@ export async function verifyBearerToken(req: Request): Promise<SessionPayload | 
 
   try {
     const { payload } = await jwtVerify(token, getSecretKey());
-    return payload as unknown as SessionPayload;
+    return resolveCurrentSession((payload as unknown as SessionPayload).userId);
   } catch {
     return null;
   }
@@ -66,7 +79,7 @@ export async function getSession(): Promise<SessionPayload | null> {
 
   try {
     const { payload } = await jwtVerify(token, getSecretKey());
-    return payload as unknown as SessionPayload;
+    return resolveCurrentSession((payload as unknown as SessionPayload).userId);
   } catch {
     return null;
   }
