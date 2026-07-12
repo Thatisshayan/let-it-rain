@@ -2,6 +2,7 @@ import * as SecureStore from "expo-secure-store";
 import { router } from "expo-router";
 
 const TOKEN_KEY = "litr_token";
+const FACE_ID_ENABLED_KEY = "litr_face_id_enabled";
 const REQUEST_TIMEOUT_MS = 15_000;
 
 export async function getToken(): Promise<string | null> {
@@ -14,6 +15,18 @@ export async function setToken(token: string): Promise<void> {
 
 export async function clearToken(): Promise<void> {
   await SecureStore.deleteItemAsync(TOKEN_KEY);
+}
+
+export async function getFaceIdEnabled(): Promise<boolean> {
+  return (await SecureStore.getItemAsync(FACE_ID_ENABLED_KEY)) === "true";
+}
+
+export async function setFaceIdEnabled(enabled: boolean): Promise<void> {
+  if (enabled) {
+    await SecureStore.setItemAsync(FACE_ID_ENABLED_KEY, "true");
+  } else {
+    await SecureStore.deleteItemAsync(FACE_ID_ENABLED_KEY);
+  }
 }
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;

@@ -98,8 +98,12 @@ mobile/
 └── package.json
 ```
 
-**Navigation:** the items list screen (`app/items/index.tsx`) has header links to
-Activity, Reports, and Settings — it's the de facto home screen after login.
+**Navigation:** a bottom tab bar (`app/(tabs)/_layout.tsx`) with five tabs — Dashboard,
+Items, Activity, Reports, Settings. Dashboard (`/dashboard`) is the landing screen after
+login/cold-start, not Items; it summarizes today's revenue, low-stock items, and recent
+activity by composing the same `fetchReports`/`fetchItems`/`fetchActivity` calls the other
+tabs use, with no dedicated dashboard API endpoint. The Items tab shows a live low-stock
+count badge.
 
 ## How screens talk to the API
 
@@ -117,16 +121,21 @@ for reads and call the typed functions directly (inside `try`/`catch`, showing
 `err.message` on failure) for mutations, then call
 `queryClient.invalidateQueries(...)` to refresh any affected cached data.
 
-Auth state lives in `AuthContext` (`src/api/AuthContext.tsx`) — set once at login, read
-anywhere via `useAuth()`. It's in-memory only (not persisted across app restarts beyond
-the token itself); a real "stay logged in" flow would re-hydrate this from the stored
-token on launch, which isn't implemented yet (see [Known limitations](#known-limitations)).
+Auth state lives in `AuthContext` (`src/api/AuthContext.tsx`), read anywhere via
+`useAuth()`. On cold start it re-hydrates from the stored token in `expo-secure-store`
+(decoding and checking expiry client-side before trusting it) rather than starting
+signed-out every launch. If the user has enabled Face ID (Settings → toggle, stored via
+`getFaceIdEnabled`/`setFaceIdEnabled` in `src/api/client.ts`), `AuthGate`
+(`src/api/AuthGate.tsx`) renders a lock screen over the whole navigator until
+`expo-local-authentication` succeeds — this only gates the UI locally; the API itself
+still trusts the bearer token regardless of Face ID state, same as before.
 
 ## Screens reference
 
 | Screen | Path | Requires |
 |---|---|---|
 | Login | `/login` | — |
+| Dashboard | `/dashboard` | signed in (landing screen after login) |
 | Items list | `/items` | signed in |
 | Item detail | `/items/:id` | signed in |
 | New item | `/items/new` | `EDIT_ITEMS` (enforced server-side; the screen itself doesn't hide the link) |

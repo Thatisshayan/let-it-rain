@@ -11,7 +11,8 @@
       "bundleIdentifier": "com.letitrain.mobile",
       "buildNumber": "5",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSFaceIDUsageDescription": "Let It Rain uses Face ID to quickly and securely unlock the app."
       }
     },
     "android": {
