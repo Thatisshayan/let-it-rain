@@ -23,10 +23,18 @@ The token payload (`SessionPayload`, `src/lib/auth.ts`):
 { userId: string; email: string; name: string; permissions: string[] }
 ```
 
-Requests without a valid token get `401 Unauthorized`. Requests from a valid but
-under-permissioned user get `403 Forbidden` on endpoints that require a specific
-permission (see [Authorization model](../README.md#authorization-model) in the main
-README for what each permission grants).
+The `permissions`/`name`/`email` claims only identify *which* `userId` the request is
+for — `verifyBearerToken` re-fetches that user from the DB on every call and enforces
+their **current** `permissions`/`active` status, not whatever was embedded in the token
+at login. A permission revoked (or an account deactivated) after the token was issued
+takes effect on the very next request, even though the token itself is still valid for
+up to 30 days.
+
+Requests without a valid token, or whose user no longer exists / has been deactivated,
+get `401 Unauthorized`. Requests from a valid but under-permissioned user get
+`403 Forbidden` on endpoints that require a specific permission (see
+[Authorization model](../README.md#authorization-model) in the main README for what each
+permission grants).
 
 `src/proxy.ts` exempts `/api/v1/*` from the web app's cookie-based redirect-to-login
 behavior — each route below does its own `verifyBearerToken` check.
@@ -43,7 +51,8 @@ behavior — each route below does its own `verifyBearerToken` check.
   - `404` — resource not found (or soft-deleted)
   - `409` — a stock-adjustment write lost a `SERIALIZABLE` transaction race after all
     retries were exhausted (rare; safe to retry the request)
-  - `429` — too many login attempts for the same IP+email (see the login endpoint below)
+  - `429` — too many login attempts, either for the same IP+email or from the same IP
+    across different emails (see the login endpoint below)
 
 ---
 
@@ -67,9 +76,16 @@ No auth required.
 ```
 
 `401` if the email/password don't match or the user is deactivated (`active: false`).
-`429` if there have been more than 10 attempts for the same IP+email combination within
-a 15-minute window (`src/lib/rate-limit.ts`, an in-memory sliding window — same limiter
-the web login form uses).
+`429` if either rate-limit bucket is exceeded (`src/lib/login.ts`, `src/lib/rate-limit.ts`
+— same limiter the web login form uses, since both call `attemptLogin`):
+- more than 10 attempts for the same IP+email combination within a 15-minute window, or
+- more than 30 attempts from the same IP (across any emails) within a 15-minute window —
+  this catches an attacker spraying guesses across many emails from one IP, which the
+  per-email bucket alone wouldn't.
+
+Backed by Upstash Redis when `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` are
+configured (durable, multi-instance safe), otherwise an in-memory Map (single-instance
+only; also the fallback if Upstash errors).
 
 ### `POST /api/v1/auth/logout`
 

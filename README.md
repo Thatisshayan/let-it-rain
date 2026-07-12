@@ -189,6 +189,13 @@ mobile API):
 - An admin **cannot remove their own `MANAGE_USERS` permission**.
 - An admin **cannot deactivate their own account**.
 
+Session JWTs are long-lived (30 days), but they aren't a static permissions snapshot:
+`getSession()`/`verifyBearerToken()` (`src/lib/auth.ts`) re-fetch the `User` row by id on
+every call and return the **current** DB permissions/active status rather than trusting
+whatever was embedded in the token at login. A revoked permission or a deactivation takes
+effect on the user's very next request — it doesn't wait for the token to expire or for
+them to log out and back in.
+
 Viewing items, the activity calendar, and accounting reports requires no specific
 permission beyond being signed in — those are read-only and open to every authenticated
 user.
@@ -263,12 +270,16 @@ its cookie-based redirect-to-login behavior — each `/api/v1` route does its ow
   adjustments to the same item can't silently overwrite each other (lost update). This
   is shared by both the web form and the mobile API, so the guarantee holds no matter
   which client made the call.
-- **Rate limiting:** login attempts are limited per IP+email via an in-memory sliding
-  window (`src/lib/rate-limit.ts`) on the web login form. This is fine for a
-  single-instance deployment; swap for a shared store (e.g. Redis) if this ever runs
-  multiple instances behind a load balancer. (The `/api/v1/auth/login` endpoint used by
-  mobile does not currently share this rate limiter — see the code before assuming it
-  does.)
+- **Rate limiting:** login attempts go through `attemptLogin` (`src/lib/login.ts`),
+  shared by both the web login Server Action and the `POST /api/v1/auth/login` route
+  used by mobile — the limiter is not web-only. Two buckets are checked per attempt:
+  10 attempts / 15 min per `ip:email`, and a coarser 30 attempts / 15 min per `ip`
+  alone (the second bucket exists so an attacker can't dodge the per-email limit by
+  spraying guesses across many different email addresses from one IP). Both use
+  `checkRateLimit` (`src/lib/rate-limit.ts`): Upstash Redis when
+  `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` are configured (durable,
+  multi-instance safe), otherwise an in-memory Map — correct for a single instance
+  but silently non-durable across replicas without Upstash configured.
 - **Low stock:** items with `quantity < minStock` are flagged throughout both UIs.
 - **Weighted-average costing:** receiving stock at a new unit cost recomputes the item's
   `unitCost` as a quantity-weighted average of the existing stock and the new batch

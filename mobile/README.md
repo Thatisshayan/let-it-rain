@@ -148,10 +148,6 @@ disallowed action always fails server-side with `403` regardless of what the UI 
 
 - **No offline support.** Every screen requires network connectivity; failed requests
   show an inline error with no local queueing or retry-on-reconnect.
-- **No persisted "stay logged in".** The bearer token is stored in `expo-secure-store`,
-  but the app doesn't currently re-hydrate the signed-in user from it on a cold start —
-  closing and reopening the app requires signing in again even though the token is
-  technically still valid and stored on-device.
 - **No push notifications.**
 - **Not yet submitted to TestFlight/the App Store.** `eas.json` and the required
   `app.json` fields (bundle identifier, build number) are in place — see
@@ -166,59 +162,52 @@ disallowed action always fails server-side with `403` regardless of what the UI 
 ## Preparing for TestFlight
 
 The project is configured for [EAS Build](https://docs.expo.dev/build/introduction/):
-`app.json` has a bundle identifier (`com.letitrain.mobile` — change this if it doesn't
-match your Apple Developer account's convention, before your first build) and
-`eas.json` defines `development`/`preview`/`production` build profiles.
+`app.json` has a bundle identifier and `eas.json` defines
+`development`/`preview`/`production` build profiles.
 
-**Before your first build, you must:**
+**Already done:**
 
-1. **Point the build profiles at a real HTTPS backend.** `eas.json`'s `preview` and
-   `production` profiles currently have `EXPO_PUBLIC_API_BASE_URL` set to a placeholder
-   (`https://REPLACE_WITH_YOUR_DEPLOYED_API_URL`). This is not optional: iOS App
-   Transport Security blocks plain `http://` requests in a standalone (non-Expo-Go)
-   build by default, so a build pointed at a LAN IP or `localhost` will fail every
-   network request with no clear error beyond "could not reach the server." Deploy the
-   web app (see the [repo root README](../README.md#deploy)) and put its real HTTPS URL
-   in both profiles before building `preview` or `production`.
-2. **Log in to EAS and link the project** (requires an Expo account):
-   ```bash
-   npx eas login
-   npx eas init
-   ```
-   `eas init` writes an `extra.eas.projectId` into `app.json` — commit that change.
-3. **Verify/update the bundle identifier** in `app.json` (`ios.bundleIdentifier`) to
-   match an app record you'll create (or have already created) in
-   [App Store Connect](https://appstoreconnect.apple.com/).
-4. **Build:**
-   ```bash
-   npx eas build --platform ios --profile preview   # internal testing build
-   # or
-   npx eas build --platform ios --profile production
-   ```
-   The first iOS build will interactively prompt for your Apple Developer credentials
-   and generate/select signing certificates and provisioning profiles — EAS manages
-   this for you, but it does require an active Apple Developer Program membership.
-5. **Submit to TestFlight:**
-   ```bash
-   npx eas submit --platform ios --latest
-   ```
-   Requires an app record already created in App Store Connect with a matching bundle
-   identifier, and (per `eas.json`'s `ITSAppUsesNonExemptEncryption: false` setting in
-   `app.json`) answers the export-compliance question automatically since the app only
-   uses standard HTTPS/TLS, no custom cryptography.
+1. **Build profiles point at the real deployed API.** `eas.json`'s `preview` and
+   `production` profiles set `EXPO_PUBLIC_API_BASE_URL` to the deployed web app's HTTPS
+   URL (`https://letitrain-jade.vercel.app`) — required because iOS App Transport
+   Security blocks plain `http://` requests in a standalone (non-Expo-Go) build.
+2. **EAS project is linked.** `app.json`'s `extra.eas.projectId` and `owner` are set
+   (`obsidianstudio/letitrain-mobile`); `eas init`/`eas login` don't need to be re-run
+   unless you're switching Expo accounts.
+3. **Bundle identifier is set** in `app.json` (`ios.bundleIdentifier`:
+   `com.letitrain.mobile`) — verify this still matches the app record in
+   [App Store Connect](https://appstoreconnect.apple.com/) before submitting.
+4. `ios.buildNumber`, `android.package`, `android.versionCode` are set in `app.json`, and
+   `eas.json`'s `production` profile has `autoIncrement: true` so the build number bumps
+   automatically between submissions.
+5. The app itself: cold-start session persistence (a valid stored token signs you back in
+   automatically — see `AuthProvider` in `src/api/AuthContext.tsx`), automatic sign-out +
+   redirect to login on a `401` (expired/invalidated token) from any screen, a working
+   sign-out button (Settings → Sign out), and a request timeout so a bad network shows an
+   error instead of an infinite spinner.
 
-**What's already handled:**
-- `ios.bundleIdentifier`, `ios.buildNumber`, `android.package`, `android.versionCode` are
-  set in `app.json`.
-- `eas.json`'s `production` profile has `autoIncrement: true`, so you don't need to
-  manually bump the build number between submissions.
-- App icon and splash screen assets exist (currently Expo's generic defaults — replace
+**Still needed before shipping to real testers:**
+- App icon and splash screen assets are currently Expo's generic defaults — replace
   `assets/icon.png`, `assets/android-icon-*.png`, `assets/splash-icon.png`,
-  `assets/favicon.png` with your own branded assets before shipping to real testers).
-- The app itself: cold-start session persistence (a valid stored token signs you back in
-  automatically), automatic sign-out + redirect to login on a `401` (expired/invalidated
-  token) from any screen, a working sign-out button (Settings → Sign out), and a request
-  timeout so a bad network shows an error instead of an infinite spinner.
+  `assets/favicon.png` with your own branded assets.
+- An app record in App Store Connect with a matching bundle identifier (needed for
+  `eas submit`, not for `eas build` itself).
+
+**To build and submit:**
+```bash
+npx eas build --platform ios --profile preview     # internal testing build (ad hoc)
+# or
+npx eas build --platform ios --profile production  # TestFlight/App Store build
+
+npx eas submit --platform ios --latest              # upload the most recent build to
+                                                      # App Store Connect / TestFlight
+```
+The first iOS build will interactively prompt for your Apple Developer credentials and
+generate/select signing certificates and provisioning profiles — EAS manages this for
+you, but it does require an active Apple Developer Program membership. `eas.json`'s
+`ITSAppUsesNonExemptEncryption: false` setting (in `app.json`) answers the App Store
+Connect export-compliance question automatically, since the app only uses standard
+HTTPS/TLS and no custom cryptography.
 
 ## Troubleshooting
 
