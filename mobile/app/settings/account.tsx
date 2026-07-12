@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import { updateOwnProfile, changeOwnPassword } from "../../src/api/settings";
 import { ApiError } from "../../src/api/client";
 import { useAuth } from "../../src/api/AuthContext";
+import { useTheme } from "../../src/theme";
 
 export default function AccountScreen() {
   const { user } = useAuth();
@@ -12,6 +13,7 @@ export default function AccountScreen() {
 }
 
 function AccountForm({ initialName }: { initialName: string }) {
+  const theme = useTheme();
   const [name, setName] = useState(initialName);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -44,35 +46,39 @@ function AccountForm({ initialName }: { initialName: string }) {
     }
   }
 
+  const inputStyle = [styles.input, { borderColor: theme.border, color: theme.foreground }];
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Name</Text>
-      <TextInput style={styles.input} value={name} onChangeText={setName} />
-      {nameError ? <Text style={styles.error}>{nameError}</Text> : null}
-      {nameSuccess ? <Text style={styles.success}>{nameSuccess}</Text> : null}
-      <Pressable style={styles.button} onPress={saveName}>
-        <Text style={styles.buttonText}>Save name</Text>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Name</Text>
+      <TextInput style={inputStyle} value={name} onChangeText={setName} />
+      {nameError ? <Text style={{ color: theme.destructive }}>{nameError}</Text> : null}
+      {nameSuccess ? <Text style={{ color: theme.success }}>{nameSuccess}</Text> : null}
+      <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={saveName}>
+        <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>Save name</Text>
       </Pressable>
 
-      <Text style={styles.sectionTitle}>Change password</Text>
+      <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Change password</Text>
       <TextInput
-        style={styles.input}
+        style={inputStyle}
         placeholder="Current password"
+        placeholderTextColor={theme.mutedForeground}
         secureTextEntry
         value={currentPassword}
         onChangeText={setCurrentPassword}
       />
       <TextInput
-        style={styles.input}
+        style={inputStyle}
         placeholder="New password"
+        placeholderTextColor={theme.mutedForeground}
         secureTextEntry
         value={newPassword}
         onChangeText={setNewPassword}
       />
-      {passwordError ? <Text style={styles.error}>{passwordError}</Text> : null}
-      {passwordSuccess ? <Text style={styles.success}>{passwordSuccess}</Text> : null}
-      <Pressable style={styles.button} onPress={savePassword}>
-        <Text style={styles.buttonText}>Change password</Text>
+      {passwordError ? <Text style={{ color: theme.destructive }}>{passwordError}</Text> : null}
+      {passwordSuccess ? <Text style={{ color: theme.success }}>{passwordSuccess}</Text> : null}
+      <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={savePassword}>
+        <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>Change password</Text>
       </Pressable>
     </View>
   );
@@ -81,9 +87,7 @@ function AccountForm({ initialName }: { initialName: string }) {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, gap: 8 },
   sectionTitle: { fontWeight: "600", marginTop: 12 },
-  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12 },
-  error: { color: "#c00" },
-  success: { color: "#080" },
-  button: { backgroundColor: "#2563eb", padding: 12, borderRadius: 8, alignItems: "center", marginTop: 4 },
-  buttonText: { color: "#fff", fontWeight: "600" },
+  input: { borderWidth: 1, borderRadius: 8, padding: 12 },
+  button: { padding: 12, borderRadius: 8, alignItems: "center", marginTop: 4 },
+  buttonText: { fontWeight: "600" },
 });

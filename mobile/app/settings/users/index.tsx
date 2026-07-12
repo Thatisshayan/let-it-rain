@@ -2,21 +2,23 @@ import { View, Text, FlatList, Pressable, StyleSheet } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { fetchUsers } from "../../../src/api/settings";
+import { useTheme } from "../../../src/theme";
 
 export default function UsersScreen() {
+  const theme = useTheme();
   const { data: users, isLoading, error, refetch } = useQuery({
     queryKey: ["users"],
     queryFn: fetchUsers,
   });
 
   return (
-    <View style={styles.container}>
-      {isLoading ? <Text>Loading...</Text> : null}
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {isLoading ? <Text style={{ color: theme.foreground }}>Loading...</Text> : null}
       {error ? (
         <View>
-          <Text style={styles.error}>Could not load users.</Text>
+          <Text style={{ color: theme.destructive }}>Could not load users.</Text>
           <Pressable onPress={() => refetch()}>
-            <Text>Retry</Text>
+            <Text style={{ color: theme.primary }}>Retry</Text>
           </Pressable>
         </View>
       ) : null}
@@ -24,16 +26,16 @@ export default function UsersScreen() {
         data={users ?? []}
         keyExtractor={(u) => u.id}
         renderItem={({ item }) => (
-          <Pressable style={styles.row} onPress={() => router.push(`/settings/users/${item.id}`)}>
-            <Text style={styles.rowName}>{item.name}</Text>
-            <Text style={item.active ? styles.active : styles.inactive}>
+          <Pressable style={[styles.row, { borderColor: theme.border }]} onPress={() => router.push(`/settings/users/${item.id}`)}>
+            <Text style={[styles.rowName, { color: theme.foreground }]}>{item.name}</Text>
+            <Text style={{ color: item.active ? theme.success : theme.mutedForeground }}>
               {item.active ? "Active" : "Inactive"}
             </Text>
           </Pressable>
         )}
       />
-      <Pressable style={styles.addButton} onPress={() => router.push("/settings/users/new")}>
-        <Text style={styles.addButtonText}>+ New user</Text>
+      <Pressable style={[styles.addButton, { backgroundColor: theme.primary }]} onPress={() => router.push("/settings/users/new")}>
+        <Text style={[styles.addButtonText, { color: theme.primaryForeground }]}>+ New user</Text>
       </Pressable>
     </View>
   );
@@ -41,17 +43,13 @@ export default function UsersScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, gap: 8 },
-  error: { color: "#c00" },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderColor: "#eee",
   },
   rowName: { fontWeight: "500" },
-  active: { color: "#080" },
-  inactive: { color: "#888" },
-  addButton: { backgroundColor: "#2563eb", padding: 14, borderRadius: 8, alignItems: "center", marginTop: 8 },
-  addButtonText: { color: "#fff", fontWeight: "600" },
+  addButton: { padding: 14, borderRadius: 8, alignItems: "center", marginTop: 8 },
+  addButtonText: { fontWeight: "600" },
 });

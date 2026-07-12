@@ -4,8 +4,10 @@ import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { createUser, ALL_PERMISSIONS } from "../../../src/api/settings";
 import { ApiError } from "../../../src/api/client";
+import { useTheme } from "../../../src/theme";
 
 export default function NewUserScreen() {
+  const theme = useTheme();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,20 +34,24 @@ export default function NewUserScreen() {
     }
   }
 
+  const inputStyle = [styles.input, { borderColor: theme.border, color: theme.foreground }];
+
   return (
-    <View style={styles.container}>
-      <TextInput style={styles.input} placeholder="Name" value={name} onChangeText={setName} />
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <TextInput style={inputStyle} placeholder="Name" placeholderTextColor={theme.mutedForeground} value={name} onChangeText={setName} />
       <TextInput
-        style={styles.input}
+        style={inputStyle}
         placeholder="Email"
+        placeholderTextColor={theme.mutedForeground}
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
         onChangeText={setEmail}
       />
       <TextInput
-        style={styles.input}
+        style={inputStyle}
         placeholder="Password"
+        placeholderTextColor={theme.mutedForeground}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
@@ -54,16 +60,22 @@ export default function NewUserScreen() {
         {ALL_PERMISSIONS.map((p) => (
           <Pressable
             key={p}
-            style={[styles.permButton, permissions.includes(p) && styles.permButtonActive]}
+            style={[
+              styles.permButton,
+              { borderColor: theme.border },
+              permissions.includes(p) && { backgroundColor: theme.primary, borderColor: theme.primary },
+            ]}
             onPress={() => togglePermission(p)}
           >
-            <Text style={permissions.includes(p) ? styles.permTextActive : undefined}>{p}</Text>
+            <Text style={{ color: permissions.includes(p) ? theme.primaryForeground : theme.foreground }}>{p}</Text>
           </Pressable>
         ))}
       </View>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Pressable style={styles.submit} onPress={onSubmit} disabled={submitting}>
-        <Text style={styles.submitText}>{submitting ? "Creating..." : "Create user"}</Text>
+      {error ? <Text style={{ color: theme.destructive }}>{error}</Text> : null}
+      <Pressable style={[styles.submit, { backgroundColor: theme.primary }]} onPress={onSubmit} disabled={submitting}>
+        <Text style={[styles.submitText, { color: theme.primaryForeground }]}>
+          {submitting ? "Creating..." : "Create user"}
+        </Text>
       </Pressable>
     </View>
   );
@@ -71,12 +83,9 @@ export default function NewUserScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, gap: 12 },
-  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12 },
+  input: { borderWidth: 1, borderRadius: 8, padding: 12 },
   permissions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  permButton: { padding: 8, borderRadius: 8, borderWidth: 1, borderColor: "#ccc" },
-  permButtonActive: { backgroundColor: "#2563eb", borderColor: "#2563eb" },
-  permTextActive: { color: "#fff" },
-  error: { color: "#c00" },
-  submit: { backgroundColor: "#2563eb", padding: 14, borderRadius: 8, alignItems: "center" },
-  submitText: { color: "#fff", fontWeight: "600" },
+  permButton: { padding: 8, borderRadius: 8, borderWidth: 1 },
+  submit: { padding: 14, borderRadius: 8, alignItems: "center" },
+  submitText: { fontWeight: "600" },
 });

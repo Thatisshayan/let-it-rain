@@ -4,8 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchReports, formatMoney } from "../../src/api/reports";
 import { adjacentMonthParam } from "../../src/api/activity";
+import { useTheme } from "../../src/theme";
 
 export default function ReportsScreen() {
+  const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [month, setMonth] = useState<string | undefined>(undefined);
 
@@ -20,8 +22,14 @@ export default function ReportsScreen() {
     setMonth(adjacentMonthParam(data.year, data.month, delta));
   }
 
-  if (isLoading || !data) return <Text style={styles.padded}>Loading...</Text>;
-  if (error) return <Text style={[styles.padded, styles.error]}>Could not load reports.</Text>;
+  if (isLoading || !data)
+    return <Text style={[styles.padded, { color: theme.foreground, backgroundColor: theme.background }]}>Loading...</Text>;
+  if (error)
+    return (
+      <Text style={[styles.padded, { color: theme.destructive, backgroundColor: theme.background }]}>
+        Could not load reports.
+      </Text>
+    );
 
   const cards: { label: string; value: string; negative?: boolean }[] = [
     { label: "Today's revenue", value: formatMoney(data.todayRevenue) },
@@ -38,7 +46,7 @@ export default function ReportsScreen() {
 
   return (
     <FlatList
-      style={[styles.container, { paddingTop: insets.top }]}
+      style={[styles.container, { paddingTop: insets.top, backgroundColor: theme.background }]}
       data={[]}
       keyExtractor={() => "x"}
       renderItem={null}
@@ -48,53 +56,58 @@ export default function ReportsScreen() {
         <View style={styles.content}>
           <View style={styles.header}>
             <Pressable onPress={() => goToMonth(-1)}>
-              <Text>← Prev</Text>
+              <Text style={{ color: theme.primary }}>← Prev</Text>
             </Pressable>
-            <Text style={styles.monthLabel}>{data.monthLabel}</Text>
+            <Text style={[styles.monthLabel, { color: theme.foreground }]}>{data.monthLabel}</Text>
             <Pressable onPress={() => goToMonth(1)}>
-              <Text>Next →</Text>
+              <Text style={{ color: theme.primary }}>Next →</Text>
             </Pressable>
           </View>
 
           <View style={styles.cardsGrid}>
             {cards.map((c) => (
-              <View key={c.label} style={styles.card}>
-                <Text style={styles.cardLabel}>{c.label}</Text>
-                <Text style={[styles.cardValue, c.negative && styles.negative]}>{c.value}</Text>
+              <View key={c.label} style={[styles.card, { borderColor: theme.border, backgroundColor: theme.card }]}>
+                <Text style={[styles.cardLabel, { color: theme.mutedForeground }]}>{c.label}</Text>
+                <Text style={[styles.cardValue, { color: c.negative ? theme.destructive : theme.foreground }]}>
+                  {c.value}
+                </Text>
               </View>
             ))}
           </View>
 
-          <Text style={styles.sectionTitle}>Revenue by day</Text>
+          <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Revenue by day</Text>
           {data.revenueByDay.length === 0 ? (
-            <Text style={styles.empty}>No sales recorded this month.</Text>
+            <Text style={[styles.empty, { color: theme.mutedForeground }]}>No sales recorded this month.</Text>
           ) : (
             data.revenueByDay.map((d) => (
               <View key={d.date} style={styles.chartRow}>
-                <Text style={styles.chartLabel}>{d.date.slice(5)}</Text>
-                <View style={styles.chartTrack}>
+                <Text style={[styles.chartLabel, { color: theme.mutedForeground }]}>{d.date.slice(5)}</Text>
+                <View style={[styles.chartTrack, { backgroundColor: theme.muted }]}>
                   <View
-                    style={[styles.chartBar, { width: `${Math.max(4, (d.revenue / maxRevenue) * 100)}%` }]}
+                    style={[
+                      styles.chartBar,
+                      { width: `${Math.max(4, (d.revenue / maxRevenue) * 100)}%`, backgroundColor: theme.primary },
+                    ]}
                   />
                 </View>
-                <Text style={styles.chartValue}>{formatMoney(d.revenue)}</Text>
+                <Text style={[styles.chartValue, { color: theme.foreground }]}>{formatMoney(d.revenue)}</Text>
               </View>
             ))
           )}
 
-          <Text style={styles.sectionTitle}>Sales by item</Text>
+          <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Sales by item</Text>
           {data.salesByItem.length === 0 ? (
-            <Text style={styles.empty}>No sales recorded this month.</Text>
+            <Text style={[styles.empty, { color: theme.mutedForeground }]}>No sales recorded this month.</Text>
           ) : (
             data.salesByItem.map((row) => (
-              <View key={row.itemId} style={styles.row}>
+              <View key={row.itemId} style={[styles.row, { borderColor: theme.border }]}>
                 <View>
-                  <Text style={styles.rowName}>{row.itemName}</Text>
-                  <Text style={styles.rowMeta}>{row.unitsSold} units sold</Text>
+                  <Text style={[styles.rowName, { color: theme.foreground }]}>{row.itemName}</Text>
+                  <Text style={[styles.rowMeta, { color: theme.mutedForeground }]}>{row.unitsSold} units sold</Text>
                 </View>
                 <View style={styles.rowRight}>
-                  <Text style={styles.rowValue}>{formatMoney(row.revenue)}</Text>
-                  <Text style={styles.rowMeta}>profit {formatMoney(row.profit)}</Text>
+                  <Text style={[styles.rowValue, { color: theme.foreground }]}>{formatMoney(row.revenue)}</Text>
+                  <Text style={[styles.rowMeta, { color: theme.mutedForeground }]}>profit {formatMoney(row.profit)}</Text>
                 </View>
               </View>
             ))
@@ -108,31 +121,28 @@ export default function ReportsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16, gap: 8 },
-  padded: { padding: 16 },
-  error: { color: "#c00" },
+  padded: { padding: 16, flex: 1 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   monthLabel: { fontWeight: "600" },
   cardsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 },
-  card: { flexBasis: "47%", borderWidth: 1, borderColor: "#eee", borderRadius: 8, padding: 12 },
-  cardLabel: { fontSize: 11, color: "#666" },
+  card: { flexBasis: "47%", borderWidth: 1, borderRadius: 8, padding: 12 },
+  cardLabel: { fontSize: 11 },
   cardValue: { fontSize: 18, fontWeight: "700", marginTop: 4 },
-  negative: { color: "#c00" },
   sectionTitle: { fontWeight: "600", marginTop: 16 },
-  empty: { color: "#666", fontSize: 13 },
+  empty: { fontSize: 13 },
   chartRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4 },
-  chartLabel: { width: 48, fontSize: 11, color: "#666" },
-  chartTrack: { flex: 1, height: 8, backgroundColor: "#eee", borderRadius: 4, overflow: "hidden" },
-  chartBar: { height: "100%", backgroundColor: "#2563eb", borderRadius: 4 },
+  chartLabel: { width: 48, fontSize: 11 },
+  chartTrack: { flex: 1, height: 8, borderRadius: 4, overflow: "hidden" },
+  chartBar: { height: "100%", borderRadius: 4 },
   chartValue: { width: 64, textAlign: "right", fontSize: 11, fontWeight: "600" },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderColor: "#eee",
   },
   rowName: { fontWeight: "500" },
-  rowMeta: { fontSize: 11, color: "#666" },
+  rowMeta: { fontSize: 11 },
   rowValue: { fontWeight: "600" },
   rowRight: { alignItems: "flex-end" },
 });

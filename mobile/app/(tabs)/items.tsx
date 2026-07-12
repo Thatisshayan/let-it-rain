@@ -5,12 +5,14 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchItems, type Item } from "../../src/api/items";
 import { exportItemsCsv } from "../../src/api/export";
+import { useTheme } from "../../src/theme";
 
 const SORTS = ["name", "quantity", "value"] as const;
 type Sort = (typeof SORTS)[number];
 const SORT_LABEL: Record<Sort, string> = { name: "Name", quantity: "Quantity", value: "Value" };
 
 export default function ItemsScreen() {
+  const theme = useTheme();
   const [q, setQ] = useState("");
   const [lowOnly, setLowOnly] = useState(false);
   const [category, setCategory] = useState<string | null>(null);
@@ -52,15 +54,21 @@ export default function ItemsScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 16, backgroundColor: theme.background }]}>
       <View style={styles.topRow}>
-        <TextInput style={[styles.search, styles.searchFlex]} placeholder="Search items" value={q} onChangeText={setQ} />
-        <Pressable onPress={onExport} style={styles.exportButton} disabled={exporting}>
-          <Text style={styles.exportButtonText}>{exporting ? "…" : "Export"}</Text>
+        <TextInput
+          style={[styles.search, styles.searchFlex, { borderColor: theme.border, color: theme.foreground }]}
+          placeholder="Search items"
+          placeholderTextColor={theme.mutedForeground}
+          value={q}
+          onChangeText={setQ}
+        />
+        <Pressable onPress={onExport} style={[styles.exportButton, { borderColor: theme.border }]} disabled={exporting}>
+          <Text style={[styles.exportButtonText, { color: theme.foreground }]}>{exporting ? "…" : "Export"}</Text>
         </Pressable>
       </View>
       <Pressable onPress={() => setLowOnly((v) => !v)} style={styles.filterButton}>
-        <Text>{lowOnly ? "Showing low stock only" : "Show all"}</Text>
+        <Text style={{ color: theme.foreground }}>{lowOnly ? "Showing low stock only" : "Show all"}</Text>
       </Pressable>
 
       {categories.length > 0 && (
@@ -72,10 +80,16 @@ export default function ItemsScreen() {
           contentContainerStyle={styles.chipRow}
           renderItem={({ item: c }) => (
             <Pressable
-              style={[styles.chip, category === c && styles.chipActive]}
+              style={[
+                styles.chip,
+                { borderColor: theme.border },
+                category === c && { backgroundColor: theme.primary, borderColor: theme.primary },
+              ]}
               onPress={() => setCategory(c)}
             >
-              <Text style={[styles.chipText, category === c && styles.chipTextActive]}>{c ?? "All"}</Text>
+              <Text style={[styles.chipText, { color: category === c ? theme.primaryForeground : theme.foreground }]}>
+                {c ?? "All"}
+              </Text>
             </Pressable>
           )}
         />
@@ -85,36 +99,44 @@ export default function ItemsScreen() {
         {SORTS.map((s) => (
           <Pressable
             key={s}
-            style={[styles.sortButton, sort === s && styles.sortButtonActive]}
+            style={[
+              styles.sortButton,
+              { backgroundColor: theme.muted },
+              sort === s && { backgroundColor: theme.primary + "26" },
+            ]}
             onPress={() => setSort(s)}
           >
-            <Text style={sort === s ? styles.sortTextActive : undefined}>{SORT_LABEL[s]}</Text>
+            <Text style={{ color: sort === s ? theme.primary : theme.foreground, fontWeight: sort === s ? "600" : "400" }}>
+              {SORT_LABEL[s]}
+            </Text>
           </Pressable>
         ))}
       </View>
 
-      {isLoading ? <Text>Loading...</Text> : null}
+      {isLoading ? <Text style={{ color: theme.foreground }}>Loading...</Text> : null}
       {error ? (
         <View>
-          <Text style={styles.error}>Could not load items.</Text>
+          <Text style={[styles.error, { color: theme.destructive }]}>Could not load items.</Text>
           <Pressable onPress={() => refetch()}>
-            <Text>Retry</Text>
+            <Text style={{ color: theme.primary }}>Retry</Text>
           </Pressable>
         </View>
       ) : null}
       <FlatList
         data={visibleItems}
         keyExtractor={(item: Item) => item.id}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={theme.primary} />}
         renderItem={({ item }) => (
-          <Pressable style={styles.row} onPress={() => router.push(`/items/${item.id}`)}>
-            <Text style={styles.rowName}>{item.name}</Text>
-            <Text style={item.lowStock ? styles.lowStock : undefined}>{item.quantity} in stock</Text>
+          <Pressable style={[styles.row, { borderColor: theme.border }]} onPress={() => router.push(`/items/${item.id}`)}>
+            <Text style={[styles.rowName, { color: theme.foreground }]}>{item.name}</Text>
+            <Text style={{ color: item.lowStock ? theme.destructive : theme.foreground, fontWeight: item.lowStock ? "600" : "400" }}>
+              {item.quantity} in stock
+            </Text>
           </Pressable>
         )}
       />
-      <Pressable style={styles.addButton} onPress={() => router.push("/items/new")}>
-        <Text style={styles.addButtonText}>+ New item</Text>
+      <Pressable style={[styles.addButton, { backgroundColor: theme.primary }]} onPress={() => router.push("/items/new")}>
+        <Text style={[styles.addButtonText, { color: theme.primaryForeground }]}>+ New item</Text>
       </Pressable>
     </View>
   );
@@ -123,30 +145,24 @@ export default function ItemsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, gap: 8 },
   topRow: { flexDirection: "row", gap: 8 },
-  search: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 10 },
+  search: { borderWidth: 1, borderRadius: 8, padding: 10 },
   searchFlex: { flex: 1 },
-  exportButton: { justifyContent: "center", paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: "#ccc" },
+  exportButton: { justifyContent: "center", paddingHorizontal: 12, borderRadius: 8, borderWidth: 1 },
   exportButtonText: { fontWeight: "500" },
   filterButton: { padding: 8 },
   chipRow: { gap: 8, paddingVertical: 4 },
-  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: "#ccc" },
-  chipActive: { backgroundColor: "#2563eb", borderColor: "#2563eb" },
+  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1 },
   chipText: { fontSize: 13 },
-  chipTextActive: { color: "#fff" },
   sortRow: { flexDirection: "row", gap: 6 },
-  sortButton: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, backgroundColor: "#f3f4f6" },
-  sortButtonActive: { backgroundColor: "#dbeafe" },
-  sortTextActive: { fontWeight: "600", color: "#2563eb" },
-  error: { color: "#c00" },
+  sortButton: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
+  error: {},
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderColor: "#eee",
   },
   rowName: { fontWeight: "500" },
-  lowStock: { color: "#c00", fontWeight: "600" },
-  addButton: { backgroundColor: "#2563eb", padding: 14, borderRadius: 8, alignItems: "center", marginTop: 8 },
-  addButtonText: { color: "#fff", fontWeight: "600" },
+  addButton: { padding: 14, borderRadius: 8, alignItems: "center", marginTop: 8 },
+  addButtonText: { fontWeight: "600" },
 });

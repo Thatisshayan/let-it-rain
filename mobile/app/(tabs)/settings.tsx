@@ -5,8 +5,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useAuth } from "../../src/api/AuthContext";
 import { getFaceIdEnabled, setFaceIdEnabled } from "../../src/api/client";
+import { useTheme } from "../../src/theme";
 
 export default function SettingsScreen() {
+  const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
   const canManageUsers = user?.permissions.includes("MANAGE_USERS");
@@ -45,20 +47,21 @@ export default function SettingsScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 16, backgroundColor: theme.background }]}>
       {canManageUsers ? (
-        <Pressable style={styles.row} onPress={() => router.push("/settings/users")}>
-          <Text style={styles.rowText}>Users</Text>
+        <Pressable style={[styles.row, { borderColor: theme.border }]} onPress={() => router.push("/settings/users")}>
+          <Text style={[styles.rowText, { color: theme.foreground }]}>Users</Text>
         </Pressable>
       ) : null}
-      <Pressable style={styles.row} onPress={() => router.push("/settings/account")}>
-        <Text style={styles.rowText}>Account</Text>
+      <Pressable style={[styles.row, { borderColor: theme.border }]} onPress={() => router.push("/settings/account")}>
+        <Text style={[styles.rowText, { color: theme.foreground }]}>Account</Text>
       </Pressable>
-      <View style={styles.row}>
+      <View style={[styles.row, { borderColor: theme.border }]}>
         <View style={styles.switchRow}>
-          <Text style={styles.rowText}>Unlock with Face ID</Text>
+          <Text style={[styles.rowText, { color: theme.foreground }]}>Unlock with Face ID</Text>
           <Switch
             value={faceIdOn}
+            trackColor={{ true: theme.primary }}
             onValueChange={(value) => {
               if (!faceIdAvailable) {
                 Alert.alert(
@@ -72,8 +75,8 @@ export default function SettingsScreen() {
           />
         </View>
       </View>
-      <Pressable style={styles.row} onPress={onSignOut}>
-        <Text style={styles.signOutText}>Sign out</Text>
+      <Pressable style={[styles.row, { borderColor: theme.border }]} onPress={onSignOut}>
+        <Text style={[styles.signOutText, { color: theme.destructive }]}>Sign out</Text>
       </Pressable>
     </View>
   );
@@ -81,8 +84,8 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
-  row: { paddingVertical: 16, borderBottomWidth: 1, borderColor: "#eee" },
+  row: { paddingVertical: 16, borderBottomWidth: 1 },
   switchRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   rowText: { fontSize: 16, fontWeight: "500" },
-  signOutText: { fontSize: 16, fontWeight: "500", color: "#c00" },
+  signOutText: { fontSize: 16, fontWeight: "500" },
 });

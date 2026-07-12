@@ -4,8 +4,10 @@ import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { createItem } from "../../src/api/items";
 import { ApiError } from "../../src/api/client";
+import { useTheme } from "../../src/theme";
 
 export default function NewItemScreen() {
+  const theme = useTheme();
   const [name, setName] = useState("");
   const [minStock, setMinStock] = useState("0");
   const [initialQuantity, setInitialQuantity] = useState("0");
@@ -35,40 +37,54 @@ export default function NewItemScreen() {
     }
   }
 
+  const inputStyle = [styles.input, { borderColor: theme.border, color: theme.foreground }];
+
   return (
-    <View style={styles.container}>
-      <TextInput style={styles.input} placeholder="Item name" value={name} onChangeText={setName} />
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <TextInput
-        style={styles.input}
+        style={inputStyle}
+        placeholder="Item name"
+        placeholderTextColor={theme.mutedForeground}
+        value={name}
+        onChangeText={setName}
+      />
+      <TextInput
+        style={inputStyle}
         placeholder="Min stock"
+        placeholderTextColor={theme.mutedForeground}
         keyboardType="numeric"
         value={minStock}
         onChangeText={setMinStock}
       />
       <TextInput
-        style={styles.input}
+        style={inputStyle}
         placeholder="Initial quantity"
+        placeholderTextColor={theme.mutedForeground}
         keyboardType="numeric"
         value={initialQuantity}
         onChangeText={setInitialQuantity}
       />
       <TextInput
-        style={styles.input}
+        style={inputStyle}
         placeholder="Unit cost"
+        placeholderTextColor={theme.mutedForeground}
         keyboardType="numeric"
         value={unitCost}
         onChangeText={setUnitCost}
       />
       <TextInput
-        style={styles.input}
+        style={inputStyle}
         placeholder="Unit price"
+        placeholderTextColor={theme.mutedForeground}
         keyboardType="numeric"
         value={unitPrice}
         onChangeText={setUnitPrice}
       />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Pressable style={styles.submit} onPress={onSubmit} disabled={submitting}>
-        <Text style={styles.submitText}>{submitting ? "Saving..." : "Create item"}</Text>
+      {error ? <Text style={{ color: theme.destructive }}>{error}</Text> : null}
+      <Pressable style={[styles.submit, { backgroundColor: theme.primary }]} onPress={onSubmit} disabled={submitting}>
+        <Text style={[styles.submitText, { color: theme.primaryForeground }]}>
+          {submitting ? "Saving..." : "Create item"}
+        </Text>
       </Pressable>
     </View>
   );
@@ -76,8 +92,7 @@ export default function NewItemScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, gap: 12 },
-  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12 },
-  error: { color: "#c00" },
-  submit: { backgroundColor: "#2563eb", padding: 14, borderRadius: 8, alignItems: "center" },
-  submitText: { color: "#fff", fontWeight: "600" },
+  input: { borderWidth: 1, borderRadius: 8, padding: 12 },
+  submit: { padding: 14, borderRadius: 8, alignItems: "center" },
+  submitText: { fontWeight: "600" },
 });
