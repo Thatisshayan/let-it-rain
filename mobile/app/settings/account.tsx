@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, Alert } from "react-native";
 import * as Haptics from "expo-haptics";
-import { updateOwnProfile, changeOwnPassword } from "../../src/api/settings";
+import { router } from "expo-router";
+import { updateOwnProfile, changeOwnPassword, revokeOwnSessions } from "../../src/api/settings";
 import { ApiError } from "../../src/api/client";
 import { useAuth } from "../../src/api/AuthContext";
 import { useTheme } from "../../src/theme";
@@ -15,6 +16,7 @@ export default function AccountScreen() {
 
 function AccountForm({ initialName }: { initialName: string }) {
   const theme = useTheme();
+  const { signOut } = useAuth();
   const [name, setName] = useState(initialName);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -22,6 +24,7 @@ function AccountForm({ initialName }: { initialName: string }) {
   const [nameSuccess, setNameSuccess] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [signingOutEverywhere, setSigningOutEverywhere] = useState(false);
 
   async function saveName() {
     setNameError(null);
@@ -48,6 +51,23 @@ function AccountForm({ initialName }: { initialName: string }) {
     } catch (err) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setPasswordError(err instanceof ApiError ? err.message : "Could not change password.");
+    }
+  }
+
+  async function handleSignOutEverywhere() {
+    if (signingOutEverywhere) return;
+    setSigningOutEverywhere(true);
+    try {
+      await revokeOwnSessions();
+      await signOut();
+      router.replace("/login");
+    } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        "Sign out failed",
+        err instanceof ApiError ? err.message : "Could not sign out everywhere."
+      );
+      setSigningOutEverywhere(false);
     }
   }
 
@@ -84,6 +104,20 @@ function AccountForm({ initialName }: { initialName: string }) {
       {passwordSuccess ? <Text style={{ color: theme.success }}>{passwordSuccess}</Text> : null}
       <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={savePassword}>
         <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>Change password</Text>
+      </Pressable>
+
+      <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Sessions</Text>
+      <Text style={{ color: theme.mutedForeground, fontSize: 13 }}>
+        Sign out of every device. You&apos;ll need to sign in again.
+      </Text>
+      <Pressable
+        style={[styles.button, { borderWidth: 1, borderColor: theme.border }]}
+        onPress={handleSignOutEverywhere}
+        disabled={signingOutEverywhere}
+      >
+        <Text style={{ color: theme.foreground, fontWeight: "600" }}>
+          {signingOutEverywhere ? "Signing out…" : "Sign out everywhere"}
+        </Text>
       </Pressable>
     </View>
   );

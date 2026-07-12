@@ -51,6 +51,10 @@ export async function changeOwnPassword(currentPassword: string, newPassword: st
   });
 }
 
+export async function revokeOwnSessions(): Promise<{ ok: true }> {
+  return apiFetch("/api/v1/me/sessions", { method: "POST" });
+}
+
 export const ALL_PERMISSIONS = [
   "MANAGE_USERS",
   "DELETE_ITEMS",
