@@ -210,6 +210,20 @@ quantity-weighted average if provided; if omitted, the existing cost is kept.
 **Response `200`:** `{ "ok": true }`. `400` if the resulting quantity would go negative
 or the item doesn't exist; `409` if all serialization retries were exhausted.
 
+### `GET /api/v1/items/export.csv`
+
+Requires auth. Same data as the web app's `/items/export.csv` page, exposed under `/api/v1`
+because that page route only checks the session **cookie** (`getSession()`), which mobile
+has no equivalent of — this endpoint does the same `Bearer` check as every other `/api/v1`
+route instead. **Response `200`:** `text/csv`, one row per non-deleted item (name,
+category, quantity, min stock).
+
+### `GET /api/v1/items/:id/movements/export.csv`
+
+Requires auth. Same idea as above, for a single item's full movement history. `404` if the
+item doesn't exist. **Response `200`:** `text/csv` (date, type, delta, quantity after,
+user, reason).
+
 ---
 
 ## Users (requires `MANAGE_USERS` unless noted)

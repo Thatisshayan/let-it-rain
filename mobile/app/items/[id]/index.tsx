@@ -1,10 +1,13 @@
-import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl } from "react-native";
+import { useState } from "react";
+import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, Alert } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { fetchItem } from "../../../src/api/items";
+import { exportItemMovementsCsv } from "../../../src/api/export";
 
 export default function ItemDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const [exporting, setExporting] = useState(false);
   const { data, isLoading, isRefetching, error, refetch } = useQuery({
     queryKey: ["item", id],
     queryFn: () => fetchItem(id),
@@ -12,6 +15,18 @@ export default function ItemDetailScreen() {
 
   if (isLoading) return <Text style={styles.padded}>Loading...</Text>;
   if (error || !data) return <Text style={[styles.padded, styles.error]}>Could not load item.</Text>;
+
+  async function onExport() {
+    if (!data) return;
+    setExporting(true);
+    try {
+      await exportItemMovementsCsv(id, data.item.name);
+    } catch (err) {
+      Alert.alert("Export failed", err instanceof Error ? err.message : "Could not export CSV.");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   return (
     <View style={styles.container}>
@@ -25,6 +40,9 @@ export default function ItemDetailScreen() {
         </Pressable>
         <Pressable style={styles.buttonSecondary} onPress={() => router.push(`/items/${id}/edit`)}>
           <Text>Edit item</Text>
+        </Pressable>
+        <Pressable style={styles.buttonSecondary} onPress={onExport} disabled={exporting}>
+          <Text>{exporting ? "Exporting…" : "Export CSV"}</Text>
         </Pressable>
       </View>
       <Text style={styles.sectionTitle}>Movement history</Text>

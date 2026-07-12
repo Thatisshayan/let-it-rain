@@ -207,10 +207,13 @@ user.
   count badge in the web nav bar, linking to `/items?low=1`.
 - Item detail with full movement (audit) history.
 - Create/edit items, including cost/price fields used by accounting reports.
-- Receive, remove, or count-adjust stock, with an optional reason and (for removals) an
-  `isSale` flag that feeds the reports below.
-- CSV export of the item list and of a single item's movement history (web only, at
-  `/items/export.csv` and `/items/[id]/movements/export.csv`).
+- Receive, remove, or count-adjust stock, with an optional reason and (for removals)
+  optional Cash/Interac split amounts that feed the reports below — a removal is recorded
+  as a sale whenever their sum is greater than `0`.
+- CSV export of the item list and of a single item's movement history — the web pages at
+  `/items/export.csv`/`/items/[id]/movements/export.csv` (cookie session auth) and the
+  equivalent `/api/v1/items/export.csv`/`/api/v1/items/:id/movements/export.csv` (Bearer
+  auth, used by mobile's share-sheet export) return the same data.
 
 ### Settings & user management (web + mobile)
 - Admins (`MANAGE_USERS`) can create users, edit their permissions, activate/deactivate

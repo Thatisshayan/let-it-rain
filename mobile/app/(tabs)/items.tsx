@@ -1,22 +1,40 @@
 import { useState } from "react";
-import { View, TextInput, FlatList, Text, Pressable, StyleSheet, RefreshControl } from "react-native";
+import { View, TextInput, FlatList, Text, Pressable, StyleSheet, RefreshControl, Alert } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchItems } from "../../src/api/items";
+import { exportItemsCsv } from "../../src/api/export";
 
 export default function ItemsScreen() {
   const [q, setQ] = useState("");
   const [lowOnly, setLowOnly] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const insets = useSafeAreaInsets();
   const { data: items, isLoading, isRefetching, error, refetch } = useQuery({
     queryKey: ["items", q, lowOnly],
     queryFn: () => fetchItems({ q, low: lowOnly }),
   });
 
+  async function onExport() {
+    setExporting(true);
+    try {
+      await exportItemsCsv();
+    } catch (err) {
+      Alert.alert("Export failed", err instanceof Error ? err.message : "Could not export CSV.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
-      <TextInput style={styles.search} placeholder="Search items" value={q} onChangeText={setQ} />
+      <View style={styles.topRow}>
+        <TextInput style={[styles.search, styles.searchFlex]} placeholder="Search items" value={q} onChangeText={setQ} />
+        <Pressable onPress={onExport} style={styles.exportButton} disabled={exporting}>
+          <Text style={styles.exportButtonText}>{exporting ? "…" : "Export"}</Text>
+        </Pressable>
+      </View>
       <Pressable onPress={() => setLowOnly((v) => !v)} style={styles.filterButton}>
         <Text>{lowOnly ? "Showing low stock only" : "Show all"}</Text>
       </Pressable>
@@ -49,7 +67,11 @@ export default function ItemsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, gap: 8 },
+  topRow: { flexDirection: "row", gap: 8 },
   search: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 10 },
+  searchFlex: { flex: 1 },
+  exportButton: { justifyContent: "center", paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: "#ccc" },
+  exportButtonText: { fontWeight: "500" },
   filterButton: { padding: 8 },
   error: { color: "#c00" },
   row: {
