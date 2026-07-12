@@ -57,7 +57,11 @@ and permission model without duplicating business rules.
 **Rate limiting is best-effort, not an authZ boundary.**
 
 - Login attempts are throttled by `checkRateLimit` (`src/lib/rate-limit.ts`),
-  keyed by `ip:email`. It uses Upstash Redis when
+  keyed by `ip:email` (10 attempts / 15 min) **and** a coarser `ip`-only key
+  (30 attempts / 15 min). The per-email key alone let an attacker spray
+  guesses across many different emails from one IP without ever tripping a
+  shared limit; the IP-only key closes that gap while still allowing normal
+  shared-IP scenarios (offices, NAT) some headroom. It uses Upstash Redis when
   `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` are configured
   (durable, multi-instance safe), falling back to an in-memory Map
   otherwise (or on Upstash error) — correct for a single instance, but

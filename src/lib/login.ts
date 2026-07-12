@@ -5,6 +5,11 @@ import { checkRateLimit } from "@/lib/rate-limit";
 export const LOGIN_ATTEMPT_LIMIT = 10;
 export const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 
+// Coarser, IP-only bucket so an attacker can't dodge the per-email limit by
+// spraying attempts across many different email addresses from one IP.
+export const LOGIN_IP_ATTEMPT_LIMIT = 30;
+export const LOGIN_IP_WINDOW_MS = 15 * 60 * 1000;
+
 export type LoginResult =
   | {
       ok: true;
@@ -35,8 +40,10 @@ export async function attemptLogin(
   password: string,
   ip: string
 ): Promise<LoginResult> {
+  const ipOnlyAllowed = await checkRateLimit(`ip:${ip}`, LOGIN_IP_ATTEMPT_LIMIT, LOGIN_IP_WINDOW_MS);
   const rateLimitKey = `${ip}:${email}`;
-  if (!(await checkRateLimit(rateLimitKey, LOGIN_ATTEMPT_LIMIT, LOGIN_WINDOW_MS))) {
+  const perEmailAllowed = await checkRateLimit(rateLimitKey, LOGIN_ATTEMPT_LIMIT, LOGIN_WINDOW_MS);
+  if (!ipOnlyAllowed || !perEmailAllowed) {
     return { ok: false, error: "Too many login attempts. Please try again later.", status: 429 };
   }
 

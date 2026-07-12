@@ -74,4 +74,14 @@ describe("POST /api/v1/auth/login", () => {
     }
     expect(lastStatus).toBe(429);
   });
+
+  it("returns 429 after too many attempts from the same IP across different emails", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue(null);
+    let lastStatus = 0;
+    for (let i = 0; i < 31; i++) {
+      const res = await POST(req({ email: `spray-${i}@b.com`, password: "wrong" }));
+      lastStatus = res.status;
+    }
+    expect(lastStatus).toBe(429);
+  });
 });
