@@ -24,6 +24,16 @@
         "EXPO_PUBLIC_APP_ENVIRONMENT": "preview"
       }
     },
+    "staging": {
+      "distribution": "internal",
+      "ios": {
+        "resourceClass": "m-medium"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://letitrain-staging.vercel.app",
+        "EXPO_PUBLIC_APP_ENVIRONMENT": "staging"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "ios": {
