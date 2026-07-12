@@ -56,6 +56,9 @@ export default async function AppLayout({
             <Link href="/reports" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
               Reports
             </Link>
+            <Link href="/orders" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
+              Orders
+            </Link>
             {lowStockCount > 0 && (
               <Link href="/items?low=1" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
                 Low stock <Badge variant="warning" className="ml-1">{lowStockCount}</Badge>
