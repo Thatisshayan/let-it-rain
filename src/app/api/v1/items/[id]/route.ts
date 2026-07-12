@@ -24,6 +24,7 @@ export const GET = withAuth<Ctx>(async (_req, { params }) => {
       name: item.name,
       category: item.category,
       description: item.description,
+      location: item.location,
       quantity: item.quantity,
       minStock: item.minStock,
       unitCost: Number(item.unitCost),

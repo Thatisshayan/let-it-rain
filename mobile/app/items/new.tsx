@@ -17,6 +17,7 @@ export default function NewItemScreen() {
   const [name, setName] = useState("");
   const [minStock, setMinStock] = useState("0");
   const [initialQuantity, setInitialQuantity] = useState("0");
+  const [location, setLocation] = useState("");
   const [unitCost, setUnitCost] = useState("0");
   const [unitPrice, setUnitPrice] = useState("0");
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +34,7 @@ export default function NewItemScreen() {
         name,
         minStock: Number(minStock) || 0,
         initialQuantity: Number(initialQuantity) || 0,
+        location: location.trim() || undefined,
         unitCost: canViewCosts ? Number(unitCost) || 0 : 0,
         unitPrice: canViewCosts ? Number(unitPrice) || 0 : 0,
       });
@@ -74,6 +76,13 @@ export default function NewItemScreen() {
         keyboardType="numeric"
         value={initialQuantity}
         onChangeText={setInitialQuantity}
+      />
+      <TextInput
+        style={inputStyle}
+        placeholder="Location (optional, e.g. Shelf A-3)"
+        placeholderTextColor={theme.mutedForeground}
+        value={location}
+        onChangeText={setLocation}
       />
       {canViewCosts && (
         <>

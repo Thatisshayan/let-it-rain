@@ -24,7 +24,11 @@ export type Movement = {
   user: { name: string };
 };
 
-export type ItemDetail = Omit<Item, "lowStock"> & { description: string | null; customFields: unknown };
+export type ItemDetail = Omit<Item, "lowStock"> & {
+  description: string | null;
+  location: string | null;
+  customFields: unknown;
+};
 
 export async function fetchItems(params: { q?: string; low?: boolean } = {}): Promise<Item[]> {
   const qs = new URLSearchParams();
@@ -42,6 +46,7 @@ export async function createItem(input: {
   name: string;
   category?: string;
   description?: string;
+  location?: string;
   minStock: number;
   initialQuantity: number;
   unitCost: number;
@@ -56,6 +61,7 @@ export async function updateItem(
     name: string;
     category?: string;
     description?: string;
+    location?: string;
     minStock: number;
     unitCost: number;
     unitPrice: number;

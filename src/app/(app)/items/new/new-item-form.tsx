@@ -41,9 +41,13 @@ export function NewItemForm({
               </datalist>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="minStock">Minimum stock</Label>
-              <Input id="minStock" name="minStock" type="number" min={0} defaultValue={0} />
+              <Label htmlFor="location">Location</Label>
+              <Input id="location" name="location" placeholder="e.g. Shelf A-3" />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="minStock">Minimum stock</Label>
+            <Input id="minStock" name="minStock" type="number" min={0} defaultValue={0} />
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">

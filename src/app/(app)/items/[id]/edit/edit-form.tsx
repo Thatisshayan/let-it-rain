@@ -49,6 +49,12 @@ export function EditItemForm({ item, customFieldsText, categories, canViewCosts 
               </datalist>
             </div>
             <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
+              <Input id="location" name="location" defaultValue={item.location ?? ""} placeholder="e.g. Shelf A-3" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
               <Label htmlFor="minStock">Minimum stock</Label>
               <Input
                 id="minStock"

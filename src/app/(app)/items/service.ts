@@ -21,7 +21,7 @@ export async function createItem(
     return { ok: false, error: "You don't have permission to add items." };
   }
 
-  const { name, category, description, minStock, initialQuantity, customFields, unitCost, unitPrice } =
+  const { name, category, description, location, minStock, initialQuantity, customFields, unitCost, unitPrice } =
     input;
 
   const item = await prisma.item.create({
@@ -29,6 +29,7 @@ export async function createItem(
       name,
       category: category ?? null,
       description: description ?? null,
+      location: location ?? null,
       minStock,
       quantity: initialQuantity,
       customFields: parseCustomFields(customFields),
@@ -63,7 +64,7 @@ export async function updateItem(
     return { ok: false, error: "You don't have permission to edit items." };
   }
 
-  const { name, category, description, minStock, customFields, unitCost, unitPrice } = input;
+  const { name, category, description, location, minStock, customFields, unitCost, unitPrice } = input;
 
   await prisma.item.update({
     where: { id: itemId, deletedAt: null },
@@ -71,6 +72,7 @@ export async function updateItem(
       name,
       category: category ?? null,
       description: description ?? null,
+      location: location ?? null,
       minStock,
       customFields: parseCustomFields(customFields),
       unitCost,

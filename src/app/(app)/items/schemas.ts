@@ -15,6 +15,7 @@ export const itemFormSchema = z.object({
     .pipe(z.string().min(1, "Item name is required.").max(200)),
   category: optionalTrimmedString,
   description: optionalTrimmedString,
+  location: optionalTrimmedString,
   minStock: z.coerce.number().int().min(0).max(1_000_000_000).default(0),
   customFields: optionalTrimmedString,
   unitCost: money,
