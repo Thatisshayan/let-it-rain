@@ -4,6 +4,8 @@ export type SaleMovement = {
   delta: number;
   unitPriceAtTime: number | null;
   unitCostAtTime: number | null;
+  cashAmount: number | null;
+  interacAmount: number | null;
   createdAt: string | Date;
 };
 
@@ -33,6 +35,14 @@ export function totalRevenue(sales: SaleMovement[]): number {
 
 export function totalCogs(sales: SaleMovement[]): number {
   return sales.reduce((sum, m) => sum + -m.delta * (m.unitCostAtTime ?? 0), 0);
+}
+
+export function totalCash(sales: SaleMovement[]): number {
+  return sales.reduce((sum, m) => sum + (m.cashAmount ?? 0), 0);
+}
+
+export function totalInterac(sales: SaleMovement[]): number {
+  return sales.reduce((sum, m) => sum + (m.interacAmount ?? 0), 0);
 }
 
 export function totalRestockCost(restocks: RestockMovement[]): number {

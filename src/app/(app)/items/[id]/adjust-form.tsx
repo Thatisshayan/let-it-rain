@@ -1,12 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { adjustStockAction, type ActionState } from "../actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 const initialState: ActionState = {};
@@ -21,6 +20,12 @@ const MODE_LABEL: Record<Mode, string> = {
 
 export function AdjustStockForm({ itemId, currentQuantity }: { itemId: string; currentQuantity: number }) {
   const [mode, setMode] = useState<Mode>("RECEIVE");
+  const [cashAmount, setCashAmount] = useState("");
+  const [interacAmount, setInteracAmount] = useState("");
+  const total = useMemo(
+    () => (Number(cashAmount) || 0) + (Number(interacAmount) || 0),
+    [cashAmount, interacAmount]
+  );
   const boundAction = adjustStockAction.bind(null, itemId);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     async (prev, formData) => {
@@ -75,11 +80,37 @@ export function AdjustStockForm({ itemId, currentQuantity }: { itemId: string; c
         )}
 
         {mode === "REMOVE" && (
-          <div className="flex items-center gap-2">
-            <Checkbox id="isSale" name="isSale" value="true" defaultChecked />
-            <Label htmlFor="isSale" className="font-normal">
-              This is a sale (counts toward revenue)
-            </Label>
+          <div className="space-y-3 rounded-lg border border-border/60 p-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="cashAmount">Cash received</Label>
+                <Input
+                  id="cashAmount"
+                  name="cashAmount"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={cashAmount}
+                  onChange={(e) => setCashAmount(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="interacAmount">Interac received</Label>
+                <Input
+                  id="interacAmount"
+                  name="interacAmount"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={interacAmount}
+                  onChange={(e) => setInteracAmount(e.target.value)}
+                />
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Total: <span className="font-medium text-foreground">${total.toFixed(2)}</span>
+              {total === 0 && " — leave both blank for a non-sale removal (e.g. damaged stock)."}
+            </p>
           </div>
         )}
 

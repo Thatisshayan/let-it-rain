@@ -91,7 +91,8 @@ export async function adjustStockAction(
     amount: formData.get("amount"),
     counted: formData.get("counted"),
     unitCost: formData.get("unitCost"),
-    isSale: formData.get("isSale"),
+    cashAmount: formData.get("cashAmount"),
+    interacAmount: formData.get("interacAmount"),
     reason: formData.get("reason"),
   });
   if (!parsed.success) return { error: firstIssueMessage(parsed.error) };

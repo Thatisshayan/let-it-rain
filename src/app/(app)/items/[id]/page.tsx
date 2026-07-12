@@ -152,6 +152,8 @@ export default async function ItemDetailPage({
                   quantityAfter: m.quantityAfter,
                   reason: m.reason,
                   isSale: m.isSale,
+                  cashAmount: m.cashAmount ? Number(m.cashAmount) : null,
+                  interacAmount: m.interacAmount ? Number(m.interacAmount) : null,
                   unitCostAtTime: m.unitCostAtTime ? Number(m.unitCostAtTime) : null,
                   unitPriceAtTime: m.unitPriceAtTime ? Number(m.unitPriceAtTime) : null,
                   createdAt: m.createdAt.toISOString(),

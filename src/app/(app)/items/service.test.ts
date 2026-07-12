@@ -144,4 +144,74 @@ describe("adjustStock", () => {
     const result = await adjustStock(session, "item-1", { type: "RECEIVE", amount: 5 } as any);
     expect(result.ok).toBe(true);
   });
+
+  it("splits a sale's cash/interac amounts and snapshots the effective unit price", async () => {
+    const movementCreate = vi.fn();
+    (prisma.$transaction as any).mockImplementation(async (fn: any) =>
+      fn({
+        item: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: "item-1",
+            quantity: 10,
+            unitCost: 1,
+            unitPrice: 5,
+            deletedAt: null,
+          }),
+          update: vi.fn(),
+        },
+        movement: { create: movementCreate },
+      })
+    );
+    const result = await adjustStock(session, "item-1", {
+      type: "REMOVE",
+      amount: 4,
+      cashAmount: 12,
+      interacAmount: 8,
+    } as any);
+    expect(result.ok).toBe(true);
+    expect(movementCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        isSale: true,
+        cashAmount: 12,
+        interacAmount: 8,
+        // (12 + 8) / 4 units = 5/unit, not the item's list unitPrice
+        unitPriceAtTime: 5,
+      }),
+    });
+  });
+
+  it("does not mark a REMOVE as a sale when cash/interac amounts are both zero", async () => {
+    const movementCreate = vi.fn();
+    (prisma.$transaction as any).mockImplementation(async (fn: any) =>
+      fn({
+        item: {
+          findUnique: vi.fn().mockResolvedValue({
+            id: "item-1",
+            quantity: 10,
+            unitCost: 1,
+            unitPrice: 5,
+            deletedAt: null,
+          }),
+          update: vi.fn(),
+        },
+        movement: { create: movementCreate },
+      })
+    );
+    const result = await adjustStock(session, "item-1", {
+      type: "REMOVE",
+      amount: 2,
+      cashAmount: 0,
+      interacAmount: 0,
+      reason: "Damaged",
+    } as any);
+    expect(result.ok).toBe(true);
+    expect(movementCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        isSale: false,
+        cashAmount: null,
+        interacAmount: null,
+        unitPriceAtTime: null,
+      }),
+    });
+  });
 });

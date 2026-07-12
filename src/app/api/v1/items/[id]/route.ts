@@ -37,6 +37,8 @@ export const GET = withAuth<Ctx>(async (_req, { params }) => {
       quantityAfter: m.quantityAfter,
       reason: m.reason,
       isSale: m.isSale,
+      cashAmount: m.cashAmount ? Number(m.cashAmount) : null,
+      interacAmount: m.interacAmount ? Number(m.interacAmount) : null,
       createdAt: m.createdAt.toISOString(),
       user: m.user,
     })),

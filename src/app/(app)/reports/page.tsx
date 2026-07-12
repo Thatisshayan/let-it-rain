@@ -6,7 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { parseMonthParam, monthLabel, adjacentMonth, monthRange } from "../activity/calendar";
-import { totalRevenue, totalCogs, totalRestockCost, revenueByDay, salesByItem } from "./reports";
+import {
+  totalRevenue,
+  totalCogs,
+  totalCash,
+  totalInterac,
+  totalRestockCost,
+  revenueByDay,
+  salesByItem,
+} from "./reports";
 
 function monthParam(year: number, month: number) {
   return `${year}-${String(month).padStart(2, "0")}`;
@@ -57,6 +65,8 @@ export default async function ReportsPage({
       delta: m.delta,
       unitPriceAtTime: m.unitPriceAtTime ? Number(m.unitPriceAtTime) : null,
       unitCostAtTime: m.unitCostAtTime ? Number(m.unitCostAtTime) : null,
+      cashAmount: m.cashAmount ? Number(m.cashAmount) : null,
+      interacAmount: m.interacAmount ? Number(m.interacAmount) : null,
       createdAt: m.createdAt,
     }));
 
@@ -75,6 +85,8 @@ export default async function ReportsPage({
       delta: m.delta,
       unitPriceAtTime: m.unitPriceAtTime ? Number(m.unitPriceAtTime) : null,
       unitCostAtTime: null,
+      cashAmount: null,
+      interacAmount: null,
       createdAt: m.createdAt,
     }))
   );
@@ -82,6 +94,8 @@ export default async function ReportsPage({
   const monthRevenue = totalRevenue(monthSales);
   const monthCogs = totalCogs(monthSales);
   const monthProfit = monthRevenue - monthCogs;
+  const monthCash = totalCash(monthSales);
+  const monthInterac = totalInterac(monthSales);
   const monthRestockCost = totalRestockCost(monthRestocks);
   const inventoryValuation = items.reduce((sum, i) => sum + i.quantity * Number(i.unitCost), 0);
   const byDay = revenueByDay(monthSales);
@@ -117,6 +131,22 @@ export default async function ReportsPage({
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-semibold tabular-nums">{money(todayRevenue)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground">Cash this month</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold tabular-nums">{money(monthCash)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground">Interac this month</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold tabular-nums">{money(monthInterac)}</p>
           </CardContent>
         </Card>
         <Card>
@@ -181,20 +211,29 @@ export default async function ReportsPage({
           {daysWithSales.length === 0 ? (
             <p className="text-sm text-muted-foreground">No sales recorded this month.</p>
           ) : (
-            <ul className="divide-y">
-              {daysWithSales.map(([day, revenue]) => (
-                <li key={day} className="flex items-center justify-between py-2 text-sm">
-                  <span>
-                    {new Date(`${day}T00:00:00.000Z`).toLocaleDateString("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                      timeZone: "UTC",
-                    })}
-                  </span>
-                  <span className="tabular-nums font-medium">{money(revenue)}</span>
-                </li>
-              ))}
+            <ul className="space-y-2">
+              {(() => {
+                const maxRevenue = Math.max(...daysWithSales.map(([, revenue]) => revenue), 0.01);
+                return daysWithSales.map(([day, revenue]) => (
+                  <li key={day} className="flex items-center gap-3 py-1 text-sm">
+                    <span className="w-24 shrink-0 text-muted-foreground">
+                      {new Date(`${day}T00:00:00.000Z`).toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                        timeZone: "UTC",
+                      })}
+                    </span>
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-primary to-rain"
+                        style={{ width: `${Math.max(4, (revenue / maxRevenue) * 100)}%` }}
+                      />
+                    </div>
+                    <span className="w-20 shrink-0 text-right tabular-nums font-medium">{money(revenue)}</span>
+                  </li>
+                ));
+              })()}
             </ul>
           )}
         </CardContent>

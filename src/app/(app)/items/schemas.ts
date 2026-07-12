@@ -35,7 +35,8 @@ export const movementFormSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("REMOVE"),
     amount: z.coerce.number().int().positive("Enter a positive quantity to remove.").max(1_000_000_000),
-    isSale: z.coerce.boolean().default(false),
+    cashAmount: money,
+    interacAmount: money,
     reason: optionalTrimmedString,
   }),
   z.object({

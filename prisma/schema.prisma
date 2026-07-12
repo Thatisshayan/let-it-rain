@@ -59,6 +59,8 @@ model Movement {
   quantityAfter Int
   reason    String?
   isSale    Boolean      @default(false)
+  cashAmount    Decimal? @db.Decimal(12, 2)
+  interacAmount Decimal? @db.Decimal(12, 2)
   unitCostAtTime  Decimal? @db.Decimal(12, 2)
   unitPriceAtTime Decimal? @db.Decimal(12, 2)
   user      User         @relation(fields: [userId], references: [id])

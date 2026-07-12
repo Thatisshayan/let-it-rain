@@ -35,9 +35,11 @@ function MovementRowItem({ m }: { m: MovementRow }) {
           {m.user.name} · {new Date(m.createdAt).toLocaleString("en-US")}
         </p>
         {m.reason && <p className="mt-1 text-xs">{m.reason}</p>}
-        {m.isSale && m.unitPriceAtTime != null && (
+        {m.isSale && (m.cashAmount != null || m.interacAmount != null) && (
           <p className="mt-1 text-xs text-success">
-            Sold for ${(m.unitPriceAtTime * -m.delta).toFixed(2)}
+            Sold for ${((m.cashAmount ?? 0) + (m.interacAmount ?? 0)).toFixed(2)}
+            {" "}
+            (${(m.cashAmount ?? 0).toFixed(2)} cash, ${(m.interacAmount ?? 0).toFixed(2)} Interac)
           </p>
         )}
         {m.type === "RECEIVE" && m.unitCostAtTime != null && (

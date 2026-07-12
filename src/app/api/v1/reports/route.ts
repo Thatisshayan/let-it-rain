@@ -5,6 +5,8 @@ import { parseMonthParam, monthLabel, monthRange } from "@/app/(app)/activity/ca
 import {
   totalRevenue,
   totalCogs,
+  totalCash,
+  totalInterac,
   totalRestockCost,
   revenueByDay,
   salesByItem,
@@ -42,6 +44,8 @@ export const GET = withAuth(async (req) => {
       delta: m.delta,
       unitPriceAtTime: m.unitPriceAtTime ? Number(m.unitPriceAtTime) : null,
       unitCostAtTime: m.unitCostAtTime ? Number(m.unitCostAtTime) : null,
+      cashAmount: m.cashAmount ? Number(m.cashAmount) : null,
+      interacAmount: m.interacAmount ? Number(m.interacAmount) : null,
       createdAt: m.createdAt,
     }));
 
@@ -60,6 +64,8 @@ export const GET = withAuth(async (req) => {
       delta: m.delta,
       unitPriceAtTime: m.unitPriceAtTime ? Number(m.unitPriceAtTime) : null,
       unitCostAtTime: null,
+      cashAmount: null,
+      interacAmount: null,
       createdAt: m.createdAt,
     }))
   );
@@ -67,6 +73,8 @@ export const GET = withAuth(async (req) => {
   const monthRevenue = totalRevenue(monthSales);
   const monthCogs = totalCogs(monthSales);
   const monthProfit = monthRevenue - monthCogs;
+  const monthCash = totalCash(monthSales);
+  const monthInterac = totalInterac(monthSales);
   const monthRestockCost = totalRestockCost(monthRestocks);
   const inventoryValuation = items.reduce((sum, i) => sum + i.quantity * Number(i.unitCost), 0);
   const byDay = revenueByDay(monthSales);
@@ -84,6 +92,8 @@ export const GET = withAuth(async (req) => {
     monthRevenue,
     monthCogs,
     monthProfit,
+    monthCash,
+    monthInterac,
     monthRestockCost,
     inventoryValuation,
     revenueByDay: revenueByDayList,

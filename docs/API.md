@@ -154,6 +154,7 @@ Requires auth. `404` if the item doesn't exist or is soft-deleted.
     {
       "id": "...", "type": "RECEIVE", "delta": 20, "quantityAfter": 20,
       "reason": "Initial stock", "isSale": false,
+      "cashAmount": null, "interacAmount": null,
       "createdAt": "2026-07-11T03:11:42.121Z",
       "user": { "name": "Admin" }
     }
@@ -190,13 +191,19 @@ Requires `ADJUST_STOCK`. Runs inside a `SERIALIZABLE` transaction with retry-on-
 { "type": "RECEIVE", "amount": 10, "unitCost": 3.5, "reason": "Restock" }
 ```
 ```json
-{ "type": "REMOVE", "amount": 2, "isSale": true, "reason": "Counter sale" }
+{ "type": "REMOVE", "amount": 2, "cashAmount": 12, "interacAmount": 8, "reason": "Counter sale" }
 ```
 ```json
 { "type": "ADJUST", "counted": 25, "reason": "Physical count correction" }
 ```
 `RECEIVE`/`REMOVE` amounts must be positive integers. `ADJUST` takes the *counted*
-total quantity, not a delta — the server computes the resulting delta. `reason` is
+total quantity, not a delta — the server computes the resulting delta. `cashAmount`/
+`interacAmount` on `REMOVE` are both optional (default `0`); the movement is recorded as
+a sale (`isSale: true`) whenever their sum is greater than `0` — a plain "shrinkage"
+removal just omits both. The server snapshots the *effective* unit price actually paid
+(`(cashAmount + interacAmount) / amount`) as `unitPriceAtTime`, not the item's current
+list price, so it exactly matches what was collected even if it differs from list price.
+`reason` is
 optional on all three. `unitCost` on `RECEIVE` updates the item's cost via a
 quantity-weighted average if provided; if omitted, the existing cost is kept.
 
@@ -325,6 +332,7 @@ malformed).
   "year": 2026, "month": 7, "monthLabel": "July 2026",
   "todayRevenue": 45.0,
   "monthRevenue": 1200.0, "monthCogs": 800.0, "monthProfit": 400.0,
+  "monthCash": 700.0, "monthInterac": 500.0,
   "monthRestockCost": 300.0,
   "inventoryValuation": 5400.0,
   "revenueByDay": [{ "date": "2026-07-11", "revenue": 45.0 }],
@@ -340,6 +348,9 @@ malformed).
   movements (`isSale: true`) in the requested month, valued at their
   `unitPriceAtTime`/`unitCostAtTime` snapshot — **not** the item's current price/cost —
   so editing an item's price later doesn't retroactively change historical figures.
+- `monthCash`/`monthInterac` sum each sale movement's `cashAmount`/`interacAmount`
+  directly (independent of `unitPriceAtTime`) — `monthCash + monthInterac` should equal
+  `monthRevenue` for the same set of sales.
 - `monthRestockCost` sums `delta * unitCostAtTime` across `RECEIVE` movements in the
   requested month.
 - `inventoryValuation` is `quantity * unitCost` summed across **all current,

@@ -10,6 +10,8 @@ export type MovementRow = {
   quantityAfter: number;
   reason: string | null;
   isSale: boolean;
+  cashAmount: number | null;
+  interacAmount: number | null;
   unitCostAtTime: number | null;
   unitPriceAtTime: number | null;
   createdAt: string;
@@ -56,6 +58,8 @@ export async function loadMoreMovementsAction(
       quantityAfter: m.quantityAfter,
       reason: m.reason,
       isSale: m.isSale,
+      cashAmount: m.cashAmount ? Number(m.cashAmount) : null,
+      interacAmount: m.interacAmount ? Number(m.interacAmount) : null,
       unitCostAtTime: m.unitCostAtTime ? Number(m.unitCostAtTime) : null,
       unitPriceAtTime: m.unitPriceAtTime ? Number(m.unitPriceAtTime) : null,
       createdAt: m.createdAt.toISOString(),

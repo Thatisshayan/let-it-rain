@@ -122,7 +122,15 @@ export async function adjustStock(
 
           const currentCost = Number(item.unitCost);
           const isReceive = input.type === "RECEIVE";
-          const isSale = input.type === "REMOVE" && input.isSale;
+          const cashAmount = input.type === "REMOVE" ? input.cashAmount : 0;
+          const interacAmount = input.type === "REMOVE" ? input.interacAmount : 0;
+          const totalPaid = cashAmount + interacAmount;
+          const isSale = input.type === "REMOVE" && totalPaid > 0;
+          // Snapshot the price actually paid (cash + Interac / units), not the item's
+          // current list price — this is the real transaction amount, and keeps
+          // totalRevenue's `-delta * unitPriceAtTime` formula exactly equal to what was
+          // collected even if it differs from the item's list price.
+          const effectiveUnitPrice = isSale ? totalPaid / input.amount : null;
           const receivedCost = isReceive ? (input.unitCost ?? currentCost) : currentCost;
           const newAvgCost = isReceive
             ? nextWeightedAverageCost(item.quantity, currentCost, input.amount, receivedCost)
@@ -143,8 +151,10 @@ export async function adjustStock(
               quantityAfter: movement.quantityAfter,
               reason,
               isSale,
+              cashAmount: isSale ? cashAmount : null,
+              interacAmount: isSale ? interacAmount : null,
               unitCostAtTime: isReceive ? receivedCost : isSale ? currentCost : null,
-              unitPriceAtTime: isSale ? item.unitPrice : null,
+              unitPriceAtTime: effectiveUnitPrice,
               userId: session.userId,
             },
           });
