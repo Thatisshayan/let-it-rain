@@ -32,9 +32,20 @@ and permission model without duplicating business rules.
   trusting the token's claims outright.
 - **Web**: the token is set as an `httpOnly`, `sameSite=lax`, `secure`
   (in prod) cookie (`createSession`/`destroySession`). `src/proxy.ts`
-  (Next.js middleware) verifies this cookie for all non-public, non-API
-  pages and redirects to `/login` on failure — this protects **pages**,
-  not API routes.
+  (Next.js Edge middleware) does a **signature/expiry-only** check of this
+  cookie for all non-public, non-API pages and redirects to `/login` on
+  failure — this is a fast path, not the authoritative check, and it
+  protects **pages**, not API routes. It deliberately does *not* re-fetch
+  the user from the DB (Edge middleware can't use the Node-only `pg` driver
+  `@/lib/prisma` depends on, and a DB round-trip on every request here would
+  be wasteful): the authoritative, DB-backed check is `getSession()`
+  (see above), called by `(app)/layout.tsx` and every Server Action, which
+  redirects/rejects independently even if `src/proxy.ts` let the request
+  through. The cookie name and HS256 signing key are shared between
+  `src/lib/auth.ts` and `src/proxy.ts` via `src/lib/session-token.ts` — a
+  small module with no `next/headers`/`prisma` dependency, kept edge-safe on
+  purpose, so both runtimes import one source of truth instead of
+  duplicating the constants.
 - **Mobile / API**: the same JWT is returned from
   `POST /api/v1/auth/login` as a bearer token, stored client-side by the
   Expo app, and sent as `Authorization: Bearer <token>` on every request.

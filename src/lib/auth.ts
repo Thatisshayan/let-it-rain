@@ -1,17 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-
-const SESSION_COOKIE = "litr_session";
-const alg = "HS256";
-
-function getSecretKey() {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret) {
-    throw new Error("SESSION_SECRET env var is not set");
-  }
-  return new TextEncoder().encode(secret);
-}
+import { SESSION_COOKIE, SESSION_JWT_ALG, getSessionSecretKey } from "@/lib/session-token";
 
 export type SessionPayload = {
   userId: string;
@@ -22,10 +12,10 @@ export type SessionPayload = {
 
 export async function signSessionToken(payload: SessionPayload): Promise<string> {
   return new SignJWT(payload)
-    .setProtectedHeader({ alg })
+    .setProtectedHeader({ alg: SESSION_JWT_ALG })
     .setIssuedAt()
     .setExpirationTime("30d")
-    .sign(getSecretKey());
+    .sign(getSessionSecretKey());
 }
 
 /**
@@ -47,7 +37,7 @@ export async function verifyBearerToken(req: Request): Promise<SessionPayload | 
   if (!token) return null;
 
   try {
-    const { payload } = await jwtVerify(token, getSecretKey());
+    const { payload } = await jwtVerify(token, getSessionSecretKey());
     return resolveCurrentSession((payload as unknown as SessionPayload).userId);
   } catch {
     return null;
@@ -78,7 +68,7 @@ export async function getSession(): Promise<SessionPayload | null> {
   if (!token) return null;
 
   try {
-    const { payload } = await jwtVerify(token, getSecretKey());
+    const { payload } = await jwtVerify(token, getSessionSecretKey());
     return resolveCurrentSession((payload as unknown as SessionPayload).userId);
   } catch {
     return null;

@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
+import { SESSION_COOKIE, getSessionSecretKey } from "@/lib/session-token";
 
-const SESSION_COOKIE = "litr_session";
 const PUBLIC_PATHS = ["/login"];
 
-function getSecretKey() {
-  return new TextEncoder().encode(process.env.SESSION_SECRET!);
-}
-
+/**
+ * This only checks the JWT signature/expiry as a fast-path redirect for
+ * obviously-missing/invalid cookies — it does NOT re-check current
+ * permissions or account-active status against the DB (Edge middleware
+ * can't use the Node-only `pg` driver `@/lib/prisma` depends on, and doing
+ * a DB round-trip on every request here would be wasteful anyway). The
+ * authoritative check is `getSession()` (`src/lib/auth.ts`), called by
+ * `(app)/layout.tsx` and every Server Action/API route, which re-resolves
+ * permissions/active status from the DB on every call. A user who fails
+ * that check gets redirected/401'd there, even if they pass this fast path.
+ */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -26,7 +33,7 @@ export async function proxy(request: NextRequest) {
   }
 
   try {
-    await jwtVerify(token, getSecretKey());
+    await jwtVerify(token, getSessionSecretKey());
     return NextResponse.next();
   } catch {
     return NextResponse.redirect(new URL("/login", request.url));
