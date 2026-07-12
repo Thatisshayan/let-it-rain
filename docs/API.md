@@ -226,6 +226,123 @@ user, reason).
 
 ---
 
+## Orders
+
+Orders model a delivery to a named customer: multiple line items (item + quantity), an
+assigned driver, and a status lifecycle
+(`PENDING → OUT_FOR_DELIVERY → DELIVERED`, or `→ CANCELLED` from either of the first two).
+Two authorization levels apply throughout, not just one permission check:
+
+- **`MANAGE_ORDERS`** — create orders, assign/reassign drivers, cancel orders, see every
+  order.
+- **The order's assigned driver** — can act on *that specific order* (mark it
+  out-for-delivery, mark it delivered) without needing `MANAGE_ORDERS` — an ownership
+  check (`order.driverId === session.userId`), the same pattern used for own-account
+  actions elsewhere in this API. Anyone who is neither gets `403` and, for listing, simply
+  doesn't see orders that aren't theirs.
+
+### `GET /api/v1/orders`
+
+Requires auth. Returns every order for a `MANAGE_ORDERS` holder; returns only orders
+assigned to the caller otherwise.
+
+**Response `200`:**
+```json
+{
+  "orders": [
+    {
+      "id": "...", "customerName": "Acme Co", "customerAddress": null, "customerPhone": null,
+      "status": "PENDING", "notes": null,
+      "driver": { "id": "...", "name": "Dana" },
+      "lineItems": [{ "id": "...", "itemId": "...", "itemName": "Widget", "quantity": 3 }],
+      "createdAt": "2026-07-12T00:00:00.000Z",
+      "outForDeliveryAt": null, "deliveredAt": null
+    }
+  ]
+}
+```
+
+### `POST /api/v1/orders`
+
+Requires `MANAGE_ORDERS`.
+
+**Request:**
+```json
+{
+  "customerName": "Acme Co", "customerAddress": "123 Main St", "customerPhone": "555-0100",
+  "notes": "Leave at the back door",
+  "lineItems": [{ "itemId": "...", "quantity": 3 }]
+}
+```
+`customerAddress`, `customerPhone`, `notes` are optional. `lineItems` requires at least
+one entry; each `itemId` must reference a real, non-deleted item. Stock is **not**
+checked or decremented at creation — only at delivery (see below).
+
+**Response `201`:** `{ "orderId": "..." }`
+
+### `GET /api/v1/orders/:id`
+
+Requires auth. `404` if the order doesn't exist, or if the caller isn't `MANAGE_ORDERS`
+and isn't the assigned driver (same "not found" response either way, not `403` — avoids
+confirming an order ID exists to someone who has no business knowing about it).
+
+**Response `200`:** same shape as a list entry, plus `createdBy: { id, name }`.
+
+### `PATCH /api/v1/orders/:id/assign`
+
+Requires `MANAGE_ORDERS`.
+
+**Request:** `{ "driverId": "..." }` or `{ "driverId": null }` to unassign.
+`400` if the order is already `DELIVERED` or `CANCELLED`.
+
+**Response `200`:** `{ "ok": true }`
+
+### `POST /api/v1/orders/:id/out-for-delivery`
+
+Requires auth; `MANAGE_ORDERS` or the assigned driver. `400` unless the order is
+currently `PENDING`.
+
+**Response `200`:** `{ "ok": true }`
+
+### `POST /api/v1/orders/:id/deliver`
+
+Requires auth; `MANAGE_ORDERS` or the assigned driver. Runs inside a `SERIALIZABLE`
+transaction with retry-on-conflict, same as `POST /api/v1/items/:id/movements` — creates
+one `REMOVE` movement per line item, all-or-nothing (if any single line item can't be
+fulfilled, e.g. insufficient stock, the whole delivery is rejected and nothing is
+written).
+
+**Request:**
+```json
+{ "payments": [{ "lineItemId": "...", "cashAmount": 12, "interacAmount": 3 }] }
+```
+`payments` is optional per line item (omit an entry, or send `0`/`0`, for a non-sale
+delivery). Whenever a line item's `cashAmount + interacAmount > 0`, its movement is
+sale-flagged (`isSale: true`) exactly like a manual stock removal — it snapshots the
+effective price paid and flows into `GET /api/v1/reports`'s `monthRevenue`/`monthCash`/
+`monthInterac`/`monthCogs` totals automatically, no separate delivery-accounting system.
+
+**Response `200`:** `{ "ok": true }`. `400` if the order isn't currently `PENDING` or
+`OUT_FOR_DELIVERY`, or if any line item can't be fulfilled; `409` if all serialization
+retries were exhausted.
+
+### `POST /api/v1/orders/:id/cancel`
+
+Requires `MANAGE_ORDERS`. `400` if the order is already `DELIVERED` or `CANCELLED`.
+
+**Response `200`:** `{ "ok": true }`
+
+### `GET /api/v1/orders/drivers`
+
+Requires `MANAGE_ORDERS`. A deliberately minimal endpoint (id/name only, active users
+only) for populating a driver-assignment picker — `GET /api/v1/users` requires
+`MANAGE_USERS` instead and exposes more than a `MANAGE_ORDERS` holder needs, so this
+exists rather than loosening that endpoint's permission or over-exposing user data.
+
+**Response `200`:** `{ "drivers": [{ "id": "...", "name": "Dana" }] }`
+
+---
+
 ## Users (requires `MANAGE_USERS` unless noted)
 
 ### `GET /api/v1/users`

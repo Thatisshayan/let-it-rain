@@ -71,9 +71,10 @@ mobile/
 │   ├── index.tsx                  # redirects to /login or /dashboard depending on auth state
 │   ├── login.tsx
 │   ├── (tabs)/                     # bottom tab bar group — none of these segments appear in the URL
-│   │   ├── _layout.tsx               # Tabs navigator: Dashboard/Items/Activity/Reports/Settings
+│   │   ├── _layout.tsx               # Tabs navigator: Dashboard/Items/Orders/Activity/Reports/Settings
 │   │   ├── dashboard.tsx             # landing screen: today's revenue, low stock, recent activity
 │   │   ├── items.tsx                 # items list: search, category chips, sort, swipe-to-adjust
+│   │   ├── orders.tsx                # orders list: role-scoped (all orders vs. just assigned ones)
 │   │   ├── activity.tsx              # month-grid calendar with day drill-down
 │   │   ├── reports.tsx               # revenue/COGS/profit/valuation + bar-chart revenue-by-day
 │   │   └── settings.tsx              # Users (if MANAGE_USERS) + Account + Face ID toggle + sign out
@@ -83,6 +84,9 @@ mobile/
 │   │       ├── index.tsx           # item detail + movement history + CSV export
 │   │       ├── edit.tsx
 │   │       └── adjust.tsx          # receive / remove (Cash/Interac split) / adjust stock
+│   ├── orders/
+│   │   ├── new.tsx                 # create order: customer info + repeatable item/quantity rows
+│   │   └── [id].tsx                # detail: driver chip-picker, status actions, delivery payment capture
 │   └── settings/
 │       ├── account.tsx             # own name + password
 │       └── users/
@@ -93,12 +97,14 @@ mobile/
 │   ├── theme.ts                    # light/dark color tokens (hand-matched to web's globals.css)
 │   ├── toast.tsx                   # minimal custom toast (no library — sonner isn't RN-usable)
 │   ├── Skeleton.tsx                 # pulsing loading placeholder
+│   ├── offlineQueue.ts              # persisted queue-and-sync for order delivery actions (see below)
 │   └── api/                        # typed API client — one file per feature area
 │       ├── client.ts                 # apiFetch()/apiFetchText() wrappers: bearer token, ApiError
 │       ├── auth.ts                   # login/logout
 │       ├── AuthContext.tsx           # React context holding the signed-in user + Face ID lock state
 │       ├── AuthGate.tsx              # renders a Face ID lock screen over the whole navigator
 │       ├── items.ts
+│       ├── orders.ts                 # orders CRUD + status transitions + driver list
 │       ├── settings.ts
 │       ├── activity.ts
 │       ├── reports.ts
@@ -108,12 +114,13 @@ mobile/
 └── package.json
 ```
 
-**Navigation:** a bottom tab bar (`app/(tabs)/_layout.tsx`) with five tabs — Dashboard,
-Items, Activity, Reports, Settings. Dashboard (`/dashboard`) is the landing screen after
-login/cold-start, not Items; it summarizes today's revenue, low-stock items, and recent
-activity by composing the same `fetchReports`/`fetchItems`/`fetchActivity` calls the other
-tabs use, with no dedicated dashboard API endpoint. The Items tab shows a live low-stock
-count badge.
+**Navigation:** a bottom tab bar (`app/(tabs)/_layout.tsx`) with six tabs — Dashboard,
+Items, Orders, Activity, Reports, Settings. Dashboard (`/dashboard`) is the landing screen
+after login/cold-start, not Items; it summarizes today's revenue, low-stock items, and
+recent activity by composing the same `fetchReports`/`fetchItems`/`fetchActivity` calls
+the other tabs use, with no dedicated dashboard API endpoint. The Items tab shows a live
+low-stock count badge. The Orders tab is role-aware: `MANAGE_ORDERS` holders see every
+order plus a create button; anyone else sees only orders assigned to them as driver.
 
 ## How screens talk to the API
 
@@ -151,6 +158,9 @@ still trusts the bearer token regardless of Face ID state, same as before.
 | New item | `/items/new` | `EDIT_ITEMS` (enforced server-side; the screen itself doesn't hide the link) |
 | Edit item | `/items/:id/edit` | `EDIT_ITEMS` |
 | Adjust stock | `/items/:id/adjust` | `ADJUST_STOCK` |
+| Orders list | `/orders` | signed in (role-scoped: all orders with `MANAGE_ORDERS`, else only assigned) |
+| New order | `/orders/new` | `MANAGE_ORDERS` |
+| Order detail | `/orders/:id` | signed in (assign/cancel need `MANAGE_ORDERS`; status actions need `MANAGE_ORDERS` or being the assigned driver) |
 | Activity calendar | `/activity` | signed in |
 | Reports | `/reports` | signed in |
 | Settings | `/settings` | signed in (Users link only shown with `MANAGE_USERS`) |
@@ -163,10 +173,24 @@ Permission checks are always enforced by the API — the screens hide/show links
 the signed-in user's `permissions` as a UX convenience, but attempting a
 disallowed action always fails server-side with `403` regardless of what the UI shows.
 
+## Offline queue (order delivery actions)
+
+Marking an order out-for-delivery or delivered is the one flow in the app with offline
+support, since a driver mid-route may not have signal. `src/offlineQueue.ts` persists a
+small queue (via `expo-secure-store`) of pending actions; when `markOutForDelivery` or
+`markDelivered` fails with a connectivity error (`ApiError.status === 0`), the action is
+enqueued instead of surfaced as an error, and a toast tells the driver it'll sync
+automatically. `startOrderQueueAutoFlush` (wired up in `app/_layout.tsx`) retries the
+queue every 15s and once whenever the app returns to the foreground, invalidating the
+`orders`/`items`/`reports` React Query caches on a successful flush. This is a narrow,
+best-effort at-least-once retry — not full offline-first — and doesn't cover any other
+screen (item edits, order creation, etc. still require a live connection).
+
 ## Known limitations
 
-- **No offline support.** Every screen requires network connectivity; failed requests
-  show an inline error with no local queueing or retry-on-reconnect.
+- **Offline support is limited to order delivery actions** (see above); every other
+  screen still requires live network connectivity, with failed requests showing an
+  inline error and no local queueing or retry-on-reconnect.
 - **No push notifications.** Explicitly deferred — would need a new Apple Push
   Notifications capability, an APNs key, and server-side infrastructure to send them on
   inventory changes, not just mobile-side work.

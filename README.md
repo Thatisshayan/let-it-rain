@@ -180,8 +180,14 @@ and every `/api/v1` Route Handler that mutates data. The four permissions:
 | `EDIT_ITEMS` | Create and edit items |
 | `DELETE_ITEMS` | Soft-delete items |
 | `ADJUST_STOCK` | Receive/remove/adjust stock (create movements) |
+| `MANAGE_ORDERS` | Create orders, assign/reassign drivers, cancel orders, see every order |
 
-New users get all four permissions by default (the `User.permissions` Prisma field
+An order's **assigned driver** is a separate, non-permission authorization path: they can
+act on that one order (mark it out-for-delivery/delivered) without holding
+`MANAGE_ORDERS`, the same "ownership check, not permission check" pattern used for
+own-account actions — see [Orders](#orders-driver-deliveries) below.
+
+New users get all five permissions by default (the `User.permissions` Prisma field
 default), but an admin can revoke any of them per-user via Settings → Users. Two
 **self-protection guards** prevent an admin from locking themselves out, enforced
 server-side in `settings/service.ts` (and reused by both the web Server Actions and the
@@ -220,6 +226,21 @@ user.
 - Admins (`MANAGE_USERS`) can create users, edit their permissions, activate/deactivate
   them, and reset their password.
 - Every signed-in user can edit their own name and change their own password.
+
+### Orders (driver deliveries) (web + mobile)
+- `MANAGE_ORDERS` holders create an order for a named customer (name, optional address/
+  phone/notes) with one or more line items, and assign a driver.
+- The assigned driver — without needing `MANAGE_ORDERS` — marks their own order
+  out-for-delivery, then delivered.
+- Marking delivered captures optional per-line-item Cash/Interac payment, exactly like a
+  manual stock removal: whenever a line item's payment is greater than `0`, it becomes a
+  sale-flagged `REMOVE` movement and flows into the Accounting/Reports totals below with
+  no separate delivery-accounting system. All line items in a delivery are decremented in
+  one all-or-nothing `SERIALIZABLE` transaction — if any single item can't be fulfilled
+  (e.g. insufficient stock), nothing is written.
+- Mobile has an offline queue for the out-for-delivery/delivered actions specifically
+  (not the whole app): a driver can confirm a delivery with no signal, and it syncs
+  automatically once back online. See [`mobile/README.md`](mobile/README.md) for how.
 
 ### Activity calendar (web + mobile)
 - A month-grid view of stock movements, with a colored net-change badge per day
@@ -271,6 +292,7 @@ Quick summary of what's exposed:
 | Auth | `POST /api/v1/auth/login`, `POST /api/v1/auth/logout` |
 | Items | `GET/POST /api/v1/items`, `GET/PATCH/DELETE /api/v1/items/:id`, `POST /api/v1/items/:id/movements` |
 | Users | `GET/POST /api/v1/users`, `PATCH /api/v1/users/:id/permissions`, `PATCH /api/v1/users/:id/active`, `POST /api/v1/users/:id/reset-password` |
+| Orders | `GET/POST /api/v1/orders`, `GET /api/v1/orders/:id`, `PATCH /api/v1/orders/:id/assign`, `POST /api/v1/orders/:id/out-for-delivery`, `POST /api/v1/orders/:id/deliver`, `POST /api/v1/orders/:id/cancel`, `GET /api/v1/orders/drivers` |
 | Account | `PATCH /api/v1/account`, `POST /api/v1/account/password` |
 | Activity | `GET /api/v1/activity` |
 | Reports | `GET /api/v1/reports` |
