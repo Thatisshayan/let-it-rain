@@ -17,7 +17,7 @@ model User {
   name         String
   email        String   @unique
   passwordHash String
-  permissions  String[] @default(["MANAGE_USERS", "DELETE_ITEMS", "EDIT_ITEMS", "ADJUST_STOCK", "MANAGE_ORDERS", "VIEW_REPORTS", "VIEW_COSTS"])
+  permissions  String[] @default(["MANAGE_USERS", "DELETE_ITEMS", "EDIT_ITEMS", "ADJUST_STOCK", "CREATE_ORDERS", "ASSIGN_DRIVERS", "CANCEL_ORDERS", "VIEW_REPORTS", "VIEW_COSTS"])
   active       Boolean  @default(true)
   tokenVersion Int      @default(0)
   createdAt    DateTime @default(now())
