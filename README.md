@@ -172,24 +172,35 @@ Expo Go.
 
 Every user has a `permissions: string[]` field on the `User` model, checked via
 `hasPermission(session, permission)` (`src/lib/permissions.ts`) in every Server Action
-and every `/api/v1` Route Handler that mutates data. The four permissions:
+and every `/api/v1` Route Handler that mutates data. Permissions (11 in total):
 
 | Permission | Grants |
 |---|---|
-| `MANAGE_USERS` | Create users, edit any user's permissions, activate/deactivate users, reset any user's password |
+| `MANAGE_USERS` | Create users, edit any user's permissions, activate/deactivate users, reset any user's password, revoke another user's sessions |
 | `EDIT_ITEMS` | Create and edit items |
 | `DELETE_ITEMS` | Soft-delete items |
 | `ADJUST_STOCK` | Receive/remove/adjust stock (create movements) |
-| `MANAGE_ORDERS` | Create orders, assign/reassign drivers, cancel orders, see every order |
+| `CREATE_ORDERS` | Create orders, see every order |
+| `ASSIGN_DRIVERS` | Assign/reassign drivers, see every order |
+| `CANCEL_ORDERS` | Cancel orders, see every order |
+| `VIEW_REPORTS` | Read accounting reports (revenue, COGS, profit, valuation) |
+| `VIEW_COSTS` | See `unitCost`/`unitPrice`/`stockValue` on items in the web/mobile UI |
+| `VIEW_AUDIT_LOG` | Read the system audit log (admin "who did what") |
+| `MANAGE_SETTINGS` | (Reserved — for a future Settings → App settings tab) |
+
+The three order perms replace a legacy `MANAGE_ORDERS` umbrella that still exists in the
+schema during the post-Phase 1 migration window; new grants should use the three. See
+[Phase 1 — Completion Report](./LETITRAINNEXTSPRIN.md#phase-1--completion-report-2026-07-12)
+in the sprint doc and `scripts/permissions-migration/migrate.ts` for the migration script.
 
 An order's **assigned driver** is a separate, non-permission authorization path: they can
 act on that one order (mark it out-for-delivery/delivered) without holding
-`MANAGE_ORDERS`, the same "ownership check, not permission check" pattern used for
-own-account actions — see [Orders](#orders-driver-deliveries) below.
+any of the three order perms, the same "ownership check, not permission check" pattern used
+for own-account actions — see [Orders](#orders-driver-deliveries) below.
 
-New users get all five permissions by default (the `User.permissions` Prisma field
-default), but an admin can revoke any of them per-user via Settings → Users. Two
-**self-protection guards** prevent an admin from locking themselves out, enforced
+New users get the default permission set (currently all 11 perms via the `User.permissions`
+Prisma field default), but an admin can revoke any of them per-user via Settings → Users.
+Two **self-protection guards** prevent an admin from locking themselves out, enforced
 server-side in `settings/service.ts` (and reused by both the web Server Actions and the
 mobile API):
 
@@ -203,9 +214,20 @@ whatever was embedded in the token at login. A revoked permission or a deactivat
 effect on the user's very next request — it doesn't wait for the token to expire or for
 them to log out and back in.
 
-Viewing items, the activity calendar, and accounting reports requires no specific
-permission beyond being signed in — those are read-only and open to every authenticated
-user.
+The same JWT also carries a `tokenVersion` claim. An admin can **forcibly invalidate
+every session for a user** (via Settings → Users → user detail → "Sign out everywhere",
+or `POST /api/v1/users/:id/revoke-sessions`) which bumps that user's `tokenVersion`.
+The next request from any of that user's still-valid JWTs fails verification with `401`
+because the embedded `tokenVersion` no longer matches the DB's current value, dropping the
+client back to the login screen on every device simultaneously. Users can do the same
+to themselves via Account → "Sign out everywhere" (`POST /api/v1/me/sessions`).
+
+Viewing items, the activity calendar, and accounting reports requires the corresponding
+permission (`VIEW_COSTS`, scoped `VIEW_REPORTS`) beyond being signed in — read-only
+access is no longer a default. Every page that shows the underlying data
+(`Activity`, `Reports`, the item detail's cost block, the Settings → Audit log tab) checks
+the permission server-side and renders a "permission denied" state if missing — so a
+direct URL or API hit still gets `403` from the API layer.
 
 ## Features
 
@@ -247,6 +269,11 @@ user.
   (green = net positive, red = net negative, blue = net zero but active).
 - Tap/click a day to see that day's individual movements (item, type, delta, reason,
   who did it, when).
+- Scoped per role: order-management perms (`CREATE_ORDERS`/`ASSIGN_DRIVERS`/
+  `CANCEL_ORDERS`) and `VIEW_AUDIT_LOG` holders see every movement company-wide;
+  drivers and others get only the `Movement` rows they themselves authored — checked
+  server-side in `src/app/api/v1/activity/route.ts` and `src/app/(app)/activity/page.tsx`
+  so a direct URL can't bypass it.
 
 ### Accounting / reports (web + mobile)
 - Today's revenue, this month's revenue/COGS/gross profit, this month's Cash/Interac
@@ -260,6 +287,22 @@ user.
   `unitPriceAtTime` at the moment of sale — so re-pricing an item doesn't rewrite history,
   and the figure reflects what was actually collected even if it differs from the item's
   list price.
+- Gated by `VIEW_REPORTS` — the API returns `403` for users without it, the web
+  `/reports` page redirects-with-message, and on mobile the Reports tab and the
+  Dashboard's "Today's revenue" card both hide.
+
+### Audit log (web)
+- Settings → Audit log tab (`VIEW_AUDIT_LOG`) — every user/perms/session change and
+  every order lifecycle event is recorded with actor, target, timestamp, and a
+  human-readable detail via `src/lib/audit.ts` (`writeAuditLog`), called from the user and
+  order service layers. The web UI is a server-rendered list (paginated via `?page=`/`?pageSize=`
+  query params on the underlying query); the mobile app does not currently expose
+  Audit log.
+
+### Items — costs visible only with `VIEW_COSTS`
+- `unitHV_COSTS` (`unitCost`/`unitPrice`/`stockValue`) only renders in the item detail
+  and the new/edit forms if the user holds `VIEW_COSTS`. Drivers can see item names and
+  quantities without seeing what they're worth.
 
 ### Mobile-only extras
 The mobile app has a few things the web app doesn't: a Dashboard landing screen
@@ -291,11 +334,14 @@ Quick summary of what's exposed:
 |---|---|
 | Auth | `POST /api/v1/auth/login`, `POST /api/v1/auth/logout` |
 | Items | `GET/POST /api/v1/items`, `GET/PATCH/DELETE /api/v1/items/:id`, `POST /api/v1/items/:id/movements` |
+| Movements CSV | `GET /api/v1/items/export.csv`, `GET /api/v1/items/:id/movements/export.csv` |
 | Users | `GET/POST /api/v1/users`, `PATCH /api/v1/users/:id/permissions`, `PATCH /api/v1/users/:id/active`, `POST /api/v1/users/:id/reset-password` |
 | Orders | `GET/POST /api/v1/orders`, `GET /api/v1/orders/:id`, `PATCH /api/v1/orders/:id/assign`, `POST /api/v1/orders/:id/out-for-delivery`, `POST /api/v1/orders/:id/deliver`, `POST /api/v1/orders/:id/cancel`, `GET /api/v1/orders/drivers` |
-| Account | `PATCH /api/v1/account`, `POST /api/v1/account/password` |
-| Activity | `GET /api/v1/activity` |
-| Reports | `GET /api/v1/reports` |
+| Account | `PATCH /api/v1/account`, `POST /api/v1/account/password`, `POST /api/v1/me/sessions` (self-revoke) |
+| Users (admin) | `POST /api/v1/users/:id/revoke-sessions` (force sign-out everywhere) |
+| Activity | `GET /api/v1/activity` (driver-scoped unless caller holds order-management perm) |
+| Reports | `GET /api/v1/reports` (`VIEW_REPORTS`) |
+| Audit | `GET /api/v1/audit` (`VIEW_AUDIT_LOG`) |
 
 `src/proxy.ts` (the route-protection middleware) exempts everything under `/api/v1` from
 its cookie-based redirect-to-login behavior — each `/api/v1` route does its own
@@ -336,18 +382,27 @@ its cookie-based redirect-to-login behavior — each `/api/v1` route does its ow
 
 ```
 letitrain/
-├── prisma/                      # schema, migrations, seed script
+├── prisma/                       # schema, migrations, seed script
+│   └── migrations/<timestamp>_phase1_permissions_audit/  # Phase 1 schema changes (audit log, tokenVersion, etc.)
+├── scripts/
+│   └── permissions-migration/    # one-time MANAGE_ORDERS → 3-perm remap (run explicitly after the schema migration)
 ├── src/
 │   ├── app/
-│   │   ├── (app)/                # web app pages (protected by proxy.ts)
-│   │   │   ├── items/            # inventory: list, detail, new/edit, service.ts
-│   │   │   ├── settings/         # user management + own account, service.ts
-│   │   │   ├── activity/         # activity calendar page + calendar.ts (pure helpers)
-│   │   │   └── reports/          # accounting reports page + reports.ts (pure helpers)
-│   │   ├── api/v1/               # the JSON API — mirrors (app)/ feature-by-feature
-│   │   └── login/                # public login page
-│   ├── lib/                      # auth (session + bearer JWT), permissions, prisma client, etc.
-│   └── generated/prisma/         # generated Prisma client (regenerate after schema changes)
+│   │   ├── (app)/                  # web app pages (protected by proxy.ts)
+│   │   │   ├── items/              # inventory: list, detail, new/edit, service.ts
+│   │   │   ├── settings/           # user mgmt + account + audit log tab + users/[id], service.ts
+│   │   │   ├── accounts/           # session-revoke (revokeUserSessions), audit service
+│   │   │   ├── audit-log/          # listAuditLog / listUserActivity queries (Phase 1)
+│   │   │   ├── activity/           # activity calendar page + calendar.ts (pure helpers)
+│   │   │   └── reports/            # accounting reports page + reports.ts (pure helpers)
+│   │   ├── api/v1/                 # the JSON API — mirrors (app)/ feature-by-feature
+│   │   │   ├── audit/                # Phase 1 (GET /audit, VIEW_AUDIT_LOG)
+│   │   │   ├── users/:id/revoke-sessions/  # Phase 1 admin force sign-out
+│   │   │   └── me/sessions/         # Phase 1 self-revoke (Sign out everywhere)
+│   │   └── login/                  # public login page
+│   ├── lib/                        # auth (session + bearer JWT), permissions, prisma client,
+│   │                                # audit log helper (writeAuditLog), rate-limit, etc.
+│   └── generated/prisma/           # generated Prisma client (regenerate after schema changes)
 ├── mobile/                       # Expo app — see mobile/README.md
 ├── docs/
 │   ├── API.md                    # full /api/v1 endpoint reference

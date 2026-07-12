@@ -1,5 +1,16 @@
 # Mobile App — Phase 2: Settings & User Management (Design)
 
+> **Note (post-Phase 0/1, 2026-07-12):** this spec was written pre-Phase 0/1 and
+> references a 4-permission model. The shipped product now has 11 permissions
+> (`MANAGE_USERS`, `DELETE_ITEMS`, `EDIT_ITEMS`, `ADJUST_STOCK`,
+> `CREATE_ORDERS`/`ASSIGN_DRIVERS`/`CANCEL_ORDERS` (replacing legacy `MANAGE_ORDERS`),
+> `VIEW_REPORTS`, `VIEW_COSTS`, `VIEW_AUDIT_LOG`, `MANAGE_SETTINGS`). The architecture
+> and "extract a service module, share between Server Actions and API Route Handlers"
+> approach below is still exactly what was shipped — only the *count of permissions*
+> in the bottom table and the api `MANAGE_ORDERS` reference are outdated. See the
+> [Phase 1 completion report](../../../../LETITRAINNEXTSPRIN.md#phase-1--completion-report-2026-07-12)
+> for the current model.
+
 ## Context
 
 Mobile Phase 1 shipped the core inventory workflow (items, movements) as a native app

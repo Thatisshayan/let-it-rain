@@ -119,8 +119,11 @@ Items, Orders, Activity, Reports, Settings. Dashboard (`/dashboard`) is the land
 after login/cold-start, not Items; it summarizes today's revenue, low-stock items, and
 recent activity by composing the same `fetchReports`/`fetchItems`/`fetchActivity` calls
 the other tabs use, with no dedicated dashboard API endpoint. The Items tab shows a live
-low-stock count badge. The Orders tab is role-aware: `MANAGE_ORDERS` holders see every
-order plus a create button; anyone else sees only orders assigned to them as driver.
+low-stock count badge. The Orders tab is role-aware: anyone holding at least one of
+`CREATE_ORDERS`/`ASSIGN_DRIVERS`/`CANCEL_ORDERS` (post-Phase 1 split of the legacy
+`MANAGE_ORDERS`) sees every order plus a create button; anyone else sees only orders
+assigned to them as driver. The Reports tab and Dashboard's revenue card are hidden
+entirely for callers without `VIEW_REPORTS`.
 
 ## How screens talk to the API
 
@@ -149,25 +152,31 @@ still trusts the bearer token regardless of Face ID state, same as before.
 
 ## Screens reference
 
+> **Post-Phase 1 update (2026-07-12):** the permission column below uses the current
+> Phase 1 names. `MANAGE_ORDERS` was split into `CREATE_ORDERS`/`ASSIGN_DRIVERS`/
+> `CANCEL_ORDERS`; new `VIEW_REPORTS`/`VIEW_COSTS`/`VIEW_AUDIT_LOG`/`MANAGE_SETTINGS`
+> perms were added. The web/mobile UI checks these perms server-side; tablets and
+> screens hide tabs/links based on the signed-in user's perms as a UX convenience.
+
 | Screen | Path | Requires |
 |---|---|---|
 | Login | `/login` | — |
 | Dashboard | `/dashboard` | signed in (landing screen after login) |
 | Items list | `/items` | signed in |
-| Item detail | `/items/:id` | signed in |
+| Item detail | `/items/:id` | signed in (cost/price fields hidden if no `VIEW_COSTS`) |
 | New item | `/items/new` | `EDIT_ITEMS` (enforced server-side; the screen itself doesn't hide the link) |
 | Edit item | `/items/:id/edit` | `EDIT_ITEMS` |
 | Adjust stock | `/items/:id/adjust` | `ADJUST_STOCK` |
-| Orders list | `/orders` | signed in (role-scoped: all orders with `MANAGE_ORDERS`, else only assigned) |
-| New order | `/orders/new` | `MANAGE_ORDERS` |
-| Order detail | `/orders/:id` | signed in (assign/cancel need `MANAGE_ORDERS`; status actions need `MANAGE_ORDERS` or being the assigned driver) |
-| Activity calendar | `/activity` | signed in |
-| Reports | `/reports` | signed in |
-| Settings | `/settings` | signed in (Users link only shown with `MANAGE_USERS`) |
+| Orders list | `/orders` | signed in (role-scoped: all orders with any order-management perm, else only assigned) |
+| New order | `/orders/new` | `CREATE_ORDERS` |
+| Order detail | `/orders/:id` | signed in (status actions need order-management perm or being the assigned driver) |
+| Activity calendar | `/activity` | signed in (driver-scoped unless caller holds order-management perm) |
+| Reports | `/reports` | `VIEW_REPORTS` (tab hidden entirely if missing) |
+| Settings | `/settings` | signed in |
 | Users list | `/settings/users` | `MANAGE_USERS` |
 | New user | `/settings/users/new` | `MANAGE_USERS` |
 | User detail | `/settings/users/:id` | `MANAGE_USERS` |
-| Account | `/settings/account` | signed in |
+| Account | `/settings/account` | signed in (includes "Sign out everywhere") |
 
 Permission checks are always enforced by the API — the screens hide/show links based on
 the signed-in user's `permissions` as a UX convenience, but attempting a
@@ -185,6 +194,16 @@ queue every 15s and once whenever the app returns to the foreground, invalidatin
 `orders`/`items`/`reports` React Query caches on a successful flush. This is a narrow,
 best-effort at-least-once retry — not full offline-first — and doesn't cover any other
 screen (item edits, order creation, etc. still require a live connection).
+
+## Sign out everywhere
+
+`/settings/account` has a "Sign out everywhere" button (added in Phase 1). It
+calls `POST /api/v1/me/sessions` (via `mobile/src/api/settings.ts` →
+`revokeOwnSessions()`) which bumps the user's `tokenVersion` server-side. This
+invalidates *every* authenticated session for that user across every device — the mobile
+app, any browser tabs on the web app, anything holding a valid Bearer token or session
+cookie for them — all get a `401` on their next request and are forced back to login.
+Useful after a device loss or "I forgot to sign out somewhere."
 
 ## Known limitations
 

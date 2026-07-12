@@ -20,15 +20,24 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJm...
 The token payload (`SessionPayload`, `src/lib/auth.ts`):
 
 ```ts
-{ userId: string; email: string; name: string; permissions: string[] }
+{ userId: string; email: string; name: string; permissions: string[]; tokenVersion: number }
 ```
 
-The `permissions`/`name`/`email` claims only identify *which* `userId` the request is
-for — `verifyBearerToken` re-fetches that user from the DB on every call and enforces
-their **current** `permissions`/`active` status, not whatever was embedded in the token
-at login. A permission revoked (or an account deactivated) after the token was issued
-takes effect on the very next request, even though the token itself is still valid for
-up to 30 days.
+The `permissions`/`name`/`email`/`tokenVersion` claims only identify *which* `userId`
+the request is for — `verifyBearerToken` re-fetches that user from the DB on every call
+and enforces their **current** `permissions`/`active` status, not whatever was embedded
+in the token at login. A permission revoked (or an account deactivated) after the token
+was issued takes effect on the very next request, even though the token itself is still
+valid for up to 30 days.
+
+The `tokenVersion` claim is a server-controlled counter that's bumped via
+`revokeUserSessions` (`src/app/(app)/accounts/service.ts`) whenever an admin (or the user
+themselves via "Sign out everywhere" in Account settings) wants to forcibly invalidate
+*every* existing session for that user — invoked server-side via
+`POST /api/v1/users/:id/revoke-sessions` (admin) or `POST /api/v1/me/sessions` (self).
+After the bump, the next request from any of that user's still-valid JWTs fails
+`verifyBearerToken` with `401` because the embedded `tokenVersion` no longer matches the
+DB's current value, and the client is dropped to the login screen.
 
 Requests without a valid token, or whose user no longer exists / has been deactivated,
 get `401 Unauthorized`. Requests from a valid but under-permissioned user get
@@ -38,6 +47,31 @@ permission grants).
 
 `src/proxy.ts` exempts `/api/v1/*` from the web app's cookie-based redirect-to-login
 behavior — each route below does its own `verifyBearerToken` check.
+
+## Permissions in this API
+
+| Permission | Granted by |
+|---|---|
+| `MANAGE_USERS` | Create / edit users, sign out everywhere for them |
+| `DELETE_ITEMS` | Soft-delete an item |
+| `EDIT_ITEMS` | Create / edit items |
+| `ADJUST_STOCK` | Receive / remove / count-adjust stock |
+| `CREATE_ORDERS` | Create orders, see every order |
+| `ASSIGN_DRIVERS` | Assign / reassign drivers, see every order |
+| `CANCEL_ORDERS` | Cancel orders, see every order |
+| `VIEW_REPORTS` | Read accounting reports (revenue, COGS, profit, valuation) |
+| `VIEW_AUDIT_LOG` | Read the system audit log |
+| `MANAGE_SETTINGS` | (Reserved — for future Settings → App settings tab) |
+
+Own-account operations (`updateOwnProfile`, `changeOwnPassword`, `revokeOwnSessions`)
+require only "signed in" — they key on `session.userId` directly rather than a
+permission, since no permission should imply "you can manage your own account."
+
+> **Deprecated:** `MANAGE_ORDERS` still exists in the schema/permission enum during the
+> post-Phase 1 migration window so production users don't lose access mid-cutover. New
+> rights should use `CREATE_ORDERS`/`ASSIGN_DRIVERS`/`CANCEL_ORDERS`; everything below that
+> says "MANAGE_ORDERS" is shorthand for "any one of those three." A follow-up cleanup
+> pass will drop the legacy perm.
 
 ## Response conventions
 
@@ -231,20 +265,32 @@ user, reason).
 Orders model a delivery to a named customer: multiple line items (item + quantity), an
 assigned driver, and a status lifecycle
 (`PENDING → OUT_FOR_DELIVERY → DELIVERED`, or `→ CANCELLED` from either of the first two).
-Two authorization levels apply throughout, not just one permission check:
+Order responsibilities are split across three permissions rather than a single
+`MANAGE_ORDERS` umbrella (see the deprecation note at the end of this section):
 
-- **`MANAGE_ORDERS`** — create orders, assign/reassign drivers, cancel orders, see every
-  order.
+- **`CREATE_ORDERS`** — create orders.
+- **`ASSIGN_DRIVERS`** — assign/reassign drivers to orders.
+- **`CANCEL_ORDERS`** — cancel orders.
+- Any one of those three is also the "see every order" permission: `listOrders` returns
+  everything for a `CREATE_ORDERS`/`ASSIGN_DRIVERS`/`CANCEL_ORDERS` holder, and only the
+  caller's own assigned orders otherwise.
 - **The order's assigned driver** — can act on *that specific order* (mark it
-  out-for-delivery, mark it delivered) without needing `MANAGE_ORDERS` — an ownership
+  out-for-delivery, mark it delivered) without needing any of the three — an ownership
   check (`order.driverId === session.userId`), the same pattern used for own-account
   actions elsewhere in this API. Anyone who is neither gets `403` and, for listing, simply
   doesn't see orders that aren't theirs.
 
+> Deprecation note: the database schema and `permissions` enum in Phase 1 still contain
+> the legacy single permission `MANAGE_ORDERS` to make permission migration
+> (`scripts/permissions-migration/migrate.ts`) idempotent. New granting should use the
+> three finer permissions above. Once the migration has run in production and all users
+> have the right combination of the new perms, `MANAGE_ORDERS` can be removed in a
+> follow-up cleanup.
+
 ### `GET /api/v1/orders`
 
-Requires auth. Returns every order for a `MANAGE_ORDERS` holder; returns only orders
-assigned to the caller otherwise.
+Requires auth. Returns every order for any of `CREATE_ORDERS`/`ASSIGN_DRIVERS`/
+`CANCEL_ORDERS` holders; returns only orders assigned to the caller otherwise.
 
 **Response `200`:**
 ```json
@@ -264,7 +310,7 @@ assigned to the caller otherwise.
 
 ### `POST /api/v1/orders`
 
-Requires `MANAGE_ORDERS`.
+Requires `CREATE_ORDERS`.
 
 **Request:**
 ```json
@@ -282,15 +328,16 @@ checked or decremented at creation — only at delivery (see below).
 
 ### `GET /api/v1/orders/:id`
 
-Requires auth. `404` if the order doesn't exist, or if the caller isn't `MANAGE_ORDERS`
-and isn't the assigned driver (same "not found" response either way, not `403` — avoids
-confirming an order ID exists to someone who has no business knowing about it).
+Requires auth. `404` if the order doesn't exist, or if the caller doesn't hold any
+of `CREATE_ORDERS`/`ASSIGN_DRIVERS`/`CANCEL_ORDERS` and isn't the assigned driver
+(same "not found" response either way, not `403` — avoids confirming an order ID exists
+to someone who has no business knowing about it).
 
 **Response `200`:** same shape as a list entry, plus `createdBy: { id, name }`.
 
 ### `PATCH /api/v1/orders/:id/assign`
 
-Requires `MANAGE_ORDERS`.
+Requires `ASSIGN_DRIVERS`.
 
 **Request:** `{ "driverId": "..." }` or `{ "driverId": null }` to unassign.
 `400` if the order is already `DELIVERED` or `CANCELLED`.
@@ -299,18 +346,18 @@ Requires `MANAGE_ORDERS`.
 
 ### `POST /api/v1/orders/:id/out-for-delivery`
 
-Requires auth; `MANAGE_ORDERS` or the assigned driver. `400` unless the order is
-currently `PENDING`.
+Requires auth; any of `CREATE_ORDERS`/`ASSIGN_DRIVERS`/`CANCEL_ORDERS` or the assigned
+driver. `400` unless the order is currently `PENDING`.
 
 **Response `200`:** `{ "ok": true }`
 
 ### `POST /api/v1/orders/:id/deliver`
 
-Requires auth; `MANAGE_ORDERS` or the assigned driver. Runs inside a `SERIALIZABLE`
-transaction with retry-on-conflict, same as `POST /api/v1/items/:id/movements` — creates
-one `REMOVE` movement per line item, all-or-nothing (if any single line item can't be
-fulfilled, e.g. insufficient stock, the whole delivery is rejected and nothing is
-written).
+Requires auth; any of `CREATE_ORDERS`/`ASSIGN_DRIVERS`/`CANCEL_ORDERS` or the assigned
+driver. Runs inside a `SERIALIZABLE` transaction with retry-on-conflict, same as
+`POST /api/v1/items/:id/movements` — creates one `REMOVE` movement per line item,
+all-or-nothing (if any single line item can't be fulfilled, e.g. insufficient stock, the
+whole delivery is rejected and nothing is written).
 
 **Request:**
 ```json
@@ -328,24 +375,79 @@ retries were exhausted.
 
 ### `POST /api/v1/orders/:id/cancel`
 
-Requires `MANAGE_ORDERS`. `400` if the order is already `DELIVERED` or `CANCELLED`.
+Requires `CANCEL_ORDERS`. `400` if the order is already `DELIVERED` or `CANCELLED`.
+On success the server also stamps `cancelledAt`/`cancelledById` on the row so the
+cancellation is audit-traceable.
 
 **Response `200`:** `{ "ok": true }`
 
 ### `GET /api/v1/orders/drivers`
 
-Requires `MANAGE_ORDERS`. A deliberately minimal endpoint (id/name only, active users
+Requires `ASSIGN_DRIVERS`. A deliberately minimal endpoint (id/name only, active users
 only) for populating a driver-assignment picker — `GET /api/v1/users` requires
-`MANAGE_USERS` instead and exposes more than a `MANAGE_ORDERS` holder needs, so this
-exists rather than loosening that endpoint's permission or over-exposing user data.
+`MANAGE_USERS` instead and exposes more than an order manager needs, so this exists
+rather than loosening that endpoint's permission or over-exposing user data.
 
 **Response `200`:** `{ "drivers": [{ "id": "...", "name": "Dana" }] }`
 
 ---
 
-## Users (requires `MANAGE_USERS` unless noted)
+## Audit
+
+### `GET /api/v1/audit`
+
+Requires `VIEW_AUDIT_LOG`. Returns the most recent writes to the system — every user
+create / permission change / activate-deactivate / password-reset / session-revoke and
+every order create / driver assign / cancellation, with the actor (who did it), the
+target (if a user or order was acted on), a human-readable `detail`, and the timestamp.
+
+**Query params:**
+- `page` — 1-indexed page number (default `1`)
+- `pageSize` — rows per page, max `200` (default `50`)
+- `action` — filter to a single audit action enum (e.g. `USER_CREATED`, `ORDER_CANCELLED`)
+- `actorId`, `targetUserId`, `orderId` — filter by the column
+
+**Response `200`:**
+```json
+{
+  "entries": [
+    {
+      "id": "...",
+      "action": "USER_CREATED",
+      "detail": "Created user Bob (bob@x.com) with permissions: MANAGE_USERS",
+      "createdAt": "2026-07-12T10:00:00.000Z",
+      "actor": { "id": "...", "name": "Admin" },
+      "targetUser": { "id": "...", "name": "Bob" },
+      "order": null
+    }
+  ]
+}
+```
+
+---
+
+## Session revocation (Sign out everywhere)
+
+### `POST /api/v1/users/:id/revoke-sessions`
+
+Admin operation. Requires `MANAGE_USERS`. Bumps the target user's `tokenVersion`, so
+*every* of that user's currently-valid JWTs (on every device, every browser, the mobile
+app — anything holding the token) fails its next request with `401` and is forced back
+to the login screen. Useful when a phone is lost, an employee leaves, or a permission
+should be effectively revoked everywhere immediately.
+
+No request body. **Response `200`:** `{ "ok": true }`. `403` for non-admins.
+
+### `POST /api/v1/me/sessions`
+
+Self-service. Requires auth (any signed-in user, can only revoke *their own* sessions —
+the `:id` is taken from `session.userId`). Same effect as the admin endpoint above, but
+caller-side: it powers the "Sign out everywhere" button in Account settings. Always
+returns `200`.
 
 ### `GET /api/v1/users`
+
+Requires `MANAGE_USERS`.
 
 **Response `200`:**
 ```json
@@ -416,7 +518,12 @@ incorrect."* if `currentPassword` doesn't match.
 
 ### `GET /api/v1/activity`
 
-Requires auth (any signed-in user, no specific permission).
+Requires auth (any signed-in user, no specific permission). Results are scoped per the
+calling user's role: anyone holding at least one of `CREATE_ORDERS`/`ASSIGN_DRIVERS`/
+`CANCEL_ORDERS` (or `VIEW_AUDIT_LOG`) sees every movement company-wide; drivers and others
+without an order-management perm get only the `Movement` rows they themselves authored
+(where `Movement.userId === session.userId`). The web `Activity` page enforces the same
+rule server-side so a manual URL can't bypass it.
 
 **Query params:** `month` (`YYYY-MM`; defaults to the current month if omitted or
 malformed).
@@ -452,7 +559,10 @@ separate request per day.
 
 ### `GET /api/v1/reports`
 
-Requires auth (any signed-in user, no specific permission).
+Requires `VIEW_REPORTS`. (Drivers who only see the "My Deliveries"-style assignment
+don't get this endpoint — they get `404`/403 at the API and the web/mobile Reports
+screens hide entirely.) The figures returned are sensitive: full revenue, COGS, profit,
+cash/Interac split, and inventory valuation across all non-deleted items.
 
 **Query params:** `month` (`YYYY-MM`; defaults to the current month if omitted or
 malformed).

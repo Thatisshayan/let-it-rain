@@ -1,5 +1,17 @@
 # ADR 0001: Authentication & Authorization Model
 
+> **Note (post-Phase 1, 2026-07-12):** this ADR predates Phase 1. The shipped model
+> adds a `tokenVersion` claim to the JWT for administrative session revocation
+> (`revokeUserSessions` / "Sign out everywhere"), splits the legacy single
+> `MANAGE_ORDERS` permission into `CREATE_ORDERS`/`ASSIGN_DRIVERS`/`CANCEL_ORDERS`,
+> adds `VIEW_REPORTS`/`VIEW_COSTS`/`VIEW_AUDIT_LOG`/`MANAGE_SETTINGS`, and wires every
+> write-path through `src/lib/audit.ts` (`writeAuditLog`) so every state mutation is
+> recorded in `AuditLog`. The architectural decision documented below (single JWT, two
+> transports; DB-backed claim verification on every call) is unchanged — Phase 1 just
+> added `tokenVersion` to that pipeline. See the
+> [Phase 1 completion report](../LETITRAINNEXTSPRIN.md#phase-1--completion-report-2026-07-12)
+> for the diff.
+
 ## Status
 
 Accepted
@@ -16,19 +28,22 @@ and permission model without duplicating business rules.
 **Single JWT, two transports.**
 
 - `signSessionToken()` (`src/lib/auth.ts`) issues one HS256 JWT containing
-  `{ userId, email, name, permissions }`, signed with `SESSION_SECRET`,
+  `{ userId, email, name, permissions, tokenVersion }`, signed with `SESSION_SECRET`,
   30-day expiry.
-- The JWT's `permissions`/`name`/`email` claims are only used to authenticate
-  *that a valid session for `userId` exists* — `getSession()` and
-  `verifyBearerToken()` both re-fetch the `User` row by `userId` on every
-  call and return the **current** DB permissions/active status, not the
-  claims embedded in the token. This closes a stale-authorization gap: with
-  a 30-day token lifetime, trusting the embedded permissions would mean a
-  revoked permission (or a deactivated account) stayed effective for up to
-  30 days or until the user's next login. The tradeoff is one extra
-  `User` lookup per authenticated request/page load; if that becomes a
-  bottleneck, revisit with a short-TTL cache keyed by `userId` (invalidated
-  on any `User.permissions`/`User.active` write) rather than reverting to
+- The JWT's `permissions`/`name`/`email`/`tokenVersion` claims are only used to
+  authenticate *that a valid session for `userId` exists* — `getSession()` and
+  `verifyBearerToken()` both re-fetch the `User` row by `userId` on every call
+  and return the **current** DB `permissions`/`active`/`tokenVersion` status, not the
+  claims embedded in the token. This closes two stale-authorization gaps at once:
+  with a 30-day token lifetime, trusting the embedded permissions would mean a
+  revoked permission (or a deactivated account) stayed effective for up to 30 days or
+  until the user's next login; without `tokenVersion`, even after deactivation and
+  re-enabling a deleted JWT would still pass verification until its 30-day expiry.
+  Both are now closed (revoke-and-permissions-changes take effect on the next request;
+  logout-everywhere-style revocation works regardless of token expiry). The tradeoff is
+  one extra `User` lookup per authenticated request/page load; if that becomes a
+  bottleneck, revisit with a short-TTL cache keyed by `userId` (invalidated on any
+  `User.permissions`/`User.active`/`User.tokenVersion` write) rather than reverting to
   trusting the token's claims outright.
 - **Web**: the token is set as an `httpOnly`, `sameSite=lax`, `secure`
   (in prod) cookie (`createSession`/`destroySession`). `src/proxy.ts`
@@ -60,22 +75,32 @@ and permission model without duplicating business rules.
 **Two-layer permission enforcement.**
 
 - `hasPermission(session, perm)` (`src/lib/permissions.ts`) checks the
-  `permissions: string[]` embedded in the JWT against a fixed enum
-  (`MANAGE_USERS`, `DELETE_ITEMS`, `EDIT_ITEMS`, `ADJUST_STOCK`).
-- Permission checks live in **two** places by design:
-  1. Route wrapper level (`withPermission("MANAGE_USERS", ...)`) for
-     routes that are permission-gated outright (e.g. `GET /api/v1/users`).
+  `permissions: string[]` embedded in the JWT against the fixed enum `MANAGE_USERS`,
+  `DELETE_ITEMS`, `EDIT_ITEMS`, `ADJUST_STOCK`, `CREATE_ORDERS`, `ASSIGN_DRIVERS`,
+  `CANCEL_ORDERS`, `VIEW_REPORTS`, `VIEW_COSTS`, `VIEW_AUDIT_LOG`, `MANAGE_SETTINGS`.
+  (The legacy `MANAGE_ORDERS` perm still exists during the Phase 1 migration window
+  as a superset of the three order perms; new granting should always use the three
+  finer-grained perms and `MANAGE_ORDERS` will be removed in a follow-up cleanup.)
+- Permission checks live in **three** places by design (the read and write layers are
+  separated cleanly):
+  1. Route wrapper or page level (`withPermission("MANAGE_USERS", ...)`,
+     `hasPermission(session, perm)` in a page render) for routes / pages that are
+     permission-gated outright (e.g. `GET /api/v1/users`, the web `/reports` page).
   2. Service-function level (`src/app/(app)/items/service.ts`,
-     `src/app/(app)/settings/service.ts`) for routes where the same
-     service is called from both the web server action and the API route,
-     or where the check depends on request body content (e.g.
+     `src/app/(app)/settings/service.ts`, `src/app/(app)/orders/service.ts`) for
+     routes where the same service is called from both the web server action and the
+     API route, or where the check depends on request body content (e.g.
      `updateUserPermissions` blocking self-removal of `MANAGE_USERS`).
-  Service-layer checks are the source of truth — they run regardless of
-  caller. Route-layer checks are a fast-path/defense-in-depth, not a
-  substitute.
-- Own-account actions (`updateOwnProfile`, `changeOwnPassword`) skip
-  permission checks entirely and scope directly to `session.userId` —
-  no permission implies "can manage self."
+  3. Audit layer (`src/lib/audit.ts` → `writeAuditLog`) records every mutation
+     (user create/permission change/activate/deactivate/session-revoke, order
+     create/assign/cancel, and future settings/AI actions) into `AuditLog` with actor,
+     target, detail, and timestamp — so what the permission model gates is also auditable
+     after the fact.
+  Service-layer checks are the source of truth — they run regardless of caller. Route
+  / page-level checks are a fast-path/defense-in-depth, not a substitute.
+- Own-account actions (`updateOwnProfile`, `changeOwnPassword`,
+  `revokeOwnSessions`) skip permission checks entirely and scope directly to
+  `session.userId` — no permission implies "can manage self."
 
 **Rate limiting is best-effort, not an authZ boundary.**
 
