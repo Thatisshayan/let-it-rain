@@ -49,7 +49,11 @@ export default function DashboardScreen() {
 
           {canViewReports && (
             <View style={styles.cardsRow}>
-              <View style={[styles.card, { borderColor: theme.border, backgroundColor: theme.card }]}>
+              <View
+                style={[styles.card, { borderColor: theme.border, backgroundColor: theme.card }]}
+                accessibilityRole="summary"
+                accessibilityLabel={`Today's revenue: ${reports.data ? formatMoney(reports.data.todayRevenue) : "Loading"}`}
+              >
                 <Text style={[styles.cardLabel, { color: theme.mutedForeground }]}>Today&apos;s revenue</Text>
                 <Text style={[styles.cardValue, { color: theme.foreground }]}>
                   {reports.data ? formatMoney(reports.data.todayRevenue) : "—"}
@@ -69,6 +73,8 @@ export default function DashboardScreen() {
                 },
               ]}
               onPress={() => router.push("/items?low=1")}
+              accessibilityRole="button"
+              accessibilityLabel={`Low stock: ${lowStock.data?.length ?? 0} items. Tap to view`}
             >
               <Text style={[styles.cardLabel, { color: theme.mutedForeground }]}>Low stock</Text>
               <Text style={[styles.cardValue, { color: theme.foreground }]}>{lowStock.data?.length ?? "—"}</Text>
@@ -83,6 +89,8 @@ export default function DashboardScreen() {
                   key={item.id}
                   style={[styles.row, { borderColor: theme.border }]}
                   onPress={() => router.push(`/items/${item.id}`)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.name}, ${item.quantity} in stock, minimum ${item.minStock}. Tap to view details.`}
                 >
                   <Text style={[styles.rowName, { color: theme.foreground }]}>{item.name}</Text>
                   <Text style={[styles.lowStockText, { color: theme.destructive }]}>

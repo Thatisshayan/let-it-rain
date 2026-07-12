@@ -40,6 +40,8 @@ export default function LoginScreen() {
         keyboardType="email-address"
         value={email}
         onChangeText={setEmail}
+        accessibilityLabel="Email address"
+        accessibilityRole="none"
       />
       <TextInput
         style={[styles.input, { borderColor: theme.border, color: theme.foreground }]}
@@ -48,9 +50,22 @@ export default function LoginScreen() {
         secureTextEntry
         value={password}
         onChangeText={setPassword}
+        accessibilityLabel="Password"
+        accessibilityRole="none"
       />
-      {error ? <Text style={[styles.error, { color: theme.destructive }]}>{error}</Text> : null}
-      <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={onSubmit} disabled={loading}>
+      {error ? (
+        <Text style={[styles.error, { color: theme.destructive }]} accessibilityRole="alert">
+          {error}
+        </Text>
+      ) : null}
+      <Pressable
+        style={[styles.button, { backgroundColor: theme.primary }]}
+        onPress={onSubmit}
+        disabled={loading}
+        accessibilityRole="button"
+        accessibilityLabel={loading ? "Signing in" : "Sign in"}
+        accessibilityState={{ disabled: loading }}
+      >
         <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>
           {loading ? "Signing in..." : "Sign in"}
         </Text>

@@ -67,12 +67,26 @@ export default function ItemsScreen() {
           placeholderTextColor={theme.mutedForeground}
           value={q}
           onChangeText={setQ}
+          accessibilityLabel="Search items"
+          accessibilityRole="search"
         />
-        <Pressable onPress={onExport} style={[styles.exportButton, { borderColor: theme.border }]} disabled={exporting}>
+        <Pressable
+          onPress={onExport}
+          style={[styles.exportButton, { borderColor: theme.border }]}
+          disabled={exporting}
+          accessibilityRole="button"
+          accessibilityLabel={exporting ? "Exporting items CSV" : "Export items CSV"}
+        >
           <Text style={[styles.exportButtonText, { color: theme.foreground }]}>{exporting ? "…" : "Export"}</Text>
         </Pressable>
       </View>
-      <Pressable onPress={() => setLowOnly((v) => !v)} style={styles.filterButton}>
+      <Pressable
+        onPress={() => setLowOnly((v) => !v)}
+        style={styles.filterButton}
+        accessibilityRole="switch"
+        accessibilityLabel={lowOnly ? "Showing low stock items only" : "Showing all items"}
+        accessibilityState={{ checked: lowOnly }}
+      >
         <Text style={{ color: theme.foreground }}>{lowOnly ? "Showing low stock only" : "Show all"}</Text>
       </Pressable>
 
@@ -91,6 +105,8 @@ export default function ItemsScreen() {
                 category === c && { backgroundColor: theme.primary, borderColor: theme.primary },
               ]}
               onPress={() => setCategory(c)}
+              accessibilityRole="button"
+              accessibilityLabel={`Filter by category: ${c ?? "All items"}${category === c ? ", selected" : ""}`}
             >
               <Text style={[styles.chipText, { color: category === c ? theme.primaryForeground : theme.foreground }]}>
                 {c ?? "All"}
@@ -100,7 +116,7 @@ export default function ItemsScreen() {
         />
       )}
 
-      <View style={styles.sortRow}>
+      <View style={styles.sortRow} accessibilityRole="none" accessibilityLabel="Sort items">
         {SORTS.map((s) => (
           <Pressable
             key={s}
@@ -110,6 +126,8 @@ export default function ItemsScreen() {
               sort === s && { backgroundColor: theme.primary + "26" },
             ]}
             onPress={() => setSort(s)}
+            accessibilityRole="button"
+            accessibilityLabel={`Sort by ${SORT_LABEL[s]}${sort === s ? ", selected" : ""}`}
           >
             <Text style={{ color: sort === s ? theme.primary : theme.foreground, fontWeight: sort === s ? "600" : "400" }}>
               {SORT_LABEL[s]}
@@ -126,9 +144,9 @@ export default function ItemsScreen() {
         </View>
       ) : null}
       {error ? (
-        <View>
+        <View accessibilityRole="alert">
           <Text style={[styles.error, { color: theme.destructive }]}>Could not load items.</Text>
-          <Pressable onPress={() => refetch()}>
+          <Pressable onPress={() => refetch()} accessibilityRole="button" accessibilityLabel="Retry loading items">
             <Text style={{ color: theme.primary }}>Retry</Text>
           </Pressable>
         </View>
@@ -150,6 +168,8 @@ export default function ItemsScreen() {
                   swipeRefs.current.get(item.id)?.close();
                   router.push(`/items/${item.id}/adjust`);
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Adjust stock for ${item.name}`}
               >
                 <Text style={[styles.swipeActionText, { color: theme.primaryForeground }]}>Adjust</Text>
               </Pressable>
@@ -158,6 +178,8 @@ export default function ItemsScreen() {
             <Pressable
               style={[styles.row, { borderColor: theme.border, backgroundColor: theme.background }]}
               onPress={() => router.push(`/items/${item.id}`)}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.name}, ${item.quantity} in stock${item.lowStock ? ", low stock" : ""}. Tap for details.`}
             >
               <Text style={[styles.rowName, { color: theme.foreground }]}>{item.name}</Text>
               <Text style={{ color: item.lowStock ? theme.destructive : theme.foreground, fontWeight: item.lowStock ? "600" : "400" }}>
@@ -167,7 +189,12 @@ export default function ItemsScreen() {
           </Swipeable>
         )}
       />
-      <Pressable style={[styles.addButton, { backgroundColor: theme.primary }]} onPress={() => router.push("/items/new")}>
+      <Pressable
+        style={[styles.addButton, { backgroundColor: theme.primary }]}
+        onPress={() => router.push("/items/new")}
+        accessibilityRole="button"
+        accessibilityLabel="Add new item"
+      >
         <Text style={[styles.addButtonText, { color: theme.primaryForeground }]}>+ New item</Text>
       </Pressable>
     </View>
