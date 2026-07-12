@@ -12,18 +12,29 @@ import {
 import { ApiError } from "../../../src/api/client";
 import { useAuth } from "../../../src/api/AuthContext";
 import { useTheme } from "../../../src/theme";
+import { hasPermission } from "../../../src/lib/permissions";
 
 type TargetUser = { id: string; name: string; email: string; active: boolean; permissions: string[] };
 
 export default function UserDetailScreen() {
   const theme = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, session } = useAuth();
+  const canManageUsers = hasPermission(session, "MANAGE_USERS");
   const { data: users, isLoading, error: loadError, refetch } = useQuery({
     queryKey: ["users"],
     queryFn: fetchUsers,
+    enabled: canManageUsers,
   });
   const target = users?.find((u) => u.id === id);
+
+  if (!canManageUsers) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <Text style={[styles.padded, { color: theme.destructive }]}>You don&apos;t have permission to manage users.</Text>
+      </View>
+    );
+  }
 
   if (isLoading)
     return <Text style={[styles.padded, { color: theme.foreground, backgroundColor: theme.background }]}>Loading...</Text>;

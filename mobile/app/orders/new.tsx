@@ -6,6 +6,8 @@ import { fetchItems } from "../../src/api/items";
 import { createOrder } from "../../src/api/orders";
 import { ApiError } from "../../src/api/client";
 import { useTheme } from "../../src/theme";
+import { useAuth } from "../../src/api/AuthContext";
+import { hasPermission } from "../../src/lib/permissions";
 
 type Row = { id: number; itemId: string; quantity: string };
 let rowKey = 0;
@@ -13,6 +15,9 @@ let rowKey = 0;
 export default function NewOrderScreen() {
   const theme = useTheme();
   const queryClient = useQueryClient();
+  const { session } = useAuth();
+  const canManageOrders = hasPermission(session, "MANAGE_ORDERS");
+
   const { data: items } = useQuery({ queryKey: ["items", "", false], queryFn: () => fetchItems() });
 
   const [customerName, setCustomerName] = useState("");
@@ -22,6 +27,14 @@ export default function NewOrderScreen() {
   const [rows, setRows] = useState<Row[]>([{ id: rowKey++, itemId: "", quantity: "1" }]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  if (!canManageOrders) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <Text style={{ color: theme.destructive }}>You don&apos;t have permission to create orders.</Text>
+      </View>
+    );
+  }
 
   function addRow() {
     setRows((prev) => [...prev, { id: rowKey++, itemId: "", quantity: "1" }]);

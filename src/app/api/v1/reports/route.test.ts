@@ -15,7 +15,7 @@ import { GET } from "./route";
 const SECRET = "test-secret-at-least-32-chars-long";
 
 async function token() {
-  return new SignJWT({ userId: "u1", email: "a@b.com", name: "Ada", permissions: [] })
+  return new SignJWT({ userId: "u1", email: "a@b.com", name: "Ada", permissions: ["VIEW_REPORTS"] })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("30d")
@@ -29,7 +29,7 @@ beforeEach(() => {
     id: "u1",
     email: "a@b.com",
     name: "Ada",
-    permissions: [],
+    permissions: ["VIEW_REPORTS"],
     active: true,
   });
 });

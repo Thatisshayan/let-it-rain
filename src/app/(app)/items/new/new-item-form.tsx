@@ -10,7 +10,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const initialState: ActionState = {};
 
-export function NewItemForm({ categories }: { categories: string[] }) {
+export function NewItemForm({
+  categories,
+  canViewCosts,
+}: {
+  categories: string[];
+  canViewCosts: boolean;
+}) {
   const [state, formAction, pending] = useActionState(createItemAction, initialState);
 
   return (
@@ -50,14 +56,18 @@ export function NewItemForm({ categories }: { categories: string[] }) {
                 defaultValue={0}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="unitCost">Unit cost</Label>
-              <Input id="unitCost" name="unitCost" type="number" min={0} step="0.01" defaultValue={0} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="unitPrice">Sale price</Label>
-              <Input id="unitPrice" name="unitPrice" type="number" min={0} step="0.01" defaultValue={0} />
-            </div>
+            {canViewCosts && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="unitCost">Unit cost</Label>
+                  <Input id="unitCost" name="unitCost" type="number" min={0} step="0.01" defaultValue={0} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="unitPrice">Sale price</Label>
+                  <Input id="unitPrice" name="unitPrice" type="number" min={0} step="0.01" defaultValue={0} />
+                </div>
+              </>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>

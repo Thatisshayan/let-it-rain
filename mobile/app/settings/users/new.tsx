@@ -5,9 +5,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createUser, ALL_PERMISSIONS } from "../../../src/api/settings";
 import { ApiError } from "../../../src/api/client";
 import { useTheme } from "../../../src/theme";
+import { useAuth } from "../../../src/api/AuthContext";
+import { hasPermission } from "../../../src/lib/permissions";
 
 export default function NewUserScreen() {
   const theme = useTheme();
+  const { session } = useAuth();
+  const canManageUsers = hasPermission(session, "MANAGE_USERS");
+  const toast = useToast();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,6 +20,14 @@ export default function NewUserScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const queryClient = useQueryClient();
+
+  if (!canManageUsers) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <Text style={{ color: theme.destructive }}>You don&apos;t have permission to create users.</Text>
+      </View>
+    );
+  }
 
   function togglePermission(p: string) {
     setPermissions((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
@@ -26,6 +39,7 @@ export default function NewUserScreen() {
     try {
       await createUser({ name, email, password, permissions });
       await queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.show("User created");
       router.back();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not create user.");

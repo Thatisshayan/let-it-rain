@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-auth";
+import { hasPermission } from "@/lib/permissions";
 import { parseMonthParam, monthLabel, monthRange } from "@/app/(app)/activity/calendar";
 import {
   totalRevenue,
@@ -12,7 +13,11 @@ import {
   salesByItem,
 } from "@/app/(app)/reports/reports";
 
-export const GET = withAuth(async (req) => {
+export const GET = withAuth(async (req, _ctx, session) => {
+  if (!hasPermission(session, "VIEW_REPORTS")) {
+    return NextResponse.json({ error: "You don't have permission to view reports." }, { status: 403 });
+  }
+
   const url = new URL(req.url);
   const { year, month } = parseMonthParam(url.searchParams.get("month") ?? undefined);
   const { start, end } = monthRange(year, month);

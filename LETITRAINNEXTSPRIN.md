@@ -333,3 +333,36 @@ these are close to buildable. No priority tags beyond ⚪; think of this as "som
 Phases 3–12 are intentionally not sequenced beyond that — they're here so nothing gets
 lost, not because they're ready. Phase 0 + Phase 1 alone is a full sprint's worth of
 verified work.
+
+---
+
+## Phase 0 — Completion Report (2026-07-12)
+
+**Status: ✅ COMPLETE** — All five confirmed security/data-exposure fixes implemented and verified.
+
+### Summary of Fixes
+
+| Finding | Priority | Fix Applied | Files Modified |
+|---------|----------|-------------|----------------|
+| Activity leaks all movements (no driver scoping) | 🔴 Must have | Added driver scoping to API + web page; users without `MANAGE_ORDERS` see only their own movements | `src/app/api/v1/activity/route.ts`, `src/app/(app)/activity/page.tsx` |
+| Reports accessible to all users (no `VIEW_REPORTS` gate) | 🔴 Must have | Added `VIEW_REPORTS` permission; API returns 403, web shows denied, mobile hides tab + Dashboard revenue card | `src/lib/permissions.ts`, `src/app/api/v1/reports/route.ts`, `src/app/(app)/reports/page.tsx`, `mobile/app/(tabs)/reports.tsx`, `mobile/app/(tabs)/dashboard.tsx`, `mobile/src/api/settings.ts` |
+| Item cost/price data leaks via 4 doors | 🔴 Must have | Added `VIEW_COSTS` permission; all item detail/new/edit screens on web + mobile now gate cost/price fields | `src/lib/permissions.ts`, `src/app/(app)/items/[id]/page.tsx`, `src/app/(app)/items/new/new-item-form.tsx`, `src/app/(app)/items/[id]/edit/edit-form.tsx`, `mobile/app/items/new.tsx`, `mobile/app/items/[id]/edit.tsx`, `mobile/src/api/settings.ts` |
+| Mobile Settings → Users has no `MANAGE_USERS` check | 🔴 Must have | Added `MANAGE_USERS` checks to list, detail, and create screens; shows permission denied | `mobile/app/settings/users/index.tsx`, `mobile/app/settings/users/[id].tsx`, `mobile/app/settings/users/new.tsx`, `mobile/src/api/settings.ts` |
+| Mobile `orders/new` has no `MANAGE_ORDERS` check | 🟠 Should have | Added `MANAGE_ORDERS` check; shows permission denied | `mobile/app/orders/new.tsx` |
+
+### New Permissions Added
+- `VIEW_REPORTS` — controls access to financial reports (revenue, COGS, profit, cash/Interac split, inventory valuation)
+- `VIEW_COSTS` — controls access to unit cost, sale price, and stock value on items
+
+### Verification Results
+- ✅ ESLint: passes (0 errors)
+- ✅ TypeScript: passes (0 errors)
+- ✅ Web tests: 154/154 passing
+- ✅ Mobile tests: 6/6 passing
+- ✅ All existing permissions logic preserved; no regressions
+
+### Notes
+- The Activity fix uses `MANAGE_ORDERS` as the scoping permission (drivers don't have it, managers/admins do). This aligns with the existing Orders driver-scoping model.
+- The permission model changes in `src/lib/permissions.ts` and `mobile/src/api/settings.ts` are synchronized.
+- No database migration required for these fixes — they're purely permission-check additions at the page/screen/API layer.
+- The Phase 0 findings were all "read-side" holes; the "write-side" (mutations) were already correctly protected by the service layer.

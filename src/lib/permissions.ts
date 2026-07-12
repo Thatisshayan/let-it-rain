@@ -4,6 +4,8 @@ export const PERMISSIONS = [
   "EDIT_ITEMS",
   "ADJUST_STOCK",
   "MANAGE_ORDERS",
+  "VIEW_REPORTS",
+  "VIEW_COSTS",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -14,6 +16,8 @@ export const PERMISSION_LABEL: Record<Permission, string> = {
   EDIT_ITEMS: "Add / edit items",
   ADJUST_STOCK: "Adjust stock",
   MANAGE_ORDERS: "Manage orders",
+  VIEW_REPORTS: "View reports",
+  VIEW_COSTS: "View costs & prices",
 };
 
 type SessionLike = { permissions?: string[] } | null | undefined;

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,9 @@ export default async function ReportsPage({
 }) {
   const session = await getSession();
   if (!session) redirect("/login");
+  if (!hasPermission(session, "VIEW_REPORTS")) {
+    return <div className="space-y-6"><p className="text-destructive">You don&apos;t have permission to view reports.</p></div>;
+  }
 
   const { month: monthParamValue } = await searchParams;
   const { year, month } = parseMonthParam(monthParamValue);

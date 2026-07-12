@@ -7,9 +7,12 @@ import { fetchItem, updateItem } from "../../../src/api/items";
 import { ApiError } from "../../../src/api/client";
 import { useTheme } from "../../../src/theme";
 import { useToast } from "../../../src/toast";
+import { useAuth } from "../../../src/api/AuthContext";
+import { hasPermission } from "../../../src/lib/permissions";
 
 export default function EditItemScreen() {
   const theme = useTheme();
+  const { session } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data, isLoading, error: loadError } = useQuery({
     queryKey: ["item", id],
@@ -25,15 +28,17 @@ export default function EditItemScreen() {
       </Text>
     );
 
-  return <EditItemForm id={id} item={data.item} />;
+  return <EditItemForm id={id} item={data.item} canViewCosts={hasPermission(session, "VIEW_COSTS")} />;
 }
 
 function EditItemForm({
   id,
   item,
+  canViewCosts,
 }: {
   id: string;
   item: { name: string; minStock: number; unitCost: number; unitPrice: number };
+  canViewCosts: boolean;
 }) {
   const theme = useTheme();
   const toast = useToast();
@@ -52,8 +57,8 @@ function EditItemForm({
       await updateItem(id, {
         name,
         minStock: Number(minStock) || 0,
-        unitCost: Number(unitCost) || 0,
-        unitPrice: Number(unitPrice) || 0,
+        unitCost: canViewCosts ? Number(unitCost) || 0 : 0,
+        unitPrice: canViewCosts ? Number(unitPrice) || 0 : 0,
       });
       await queryClient.invalidateQueries({ queryKey: ["item", id] });
       await queryClient.invalidateQueries({ queryKey: ["items"] });
@@ -87,22 +92,26 @@ function EditItemForm({
         value={minStock}
         onChangeText={setMinStock}
       />
-      <TextInput
-        style={inputStyle}
-        placeholder="Unit cost"
-        placeholderTextColor={theme.mutedForeground}
-        keyboardType="numeric"
-        value={unitCost}
-        onChangeText={setUnitCost}
-      />
-      <TextInput
-        style={inputStyle}
-        placeholder="Unit price"
-        placeholderTextColor={theme.mutedForeground}
-        keyboardType="numeric"
-        value={unitPrice}
-        onChangeText={setUnitPrice}
-      />
+      {canViewCosts && (
+        <>
+          <TextInput
+            style={inputStyle}
+            placeholder="Unit cost"
+            placeholderTextColor={theme.mutedForeground}
+            keyboardType="numeric"
+            value={unitCost}
+            onChangeText={setUnitCost}
+          />
+          <TextInput
+            style={inputStyle}
+            placeholder="Unit price"
+            placeholderTextColor={theme.mutedForeground}
+            keyboardType="numeric"
+            value={unitPrice}
+            onChangeText={setUnitPrice}
+          />
+        </>
+      )}
       {error ? <Text style={{ color: theme.destructive }}>{error}</Text> : null}
       <Pressable style={[styles.submit, { backgroundColor: theme.primary }]} onPress={onSubmit} disabled={submitting}>
         <Text style={[styles.submitText, { color: theme.primaryForeground }]}>

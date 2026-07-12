@@ -11,15 +11,14 @@ import type { Item } from "@/generated/prisma/client";
 
 const initialState: ActionState = {};
 
-export function EditItemForm({
-  item,
-  customFieldsText,
-  categories,
-}: {
+interface EditItemFormProps {
   item: Item;
   customFieldsText: string;
   categories: string[];
-}) {
+  canViewCosts: boolean;
+}
+
+export function EditItemForm({ item, customFieldsText, categories, canViewCosts }: EditItemFormProps) {
   const boundAction = updateItemAction.bind(null, item.id);
   const [state, formAction, pending] = useActionState(boundAction, initialState);
 
@@ -60,30 +59,32 @@ export function EditItemForm({
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="unitCost">Unit cost</Label>
-              <Input
-                id="unitCost"
-                name="unitCost"
-                type="number"
-                min={0}
-                step="0.01"
-                defaultValue={item.unitCost.toString()}
-              />
+          {canViewCosts && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="unitCost">Unit cost</Label>
+                <Input
+                  id="unitCost"
+                  name="unitCost"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  defaultValue={item.unitCost.toString()}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="unitPrice">Sale price</Label>
+                <Input
+                  id="unitPrice"
+                  name="unitPrice"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  defaultValue={item.unitPrice.toString()}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="unitPrice">Sale price</Label>
-              <Input
-                id="unitPrice"
-                name="unitPrice"
-                type="number"
-                min={0}
-                step="0.01"
-                defaultValue={item.unitPrice.toString()}
-              />
-            </div>
-          </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
             <Textarea

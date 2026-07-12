@@ -57,4 +57,6 @@ export const ALL_PERMISSIONS = [
   "EDIT_ITEMS",
   "ADJUST_STOCK",
   "MANAGE_ORDERS",
+  "VIEW_REPORTS",
+  "VIEW_COSTS",
 ] as const;

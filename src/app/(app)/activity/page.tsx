@@ -2,6 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
+import type { SessionPayload } from "@/lib/auth";
+import type { Prisma } from "@/generated/prisma/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -26,6 +29,22 @@ function monthParam(year: number, month: number) {
   return `${year}-${String(month).padStart(2, "0")}`;
 }
 
+async function getMovements(session: SessionPayload, start: Date, end: Date) {
+  const canManage = hasPermission(session, "MANAGE_ORDERS");
+  const where: Prisma.MovementWhereInput = {
+    createdAt: { gte: start, lt: end },
+  };
+  if (!canManage) {
+    where.userId = session.userId;
+  }
+
+  return prisma.movement.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    include: { item: { select: { id: true, name: true } }, user: { select: { name: true } } },
+  });
+}
+
 export default async function ActivityPage({
   searchParams,
 }: {
@@ -40,11 +59,7 @@ export default async function ActivityPage({
   const prev = adjacentMonth(year, month, -1);
   const next = adjacentMonth(year, month, 1);
 
-  const movements = await prisma.movement.findMany({
-    where: { createdAt: { gte: start, lt: end } },
-    orderBy: { createdAt: "desc" },
-    include: { item: { select: { id: true, name: true } }, user: { select: { name: true } } },
-  });
+  const movements = await getMovements(session, start, end);
 
   const byDay = groupMovementsByDay(movements);
   const weeks = buildMonthGrid(year, month);

@@ -3,13 +3,27 @@ import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { fetchUsers } from "../../../src/api/settings";
 import { useTheme } from "../../../src/theme";
+import { useAuth } from "../../../src/api/AuthContext";
+import { hasPermission } from "../../../src/lib/permissions";
 
 export default function UsersScreen() {
   const theme = useTheme();
+  const { session } = useAuth();
+  const canManageUsers = hasPermission(session, "MANAGE_USERS");
+
   const { data: users, isLoading, error, refetch } = useQuery({
     queryKey: ["users"],
     queryFn: fetchUsers,
+    enabled: canManageUsers,
   });
+
+  if (!canManageUsers) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <Text style={{ color: theme.destructive }}>You don&apos;t have permission to manage users.</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>

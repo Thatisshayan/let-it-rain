@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 import { EditItemForm } from "./edit-form";
 
 export default async function EditItemPage({
@@ -7,6 +9,9 @@ export default async function EditItemPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const session = await getSession();
+  const canViewCosts = hasPermission(session, "VIEW_COSTS");
+
   const { id } = await params;
   const [item, distinctCategories] = await Promise.all([
     prisma.item.findUnique({ where: { id, deletedAt: null } }),
@@ -31,7 +36,7 @@ export default async function EditItemPage({
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <h1 className="text-2xl font-semibold">Edit item</h1>
-      <EditItemForm item={item} customFieldsText={customFieldsText} categories={categories} />
+      <EditItemForm item={item} customFieldsText={customFieldsText} categories={categories} canViewCosts={canViewCosts} />
     </div>
   );
 }

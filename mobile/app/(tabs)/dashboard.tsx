@@ -6,13 +6,22 @@ import { fetchReports, formatMoney } from "../../src/api/reports";
 import { fetchItems } from "../../src/api/items";
 import { fetchActivity } from "../../src/api/activity";
 import { useTheme } from "../../src/theme";
+import { useAuth } from "../../src/api/AuthContext";
+import { hasPermission } from "../../src/lib/permissions";
 
 export default function DashboardScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { session } = useAuth();
 
-  const reports = useQuery({ queryKey: ["reports", undefined], queryFn: () => fetchReports() });
+  const canViewReports = hasPermission(session, "VIEW_REPORTS");
+
+  const reports = useQuery({
+    queryKey: ["reports", undefined],
+    queryFn: () => fetchReports(),
+    enabled: canViewReports,
+  });
   const lowStock = useQuery({ queryKey: ["items", "", true], queryFn: () => fetchItems({ low: true }) });
   const activity = useQuery({ queryKey: ["activity", undefined], queryFn: () => fetchActivity() });
 
@@ -38,13 +47,18 @@ export default function DashboardScreen() {
         <View style={styles.content}>
           <Text style={[styles.title, { color: theme.foreground }]}>Dashboard</Text>
 
-          <View style={styles.cardsRow}>
-            <View style={[styles.card, { borderColor: theme.border, backgroundColor: theme.card }]}>
-              <Text style={[styles.cardLabel, { color: theme.mutedForeground }]}>Today&apos;s revenue</Text>
-              <Text style={[styles.cardValue, { color: theme.foreground }]}>
-                {reports.data ? formatMoney(reports.data.todayRevenue) : "—"}
-              </Text>
+          {canViewReports && (
+            <View style={styles.cardsRow}>
+              <View style={[styles.card, { borderColor: theme.border, backgroundColor: theme.card }]}>
+                <Text style={[styles.cardLabel, { color: theme.mutedForeground }]}>Today&apos;s revenue</Text>
+                <Text style={[styles.cardValue, { color: theme.foreground }]}>
+                  {reports.data ? formatMoney(reports.data.todayRevenue) : "—"}
+                </Text>
+              </View>
             </View>
+          )}
+
+          <View style={styles.cardsRow}>
             <Pressable
               style={[
                 styles.card,

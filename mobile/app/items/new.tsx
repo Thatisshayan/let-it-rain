@@ -7,9 +7,12 @@ import { createItem } from "../../src/api/items";
 import { ApiError } from "../../src/api/client";
 import { useTheme } from "../../src/theme";
 import { useToast } from "../../src/toast";
+import { useAuth } from "../../src/api/AuthContext";
+import { hasPermission } from "../../src/lib/permissions";
 
 export default function NewItemScreen() {
   const theme = useTheme();
+  const { session } = useAuth();
   const toast = useToast();
   const [name, setName] = useState("");
   const [minStock, setMinStock] = useState("0");
@@ -20,6 +23,8 @@ export default function NewItemScreen() {
   const [submitting, setSubmitting] = useState(false);
   const queryClient = useQueryClient();
 
+  const canViewCosts = hasPermission(session, "VIEW_COSTS");
+
   async function onSubmit() {
     setError(null);
     setSubmitting(true);
@@ -28,8 +33,8 @@ export default function NewItemScreen() {
         name,
         minStock: Number(minStock) || 0,
         initialQuantity: Number(initialQuantity) || 0,
-        unitCost: Number(unitCost) || 0,
-        unitPrice: Number(unitPrice) || 0,
+        unitCost: canViewCosts ? Number(unitCost) || 0 : 0,
+        unitPrice: canViewCosts ? Number(unitPrice) || 0 : 0,
       });
       await queryClient.invalidateQueries({ queryKey: ["items"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -70,22 +75,26 @@ export default function NewItemScreen() {
         value={initialQuantity}
         onChangeText={setInitialQuantity}
       />
-      <TextInput
-        style={inputStyle}
-        placeholder="Unit cost"
-        placeholderTextColor={theme.mutedForeground}
-        keyboardType="numeric"
-        value={unitCost}
-        onChangeText={setUnitCost}
-      />
-      <TextInput
-        style={inputStyle}
-        placeholder="Unit price"
-        placeholderTextColor={theme.mutedForeground}
-        keyboardType="numeric"
-        value={unitPrice}
-        onChangeText={setUnitPrice}
-      />
+      {canViewCosts && (
+        <>
+          <TextInput
+            style={inputStyle}
+            placeholder="Unit cost"
+            placeholderTextColor={theme.mutedForeground}
+            keyboardType="numeric"
+            value={unitCost}
+            onChangeText={setUnitCost}
+          />
+          <TextInput
+            style={inputStyle}
+            placeholder="Unit price"
+            placeholderTextColor={theme.mutedForeground}
+            keyboardType="numeric"
+            value={unitPrice}
+            onChangeText={setUnitPrice}
+          />
+        </>
+      )}
       {error ? <Text style={{ color: theme.destructive }}>{error}</Text> : null}
       <Pressable style={[styles.submit, { backgroundColor: theme.primary }]} onPress={onSubmit} disabled={submitting}>
         <Text style={[styles.submitText, { color: theme.primaryForeground }]}>

@@ -5,21 +5,36 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchReports, formatMoney } from "../../src/api/reports";
 import { adjacentMonthParam } from "../../src/api/activity";
 import { useTheme } from "../../src/theme";
+import { useAuth } from "../../src/api/AuthContext";
+import { hasPermission } from "../../src/lib/permissions";
 
 export default function ReportsScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { session } = useAuth();
   const [month, setMonth] = useState<string | undefined>(undefined);
+
+  const canViewReports = hasPermission(session, "VIEW_REPORTS");
 
   const { data, isLoading, isRefetching, error, refetch } = useQuery({
     queryKey: ["reports", month],
     queryFn: () => fetchReports(month),
-    staleTime: 30_000,
+    enabled: canViewReports,
   });
 
   function goToMonth(delta: number) {
     if (!data) return;
     setMonth(adjacentMonthParam(data.year, data.month, delta));
+  }
+
+  if (!canViewReports) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top, backgroundColor: theme.background }]}>
+        <Text style={[styles.padded, { color: theme.destructive }]}>
+          You don&apos;t have permission to view reports.
+        </Text>
+      </View>
+    );
   }
 
   if (isLoading || !data)
