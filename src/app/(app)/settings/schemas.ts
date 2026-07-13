@@ -42,3 +42,18 @@ export const changeOwnPasswordFormSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required."),
   newPassword: passwordSchema,
 });
+
+// Phase 13c: org-level settings (AppConfig, one row per org).
+export const orgSettingsFormSchema = z.object({
+  businessName: z
+    .string()
+    .trim()
+    .max(200, "Business name is too long.")
+    .transform((v) => (v.length === 0 ? null : v))
+    .nullable(),
+  defaultLowStock: z.coerce
+    .number()
+    .int("Enter a whole number.")
+    .min(0, "Can't be negative.")
+    .max(1_000_000),
+});

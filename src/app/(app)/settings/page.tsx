@@ -8,6 +8,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { UsersTab } from "./users-tab";
 import { AccountTab } from "./account-tab";
 import { AuditLogTab } from "./audit-log-tab";
+import { OrgSettingsTab } from "./org-settings-tab";
+import { getOrgSettings } from "./service";
 
 export default async function SettingsPage({
   searchParams,
@@ -19,6 +21,7 @@ export default async function SettingsPage({
 
   const canManageUsers = hasPermission(session, "MANAGE_USERS");
   const canViewAudit = hasPermission(session, "VIEW_AUDIT_LOG");
+  const canManageSettings = hasPermission(session, "MANAGE_SETTINGS");
   const { tab: tabParam } = await searchParams;
 
   const allowed =
@@ -28,11 +31,13 @@ export default async function SettingsPage({
         ? "account"
         : tabParam === "audit" && canViewAudit
           ? "audit"
-          : canManageUsers
-            ? "users"
-            : canViewAudit
-              ? "audit"
-              : "account";
+          : tabParam === "org" && canManageSettings
+            ? "org"
+            : canManageUsers
+              ? "users"
+              : canViewAudit
+                ? "audit"
+                : "account";
 
   const users = canManageUsers
     ? await prisma.user.findMany({
@@ -41,6 +46,8 @@ export default async function SettingsPage({
         select: { id: true, name: true, email: true, permissions: true, active: true },
       })
     : [];
+
+  const orgSettings = canManageSettings ? await getOrgSettings(session) : null;
 
   return (
     <div className="space-y-6">
@@ -69,6 +76,17 @@ export default async function SettingsPage({
             Audit log
           </Link>
         )}
+        {canManageSettings && (
+          <Link
+            href="/settings?tab=org"
+            className={cn(
+              buttonVariants({ variant: allowed === "org" ? "default" : "ghost", size: "sm" }),
+              allowed !== "org" && "shadow-none"
+            )}
+          >
+            Organization
+          </Link>
+        )}
         <Link
           href="/settings?tab=account"
           className={cn(
@@ -84,6 +102,8 @@ export default async function SettingsPage({
         <UsersTab users={users} currentUserId={session.userId} />
       ) : allowed === "audit" && canViewAudit ? (
         <AuditLogTab organizationId={session.organizationId} />
+      ) : allowed === "org" && canManageSettings && orgSettings ? (
+        <OrgSettingsTab settings={orgSettings} />
       ) : (
         <AccountTab name={session.name} />
       )}

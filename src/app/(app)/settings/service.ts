@@ -9,9 +9,11 @@ import type {
   resetPasswordFormSchema,
   updateOwnProfileFormSchema,
   changeOwnPasswordFormSchema,
+  orgSettingsFormSchema,
 } from "./schemas";
 import { writeAuditLog } from "@/lib/audit";
 
+type OrgSettingsInput = z.infer<typeof orgSettingsFormSchema>;
 type CreateUserInput = z.infer<typeof createUserFormSchema>;
 type UpdatePermissionsInput = z.infer<typeof updatePermissionsFormSchema>;
 type ResetPasswordInput = z.infer<typeof resetPasswordFormSchema>;
@@ -141,6 +143,49 @@ export async function updateOwnProfile(
   input: UpdateOwnProfileInput
 ): Promise<Result> {
   await prisma.user.update({ where: { id: session.userId, organizationId: session.organizationId }, data: { name: input.name } });
+  return { ok: true };
+}
+
+// Phase 13c: org-level settings (AppConfig is one row per org). All access is
+// scoped to session.organizationId, so an org can only ever read/write its own.
+
+export type OrgSettings = { businessName: string | null; defaultLowStock: number };
+
+export async function getOrgSettings(session: SessionPayload): Promise<OrgSettings> {
+  const config = await prisma.appConfig.findUnique({
+    where: { organizationId: session.organizationId },
+    select: { businessName: true, defaultLowStock: true },
+  });
+  return { businessName: config?.businessName ?? null, defaultLowStock: config?.defaultLowStock ?? 0 };
+}
+
+export async function updateOrgSettings(
+  session: SessionPayload,
+  input: OrgSettingsInput
+): Promise<Result> {
+  if (!hasPermission(session, "MANAGE_SETTINGS")) {
+    return { ok: false, error: "You don't have permission to manage settings." };
+  }
+
+  // Upsert keyed on the org — creates the row if this org somehow has none yet
+  // (e.g. the original tenant whose AppConfig predates provisioning), always
+  // scoped so it can never touch another org's config.
+  await prisma.appConfig.upsert({
+    where: { organizationId: session.organizationId },
+    update: { businessName: input.businessName, defaultLowStock: input.defaultLowStock },
+    create: {
+      organizationId: session.organizationId,
+      businessName: input.businessName,
+      defaultLowStock: input.defaultLowStock,
+    },
+  });
+
+  await writeAuditLog({
+    actor: session,
+    action: "SETTINGS_CHANGED",
+    detail: `Updated org settings (businessName=${input.businessName ?? "—"}, defaultLowStock=${input.defaultLowStock})`,
+  });
+
   return { ok: true };
 }
 

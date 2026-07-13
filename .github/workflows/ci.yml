@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  web:
+    name: Web (lint, test, build)
+    runs-on: ubuntu-latest
+    env:
+      # Dummy values so module init / next build don't fail; tests mock Prisma,
+      # so no real database is contacted. The cross-org isolation suite runs as
+      # part of `npm test` below (Phase 13c requirement: it must run in CI).
+      DATABASE_URL: postgresql://user:pass@localhost:5432/db?sslmode=disable
+      DIRECT_URL: postgresql://user:pass@localhost:5432/db?sslmode=disable
+      SESSION_SECRET: ci-placeholder-secret-at-least-32-characters
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  mobile:
+    name: Mobile (test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npm test
