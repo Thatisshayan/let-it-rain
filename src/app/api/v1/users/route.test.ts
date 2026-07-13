@@ -3,7 +3,8 @@ import { SignJWT } from "jose";
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    user: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
+    user: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), count: vi.fn() },
+    organization: { findUnique: vi.fn() },
     auditLog: { create: vi.fn() },
   },
 }));
@@ -23,10 +24,14 @@ async function tokenFor(permissions: string[]) {
   // on the where-clause so both call sites get the right answer.
   (prisma.user.findUnique as any).mockImplementation(async ({ where }: any) => {
     if (where.id === "admin-1") {
-      return { id: "admin-1", email: "admin@x.com", name: "Admin", permissions, active: true };
+      return { id: "admin-1", email: "admin@x.com", name: "Admin", permissions, active: true, organizationId: "org-a" };
     }
     return null;
   });
+  // Phase 13d: createUser reads the org plan + counts seats. Default to an
+  // unlimited plan well under any limit so the happy path is unaffected.
+  (prisma.organization.findUnique as any).mockResolvedValue({ plan: "ENTERPRISE" });
+  (prisma.user.count as any).mockResolvedValue(0);
   return new SignJWT({ userId: "admin-1", email: "admin@x.com", name: "Admin", permissions })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()

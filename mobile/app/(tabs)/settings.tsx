@@ -12,6 +12,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
   const canManageUsers = user?.permissions.includes("MANAGE_USERS");
+  const canManageSettings = user?.permissions.includes("MANAGE_SETTINGS");
   const [faceIdOn, setFaceIdOn] = useState(false);
   const [faceIdAvailable, setFaceIdAvailable] = useState(false);
 
@@ -56,6 +57,11 @@ export default function SettingsScreen() {
       <Pressable style={[styles.row, { borderColor: theme.border }]} onPress={() => router.push("/settings/account")}>
         <Text style={[styles.rowText, { color: theme.foreground }]}>Account</Text>
       </Pressable>
+      {canManageSettings ? (
+        <Pressable style={[styles.row, { borderColor: theme.border }]} onPress={() => router.push("/settings/organization")}>
+          <Text style={[styles.rowText, { color: theme.foreground }]}>Organization &amp; plan</Text>
+        </Pressable>
+      ) : null}
       <View style={[styles.row, { borderColor: theme.border }]}>
         <View style={styles.switchRow}>
           <Text style={[styles.rowText, { color: theme.foreground }]}>Unlock with Face ID</Text>

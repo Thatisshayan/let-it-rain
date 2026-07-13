@@ -32,7 +32,9 @@ describe("createOrganizationWithAdmin", () => {
     });
 
     expect(res).toEqual({ ok: true, organizationId: "org-new", adminUserId: "admin-new" });
-    expect(tx.organization.create).toHaveBeenCalledWith({ data: { name: "Second Co" } });
+    expect(tx.organization.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ name: "Second Co", emailVerified: true }),
+    });
     expect(tx.user.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         organizationId: "org-new",

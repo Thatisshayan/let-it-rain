@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    user: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn() },
+    user: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn(), count: vi.fn() },
+    organization: { findUnique: vi.fn() },
     auditLog: { create: vi.fn() },
     appConfig: { findUnique: vi.fn(), upsert: vi.fn() },
   },
@@ -57,8 +58,29 @@ describe("createUser", () => {
     if (!result.ok) expect(result.error).toMatch(/already exists/);
   });
 
+  it("rejects when the org is at its plan seat limit", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue(null);
+    (prisma.organization.findUnique as any).mockResolvedValue({ plan: "FREE" }); // seat limit 3
+    (prisma.user.count as any).mockResolvedValue(3);
+    const result = await createUser(admin, { name: "Bob", email: "bob@x.com", password: "password1", permissions: [] });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/seat limit/i);
+    expect(prisma.user.create).not.toHaveBeenCalled();
+  });
+
+  it("allows creation under the seat limit", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue(null);
+    (prisma.organization.findUnique as any).mockResolvedValue({ plan: "FREE" });
+    (prisma.user.count as any).mockResolvedValue(2); // 2 < 3
+    (prisma.user.create as any).mockResolvedValue({ id: "u9" });
+    const result = await createUser(admin, { name: "Bob", email: "bob@x.com", password: "password1", permissions: [] });
+    expect(result.ok).toBe(true);
+  });
+
   it("creates a user with a hashed password", async () => {
     (prisma.user.findUnique as any).mockResolvedValue(null);
+    (prisma.organization.findUnique as any).mockResolvedValue({ plan: "ENTERPRISE" });
+    (prisma.user.count as any).mockResolvedValue(2);
     (prisma.user.create as any).mockResolvedValue({ id: "u2" });
     const result = await createUser(admin, {
       name: "Bob",

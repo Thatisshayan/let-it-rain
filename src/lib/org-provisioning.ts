@@ -23,6 +23,12 @@ export type ProvisionInput = {
   admin: { name: string; email: string; password: string };
   /** Optional starting values for the org's AppConfig. */
   settings?: { businessName?: string; defaultLowStock?: number };
+  /**
+   * Whether the org starts email-verified. Admin/CLI provisioning defaults to
+   * true (trusted operator). Public self-serve signup passes false so the org
+   * must confirm its email before it's treated as verified.
+   */
+  emailVerified?: boolean;
 };
 
 export type ProvisionResult =
@@ -45,7 +51,9 @@ export async function createOrganizationWithAdmin(input: ProvisionInput): Promis
   const passwordHash = await hashPassword(input.admin.password);
 
   const result = await prisma.$transaction(async (tx) => {
-    const org = await tx.organization.create({ data: { name: orgName } });
+    const org = await tx.organization.create({
+      data: { name: orgName, emailVerified: input.emailVerified ?? true },
+    });
     const admin = await tx.user.create({
       data: {
         organizationId: org.id,

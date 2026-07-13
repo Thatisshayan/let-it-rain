@@ -3,15 +3,24 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("@/lib/org-provisioning", () => ({
   createOrganizationWithAdmin: vi.fn(),
 }));
+vi.mock("@/lib/prisma", () => ({ prisma: { organization: { findMany: vi.fn() } } }));
 
 import { createOrganizationWithAdmin } from "@/lib/org-provisioning";
-import { POST } from "./route";
+import { prisma } from "@/lib/prisma";
+import { GET, POST } from "./route";
 
 function req(body: unknown, token?: string) {
   return new Request("http://localhost/api/v1/admin/organizations", {
     method: "POST",
     headers: token ? { "x-platform-admin-token": token } : {},
     body: JSON.stringify(body),
+  });
+}
+
+function getReq(token?: string) {
+  return new Request("http://localhost/api/v1/admin/organizations", {
+    method: "GET",
+    headers: token ? { "x-platform-admin-token": token } : {},
   });
 }
 
@@ -59,5 +68,29 @@ describe("POST /api/v1/admin/organizations", () => {
     process.env.PLATFORM_ADMIN_TOKEN = "secret";
     const res = await POST(req({ orgName: "", admin: { name: "", email: "nope", password: "x" } }, "secret"));
     expect(res.status).toBe(400);
+  });
+});
+
+describe("GET /api/v1/admin/organizations (support visibility)", () => {
+  it("is 404 when disabled and 401 without the token", async () => {
+    expect((await GET(getReq("x"))).status).toBe(404);
+    process.env.PLATFORM_ADMIN_TOKEN = "secret";
+    expect((await GET(getReq())).status).toBe(401);
+  });
+
+  it("lists orgs with plan/subscription + usage counts", async () => {
+    process.env.PLATFORM_ADMIN_TOKEN = "secret";
+    (prisma.organization.findMany as any).mockResolvedValue([
+      {
+        id: "o1", name: "Alpha", plan: "PRO", subscriptionStatus: "ACTIVE", emailVerified: true,
+        createdAt: new Date("2026-01-01"), _count: { users: 4, items: 10, orders: 2 },
+      },
+    ]);
+    const res = await GET(getReq("secret"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.organizations[0]).toEqual(
+      expect.objectContaining({ id: "o1", plan: "PRO", subscriptionStatus: "ACTIVE", usage: { users: 4, items: 10, orders: 2 } })
+    );
   });
 });

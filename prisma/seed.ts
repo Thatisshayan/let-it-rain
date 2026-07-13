@@ -16,7 +16,9 @@ async function main() {
   await prisma.organization.upsert({
     where: { id: LET_IT_RAIN_ORG_ID },
     update: {},
-    create: { id: LET_IT_RAIN_ORG_ID, name: "Let It Rain" },
+    // Phase 13d: the original tenant is grandfathered to ENTERPRISE (unlimited
+    // seats), same as the migration's backfill.
+    create: { id: LET_IT_RAIN_ORG_ID, name: "Let It Rain", plan: "ENTERPRISE", emailVerified: true },
   });
 
   const users = [
