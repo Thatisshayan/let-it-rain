@@ -4,13 +4,14 @@ import { withAuth } from "@/lib/api-auth";
 import { createItemFormSchema } from "@/app/(app)/items/schemas";
 import { createItem } from "@/app/(app)/items/service";
 
-export const GET = withAuth(async (req) => {
+export const GET = withAuth(async (req, _ctx, session) => {
   const url = new URL(req.url);
   const q = url.searchParams.get("q")?.trim();
   const low = url.searchParams.get("low") === "1";
 
   const items = await prisma.item.findMany({
     where: {
+      organizationId: session.organizationId,
       deletedAt: null,
       ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
     },

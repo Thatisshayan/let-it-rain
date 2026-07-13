@@ -25,8 +25,16 @@ export async function revokeUserSessions(
     }
   }
 
+  // Org-scoped: an admin can only revoke sessions for users in their own org.
+  // Guard first so a cross-org target is a clean error, not a thrown update.
+  const target = await prisma.user.findUnique({
+    where: { id: targetUserId, organizationId: actor.organizationId },
+    select: { id: true },
+  });
+  if (!target) return { ok: false, error: "User not found." };
+
   await prisma.user.update({
-    where: { id: targetUserId },
+    where: { id: targetUserId, organizationId: actor.organizationId },
     data: { tokenVersion: { increment: 1 } },
   });
 

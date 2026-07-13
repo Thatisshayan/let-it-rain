@@ -31,6 +31,7 @@ export async function POST(req: Request) {
     name: result.user.name,
     permissions: result.user.permissions,
     tokenVersion: result.user.tokenVersion,
+    organizationId: result.user.organizationId,
   });
 
   return NextResponse.json({ token, user: result.user });

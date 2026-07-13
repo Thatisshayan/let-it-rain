@@ -44,6 +44,7 @@ export async function loginAction(
     name: result.user.name,
     permissions: result.user.permissions,
     tokenVersion: result.user.tokenVersion,
+    organizationId: result.user.organizationId,
   });
   redirect("/");
 }

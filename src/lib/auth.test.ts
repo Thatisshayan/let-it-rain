@@ -41,6 +41,7 @@ describe("verifyBearerToken", () => {
       permissions: ["EDIT_ITEMS"],
       active: true,
       tokenVersion: 0,
+      organizationId: "org-a",
     });
     const secret = new TextEncoder().encode(process.env.SESSION_SECRET);
     const token = await new SignJWT({
@@ -62,8 +63,40 @@ describe("verifyBearerToken", () => {
         email: "a@b.com",
         name: "Ada",
         permissions: ["EDIT_ITEMS"],
+        // Phase 13a: org context is sourced from the DB row, not the JWT.
+        organizationId: "org-a",
       })
     );
+  });
+
+  it("sources organizationId from the current DB row, ignoring any org hint in the JWT", async () => {
+    // The DB is the source of truth: even if a token embedded a different org,
+    // the session must carry the org from the freshly-fetched user row.
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      name: "Ada",
+      permissions: ["EDIT_ITEMS"],
+      active: true,
+      tokenVersion: 0,
+      organizationId: "org-real",
+    });
+    const secret = new TextEncoder().encode(process.env.SESSION_SECRET);
+    const token = await new SignJWT({
+      userId: "u1",
+      email: "a@b.com",
+      name: "Ada",
+      permissions: ["EDIT_ITEMS"],
+      tokenVersion: 0,
+      organizationId: "org-forged",
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setIssuedAt()
+      .setExpirationTime("30d")
+      .sign(secret);
+
+    const session = await verifyBearerToken(makeRequest(`Bearer ${token}`));
+    expect(session?.organizationId).toBe("org-real");
   });
 
   it("returns null when the token's permissions are stale (DB has since changed them)", async () => {

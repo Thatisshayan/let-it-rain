@@ -26,6 +26,7 @@ export async function createItem(
 
   const item = await prisma.item.create({
     data: {
+      organizationId: session.organizationId,
       name,
       category: category ?? null,
       description: description ?? null,
@@ -41,6 +42,8 @@ export async function createItem(
   if (initialQuantity > 0) {
     await prisma.movement.create({
       data: {
+        // Denormalized from the parent item's org (same session org).
+        organizationId: session.organizationId,
         itemId: item.id,
         type: "RECEIVE",
         delta: initialQuantity,
@@ -67,7 +70,7 @@ export async function updateItem(
   const { name, category, description, location, minStock, customFields, unitCost, unitPrice } = input;
 
   await prisma.item.update({
-    where: { id: itemId, deletedAt: null },
+    where: { id: itemId, deletedAt: null, organizationId: session.organizationId },
     data: {
       name,
       category: category ?? null,
@@ -92,7 +95,7 @@ export async function deleteItem(
   }
 
   await prisma.item.update({
-    where: { id: itemId, deletedAt: null },
+    where: { id: itemId, deletedAt: null, organizationId: session.organizationId },
     data: { deletedAt: new Date() },
   });
 
@@ -116,7 +119,7 @@ export async function adjustStock(
     try {
       const result = await prisma.$transaction(
         async (tx) => {
-          const item = await tx.item.findUnique({ where: { id: itemId, deletedAt: null } });
+          const item = await tx.item.findUnique({ where: { id: itemId, deletedAt: null, organizationId: session.organizationId } });
           if (!item) return { error: "Item not found." } as const;
 
           const movement = computeMovement(item.quantity, input);
@@ -139,7 +142,7 @@ export async function adjustStock(
             : currentCost;
 
           await tx.item.update({
-            where: { id: itemId },
+            where: { id: itemId, organizationId: session.organizationId },
             data: {
               quantity: movement.quantityAfter,
               ...(isReceive ? { unitCost: newAvgCost } : {}),
@@ -147,6 +150,7 @@ export async function adjustStock(
           });
           await tx.movement.create({
             data: {
+              organizationId: session.organizationId,
               itemId,
               type: input.type,
               delta: movement.delta,

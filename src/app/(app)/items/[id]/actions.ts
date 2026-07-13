@@ -30,6 +30,7 @@ export async function loadMoreMovementsAction(
   const movements = await prisma.movement.findMany({
     where: {
       itemId,
+      organizationId: session.organizationId,
       ...(cursor
         ? {
             OR: [

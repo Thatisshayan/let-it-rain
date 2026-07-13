@@ -12,15 +12,19 @@ type AuditEntry = {
 };
 
 export async function AuditLogTab({
+  organizationId,
   page,
   pageSize,
 }: {
+  // Required: the caller's org, derived from the session in settings/page.tsx.
+  organizationId: string;
   page?: number;
   pageSize?: number;
 }) {
   const safePage = Math.max(1, page ?? 1);
   const safePageSize = Math.min(200, Math.max(1, pageSize ?? 50));
   const entries = await prisma.auditLog.findMany({
+    where: { organizationId },
     orderBy: { createdAt: "desc" },
     skip: (safePage - 1) * safePageSize,
     take: safePageSize,

@@ -365,3 +365,65 @@ If you are picking this up as a fresh agent with no prior context on this repo, 
 read `PHASE13_INIT.md` (repo root) first — it's a condensed technical onboarding doc
 written specifically to get you productive on this codebase without needing to
 re-explore it from scratch.
+
+---
+
+## Phase 13a — Completion Report (2026-07-12)
+
+**Status: ✅ COMPLETE** — Multi-tenant foundation: `Organization` model, `organizationId` across every tenant-scoped table, an exhaustive service-and-route query-scoping sweep, and a load-bearing cross-org isolation test suite. Branch: `phase-13a-saas-foundation`.
+
+### Summary of Work
+
+| Area | What Shipped |
+|------|--------------|
+| **Schema** | New `Organization` model; `organizationId` added to `User`, `Item`, `Movement` (direct/denormalized), `Order`, `AuditLog`; `OrderLineItem` scoped via its `Order` (no column, documented); `AppConfig` converted from global `id=1` singleton to one-row-per-org (`organizationId @unique`, uuid PK). Every org column indexed, plus composite `(organizationId, createdAt)` on `Movement`/`AuditLog`. |
+| **Migration** | Two migrations following the Phase 1 nullable → backfill → NOT NULL precedent. `…_phase13a_org_nullable_backfill`: creates the org, adds nullable columns, backfills all rows to the "Let It Rain" org (fixed UUID, idempotent), adds indexes + `ON DELETE RESTRICT` FKs, restructures `AppConfig`. `…_phase13a_org_not_null`: flips all six columns to `NOT NULL`. |
+| **Session** | `SessionPayload.organizationId`, re-fetched from the DB every request in `resolveCurrentSession()` (same freshness guarantee as `active`/`tokenVersion`); threaded through `getSession` (cookie), `verifyBearerToken` (mobile), `attemptLogin`, both login entry points, and the seed. |
+| **Service-layer sweep** | All 5 `service.ts` files scoped function-by-function, including every `tx.*` call inside transactions; cross-user/cross-order/cross-item writes now use org-scoped `where` with not-found guards so a cross-org target is a clean error, not a thrown 500. `audit-log/service.ts` readers now take a required `organizationId`. |
+| **Direct-Prisma sweep (beyond the service layer)** | 8 API routes and 14 server-components/actions that query Prisma directly were each scoped to the caller's org — including the dashboard (which fetched no session at all) and a raw-SQL low-stock query in `items/page.tsx` (parameterized org predicate added). |
+| **Isolation suite** | `cross-org-isolation.test.ts` — an in-memory fake Prisma that *actually enforces* `where.organizationId`, seeded with two orgs, exercising the real service functions and API route handlers. 24 tests covering items/movements/orders/audit/users/AppConfig at both the service and API-route layers, with a sanity test proving an unfiltered query would see both orgs. |
+| **Mobile** | Pure `/api/v1` consumer (API is the enforcement boundary) — `organizationId` threaded through the `User` type + JWT decode only, so the client isn't painted into a corner for 13b/13c. No UI/feature work. |
+
+### New Files
+- `prisma/migrations/20260712160000_phase13a_org_nullable_backfill/migration.sql`
+- `prisma/migrations/20260712160100_phase13a_org_not_null/migration.sql`
+- `src/app/(app)/cross-org-isolation.test.ts` — the cross-org isolation suite
+
+### Modified Files
+- `prisma/schema.prisma`, `prisma/seed.ts`
+- `src/lib/auth.ts`, `src/lib/login.ts`, `src/lib/audit.ts` + `src/lib/auth.test.ts`
+- `src/app/api/v1/auth/login/route.ts` (+ test), `src/app/login/actions.ts`
+- Services: `items/service.ts`, `orders/service.ts`, `settings/service.ts` (+ test), `accounts/service.ts` (+ test), `audit-log/service.ts`
+- Direct-Prisma API routes: `items/route.ts`, `items/[id]/route.ts`, `items/export.csv/route.ts`, `items/[id]/movements/export.csv/route.ts` (api + app copies), `activity/route.ts`, `reports/route.ts`, `users/route.ts`, `orders/drivers/route.ts`, `audit/route.ts`
+- Direct-Prisma server components/actions: `layout.tsx`, `page.tsx` (dashboard), `items/{page,new,[id],[id]/edit,[id]/actions}`, `orders/{new,[id]}`, `activity/page.tsx`, `reports/page.tsx`, `settings/{page,audit-log-tab,users/[id]}`
+- Mobile: `mobile/src/api/auth.ts`, `mobile/src/api/jwt.ts`, `mobile/src/api/AuthContext.tsx`
+
+### Key Decisions (documented as code comments at each site)
+- **`Movement` carries a direct denormalized `organizationId`** — it's the hottest read table (activity/reports scan by date), so joining through `Item` just to filter by tenant would be needless cost. Writers copy the org from the parent item.
+- **`OrderLineItem` is scoped solely via its parent `Order`** (no column) — it is never queried standalone (verified in the sweep).
+- **`AppConfig` is now one row per org** — the `id=1` global singleton is gone; `organizationId @unique` is the effective key.
+- **Email stays globally unique, one org per user** — org is always derived server-side from the authenticated user, never client-supplied. (Login-time comment/enforcement is a 13b item; the schema + session groundwork is here.)
+
+### Discrepancies vs the handoff docs (flagged, not silently absorbed)
+- **PHASE13.md §3 / §4.5 imply org scoping lives in the 5 service files and that API routes only call through the service layer.** That is **false** in the current code: 8 API routes and 14 server-components/actions query Prisma directly. The checklist anticipated this ("If any such route is found, it is fixed as part of this checklist"); all were fixed here. The real sweep was ~30 files, not 5.
+- **`items/page.tsx` uses raw SQL** for the low-stock filter — not covered by Prisma `where` scoping; a parameterized `"organizationId" = $…` predicate was added to both raw queries.
+- **The dashboard `page.tsx` fetched no session at all** (relied on the layout redirect) — added `getSession()` + org scoping.
+- **Baseline test count**: docs cite 164; confirmed 164 at branch start, now 200 (+36: the isolation suite and added org/guard tests).
+
+### Verification Results
+- ✅ ESLint: 0 errors
+- ✅ `next build` (type check): 0 errors
+- ✅ Web tests: **200/200** passing (was 164 baseline)
+- ✅ Mobile tests: **15/15** passing
+- ✅ `npx prisma generate` clean; `prisma migrate diff` confirms the two hand-written migrations produce exactly the schema
+- ✅ **Migration verified against a live Postgres copy**: on an isolated database created on a throwaway Neon branch, seeded pre-13a data (3 users / 4 items / 4 movements / 2 orders / 3 line items / 2 audit / 1 AppConfig), applied both migrations, and confirmed — **identical row counts before/after (zero data loss)**, **0 NULL `organizationId`** across all six tables, `Organization` row created, **every** row points at that org, all six columns `NOT NULL`, `AppConfig.id` migrated int→text with `businessName` preserved, and 6 `organizationId` FK constraints present. Branch deleted afterward.
+
+### Notes / Open Items
+- **The migration has NOT been run against the app's real Neon database.** The API key provided for verification was scoped to a *different* Neon project (its `public` schema belongs to an unrelated app), so the dry-run was done on an isolated test database there and cleaned up. Before deploying, run both migrations against a branch of the **actual** letitrain DB (host `ep-lucky-wind-…`) and re-confirm the backfill row counts.
+- Cross-org update/delete on another org's row currently throws Prisma `P2025` (denies the write) where the pre-existing code already tolerated that pattern; where a scoped read preceded the write, a clean not-found guard was added instead.
+- Mobile org context is threaded through the session model only; org-level settings UI is deferred to 13c.
+- 13b was deliberately not started (its own branch, per the branching rules).
+
+### Suggested Next Step
+Merge `phase-13a-saas-foundation`, then start **13b** (org-aware auth + data-access consistency) on its own branch, fresh from `master`.
+

@@ -29,14 +29,14 @@ export const GET = withAuth(async (req, _ctx, session) => {
 
   const [monthMovements, todaySaleMovements, items] = await Promise.all([
     prisma.movement.findMany({
-      where: { createdAt: { gte: start, lt: end }, OR: [{ isSale: true }, { type: "RECEIVE" }] },
+      where: { organizationId: session.organizationId, createdAt: { gte: start, lt: end }, OR: [{ isSale: true }, { type: "RECEIVE" }] },
       include: { item: { select: { id: true, name: true } } },
     }),
     prisma.movement.findMany({
-      where: { isSale: true, createdAt: { gte: todayStart, lt: todayEnd } },
+      where: { organizationId: session.organizationId, isSale: true, createdAt: { gte: todayStart, lt: todayEnd } },
     }),
     prisma.item.findMany({
-      where: { deletedAt: null },
+      where: { organizationId: session.organizationId, deletedAt: null },
       select: { quantity: true, unitCost: true },
     }),
   ]);

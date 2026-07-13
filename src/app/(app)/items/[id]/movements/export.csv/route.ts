@@ -14,13 +14,13 @@ export async function GET(
 
   const { id } = await params;
 
-  const item = await prisma.item.findUnique({ where: { id }, select: { name: true } });
+  const item = await prisma.item.findUnique({ where: { id, organizationId: session.organizationId }, select: { name: true } });
   if (!item) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
   const movements = await prisma.movement.findMany({
-    where: { itemId: id },
+    where: { itemId: id, organizationId: session.organizationId },
     orderBy: { createdAt: "desc" },
     include: { user: { select: { name: true } } },
   });

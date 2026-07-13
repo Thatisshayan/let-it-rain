@@ -26,6 +26,9 @@ export interface WriteAuditLogInput {
 export async function writeAuditLog(input: WriteAuditLogInput): Promise<void> {
   await prisma.auditLog.create({
     data: {
+      // Org derived from the actor's session — audit entries belong to the
+      // tenant the acting user is in.
+      organizationId: input.actor.organizationId,
       actorId: input.actor.userId,
       action: input.action,
       targetUserId: input.targetUserId ?? null,

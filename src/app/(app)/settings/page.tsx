@@ -36,6 +36,7 @@ export default async function SettingsPage({
 
   const users = canManageUsers
     ? await prisma.user.findMany({
+        where: { organizationId: session.organizationId },
         orderBy: { createdAt: "asc" },
         select: { id: true, name: true, email: true, permissions: true, active: true },
       })
@@ -82,7 +83,7 @@ export default async function SettingsPage({
       {allowed === "users" && canManageUsers ? (
         <UsersTab users={users} currentUserId={session.userId} />
       ) : allowed === "audit" && canViewAudit ? (
-        <AuditLogTab />
+        <AuditLogTab organizationId={session.organizationId} />
       ) : (
         <AccountTab name={session.name} />
       )}

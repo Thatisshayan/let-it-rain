@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: payload.email,
             name: payload.name,
             permissions: payload.permissions,
+            organizationId: payload.organizationId,
           });
         } else {
           await clearToken();

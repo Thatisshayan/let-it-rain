@@ -13,7 +13,7 @@ export const LOGIN_IP_WINDOW_MS = 15 * 60 * 1000;
 export type LoginResult =
   | {
       ok: true;
-      user: { id: string; email: string; name: string; permissions: string[]; tokenVersion: number };
+      user: { id: string; email: string; name: string; permissions: string[]; tokenVersion: number; organizationId: string };
     }
   | { ok: false; error: string; status: 401 | 429 };
 
@@ -59,6 +59,8 @@ export async function attemptLogin(
 
   return {
     ok: true,
-    user: { id: user.id, email: user.email, name: user.name, permissions: user.permissions, tokenVersion: user.tokenVersion },
+    // organizationId derived from the authenticated user row — this is the only
+    // place org context enters a session, and it is never client-supplied.
+    user: { id: user.id, email: user.email, name: user.name, permissions: user.permissions, tokenVersion: user.tokenVersion, organizationId: user.organizationId },
   };
 }

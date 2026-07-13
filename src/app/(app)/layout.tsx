@@ -20,7 +20,7 @@ export default async function AppLayout({
   }
 
   const items = await prisma.item.findMany({
-    where: { deletedAt: null },
+    where: { deletedAt: null, organizationId: session.organizationId },
     select: { quantity: true, minStock: true },
   });
   const lowStockCount = items.filter((i) => i.quantity < i.minStock).length;

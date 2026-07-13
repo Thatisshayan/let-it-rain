@@ -31,6 +31,9 @@ type DecodedToken = {
   name: string;
   permissions: string[];
   tokenVersion?: number;
+  // Phase 13a: present on tokens issued after multi-tenancy landed; optional so
+  // older tokens still decode.
+  organizationId?: string;
   exp?: number;
 };
 

@@ -6,13 +6,13 @@ import { updateItem, deleteItem } from "@/app/(app)/items/service";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export const GET = withAuth<Ctx>(async (_req, { params }) => {
+export const GET = withAuth<Ctx>(async (_req, { params }, session) => {
   const { id } = await params;
-  const item = await prisma.item.findUnique({ where: { id, deletedAt: null } });
+  const item = await prisma.item.findUnique({ where: { id, deletedAt: null, organizationId: session.organizationId } });
   if (!item) return NextResponse.json({ error: "Item not found." }, { status: 404 });
 
   const movements = await prisma.movement.findMany({
-    where: { itemId: id },
+    where: { itemId: id, organizationId: session.organizationId },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     include: { user: { select: { name: true } } },
     take: 20,

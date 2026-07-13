@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -10,14 +12,21 @@ const MOVEMENT_LABEL: Record<string, string> = {
 };
 
 export default async function DashboardPage() {
+  // This page queries Prisma directly (not through the service layer), so it
+  // must derive and apply org scope itself. The layout also guards auth, but the
+  // org filter has to live on every query here regardless.
+  const session = await getSession();
+  if (!session) redirect("/login");
+  const orgId = session.organizationId;
+
   const [totalItems, items, recentMovements] = await Promise.all([
-    prisma.item.count({ where: { deletedAt: null } }),
+    prisma.item.count({ where: { deletedAt: null, organizationId: orgId } }),
     prisma.item.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, organizationId: orgId },
       select: { id: true, name: true, quantity: true, minStock: true },
     }),
     prisma.movement.findMany({
-      where: { item: { deletedAt: null } },
+      where: { organizationId: orgId, item: { deletedAt: null } },
       orderBy: { createdAt: "desc" },
       take: 10,
       include: { item: { select: { name: true, id: true } }, user: { select: { name: true } } },

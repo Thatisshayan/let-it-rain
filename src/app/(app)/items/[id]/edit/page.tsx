@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
@@ -10,13 +10,14 @@ export default async function EditItemPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await getSession();
+  if (!session) redirect("/login");
   const canViewCosts = hasPermission(session, "VIEW_COSTS");
 
   const { id } = await params;
   const [item, distinctCategories] = await Promise.all([
-    prisma.item.findUnique({ where: { id, deletedAt: null } }),
+    prisma.item.findUnique({ where: { id, deletedAt: null, organizationId: session.organizationId } }),
     prisma.item.findMany({
-      where: { deletedAt: null, category: { not: null } },
+      where: { deletedAt: null, category: { not: null }, organizationId: session.organizationId },
       select: { category: true },
       distinct: ["category"],
       orderBy: { category: "asc" },

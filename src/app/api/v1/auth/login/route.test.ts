@@ -55,13 +55,18 @@ describe("POST /api/v1/auth/login", () => {
       passwordHash: "hash",
       permissions: ["EDIT_ITEMS"],
       active: true,
+      tokenVersion: 0,
+      organizationId: "org-a",
     });
     (bcrypt.compare as any).mockResolvedValue(true);
     const res = await POST(req({ email: "a@b.com", password: "secret123" }));
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.token).toEqual(expect.any(String));
-    expect(body.user).toEqual({ id: "u1", email: "a@b.com", name: "Ada", permissions: ["EDIT_ITEMS"] });
+    // Phase 13a: login resolves and returns the user's org context.
+    expect(body.user).toEqual(
+      expect.objectContaining({ id: "u1", email: "a@b.com", name: "Ada", permissions: ["EDIT_ITEMS"], organizationId: "org-a" })
+    );
   });
 
   it("returns 429 after too many attempts for the same IP+email", async () => {
