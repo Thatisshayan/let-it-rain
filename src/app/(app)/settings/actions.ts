@@ -9,6 +9,7 @@ import {
   resetPasswordFormSchema,
   updateOwnProfileFormSchema,
   changeOwnPasswordFormSchema,
+  orgSettingsFormSchema,
 } from "./schemas";
 import {
   createUser,
@@ -17,6 +18,7 @@ import {
   resetUserPassword,
   updateOwnProfile,
   changeOwnPassword,
+  updateOrgSettings,
 } from "./service";
 
 export type ActionState = {
@@ -114,6 +116,26 @@ export async function updateOwnProfileAction(
 
   revalidatePath("/settings");
   return { success: "Profile updated. Sign out and back in to see your new name everywhere." };
+}
+
+export async function updateOrgSettingsAction(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const session = await getSession();
+  if (!session) redirect("/login");
+
+  const parsed = orgSettingsFormSchema.safeParse({
+    businessName: formData.get("businessName"),
+    defaultLowStock: formData.get("defaultLowStock"),
+  });
+  if (!parsed.success) return { error: firstIssueMessage(parsed.error) };
+
+  const result = await updateOrgSettings(session, parsed.data);
+  if (!result.ok) return { error: result.error };
+
+  revalidatePath("/settings");
+  return { success: "Organization settings saved." };
 }
 
 export async function changeOwnPasswordAction(

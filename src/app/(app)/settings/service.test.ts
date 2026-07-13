@@ -4,6 +4,7 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     user: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn() },
     auditLog: { create: vi.fn() },
+    appConfig: { findUnique: vi.fn(), upsert: vi.fn() },
   },
 }));
 vi.mock("@/lib/password", () => ({
@@ -20,6 +21,8 @@ import {
   resetUserPassword,
   updateOwnProfile,
   changeOwnPassword,
+  getOrgSettings,
+  updateOrgSettings,
 } from "./service";
 
 const admin = {
@@ -156,6 +159,42 @@ describe("updateOwnProfile", () => {
       where: { id: "admin-1", organizationId: "org-a" },
       data: { name: "New Name" },
     });
+  });
+});
+
+describe("org settings", () => {
+  it("getOrgSettings reads the caller's org config, scoped by org", async () => {
+    (prisma.appConfig.findUnique as any).mockResolvedValue({ businessName: "Alpha", defaultLowStock: 7 });
+    const res = await getOrgSettings(admin);
+    expect(res).toEqual({ businessName: "Alpha", defaultLowStock: 7 });
+    expect(prisma.appConfig.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { organizationId: "org-a" } })
+    );
+  });
+
+  it("getOrgSettings falls back to defaults when no config row exists", async () => {
+    (prisma.appConfig.findUnique as any).mockResolvedValue(null);
+    const res = await getOrgSettings(admin);
+    expect(res).toEqual({ businessName: null, defaultLowStock: 0 });
+  });
+
+  it("updateOrgSettings rejects without MANAGE_SETTINGS", async () => {
+    const res = await updateOrgSettings({ ...admin, permissions: [] }, { businessName: "X", defaultLowStock: 1 });
+    expect(res.ok).toBe(false);
+    expect(prisma.appConfig.upsert).not.toHaveBeenCalled();
+  });
+
+  it("updateOrgSettings upserts scoped to the caller's org", async () => {
+    (prisma.appConfig.upsert as any).mockResolvedValue({});
+    const res = await updateOrgSettings({ ...admin, permissions: ["MANAGE_SETTINGS"] }, { businessName: "New", defaultLowStock: 3 });
+    expect(res.ok).toBe(true);
+    expect(prisma.appConfig.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { organizationId: "org-a" },
+        update: { businessName: "New", defaultLowStock: 3 },
+        create: expect.objectContaining({ organizationId: "org-a" }),
+      })
+    );
   });
 });
 
