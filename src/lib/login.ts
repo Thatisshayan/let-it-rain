@@ -15,7 +15,7 @@ export type LoginResult =
       ok: true;
       user: { id: string; email: string; name: string; permissions: string[]; tokenVersion: number; organizationId: string };
     }
-  | { ok: false; error: string; status: 401 | 429 };
+  | { ok: false; error: string; status: 401 | 403 | 429 };
 
 /**
  * Best-effort client IP for rate-limit keying.
@@ -52,7 +52,12 @@ export async function attemptLogin(
   // read from that row below — the caller never supplies an org, so there is no
   // way to authenticate into a different org's context than the one the matched
   // user actually belongs to.
-  const user = await prisma.user.findUnique({ where: { email } });
+  // Phase 14 (item 6): also load the org's email-verification state to gate
+  // unverified self-serve-signup orgs out of the app.
+  const user = await prisma.user.findUnique({
+    where: { email },
+    include: { organization: { select: { emailVerified: true } } },
+  });
   if (!user || !user.active) {
     return { ok: false, error: "Invalid email or password.", status: 401 };
   }
@@ -60,6 +65,19 @@ export async function attemptLogin(
   const valid = await verifyPassword(password, user.passwordHash);
   if (!valid) {
     return { ok: false, error: "Invalid email or password.", status: 401 };
+  }
+
+  // Phase 14 (item 6): block sign-in until the org's email is verified. Orgs
+  // created by admin/CLI provisioning (and every pre-existing org) are already
+  // verified, so this only gates public self-serve signups until they click the
+  // verification link. Checked AFTER the password so it doesn't leak which
+  // emails exist.
+  if (!user.organization.emailVerified) {
+    return {
+      ok: false,
+      error: "Please verify your email address before signing in. Check your inbox for the verification link.",
+      status: 403,
+    };
   }
 
   return {

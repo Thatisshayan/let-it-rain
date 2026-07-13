@@ -422,10 +422,13 @@ are done**. Every item is already seam'd so only config or one function changes.
    production Neon DB and re-confirm backfill row counts. The 13a–13d verifications were
    done on isolated test databases because the API key provided was scoped to a
    different Neon project.
-6. **Decide email-verification enforcement.** The signup flow issues/consumes tokens and
-   flips `emailVerified`, but login is intentionally **not** hard-gated on it (kept
-   non-breaking). Decide whether unverified orgs should be blocked from specific actions,
-   and implement if so.
+6. ✅ **DONE (2026-07-12) — Email-verification enforcement.** Decision made and
+   implemented: **login is now gated on `emailVerified`**. `attemptLogin`
+   (`src/lib/login.ts`) loads the org's verification state and returns 403 ("verify your
+   email…") for an unverified org, checked *after* the password so it doesn't leak which
+   emails exist. Admin/CLI-provisioned orgs and every pre-existing org are
+   `emailVerified=true`, so this only gates public self-serve signups until they click
+   the verification link. Covered by a new login test.
 7. **Onboard LETTHESANDSHINE.** Once 1–4 are set, create their org (admin
    org-creation flow or public signup) and take them through checkout in test mode, then
    live.

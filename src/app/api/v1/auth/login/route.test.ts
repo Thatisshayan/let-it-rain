@@ -57,6 +57,7 @@ describe("POST /api/v1/auth/login", () => {
       active: true,
       tokenVersion: 0,
       organizationId: "org-a",
+      organization: { emailVerified: true },
     });
     (bcrypt.compare as any).mockResolvedValue(true);
     const res = await POST(req({ email: "a@b.com", password: "secret123" }));
@@ -80,6 +81,7 @@ describe("POST /api/v1/auth/login", () => {
       active: true,
       tokenVersion: 0,
       organizationId: "org-real",
+      organization: { emailVerified: true },
     });
     (bcrypt.compare as any).mockResolvedValue(true);
     // Attacker attempts to smuggle a different org through the request body.
@@ -88,7 +90,7 @@ describe("POST /api/v1/auth/login", () => {
     const body = await res.json();
     expect(body.user.organizationId).toBe("org-real");
     // The lookup is by email alone — no org predicate is ever passed to it.
-    expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { email: "a@b.com" } });
+    expect(prisma.user.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { email: "a@b.com" } }));
   });
 
   it("resolves each user to their own org (two different tenants)", async () => {
@@ -103,12 +105,32 @@ describe("POST /api/v1/auth/login", () => {
         active: true,
         tokenVersion: 0,
         organizationId: org,
+        organization: { emailVerified: true },
       });
       (bcrypt.compare as any).mockResolvedValue(true);
       const res = await POST(req({ email: `user@${org}.com`, password: "secret123" }));
       const body = await res.json();
       expect(body.user.organizationId).toBe(org);
     }
+  });
+
+  it("blocks sign-in (403) when the org's email is not verified", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      name: "Ada",
+      passwordHash: "hash",
+      permissions: [],
+      active: true,
+      tokenVersion: 0,
+      organizationId: "org-unverified",
+      organization: { emailVerified: false },
+    });
+    (bcrypt.compare as any).mockResolvedValue(true); // correct password, but unverified
+    const res = await POST(req({ email: "a@b.com", password: "secret123" }));
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toMatch(/verify your email/i);
   });
 
   it("returns 429 after too many attempts for the same IP+email", async () => {
