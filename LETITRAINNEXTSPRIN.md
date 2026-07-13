@@ -603,3 +603,40 @@ Either **Phase 3 reorder suggestions + trend comparisons** (cheapest, uses exist
 ### Suggested Next Step
 Merge `phase-13a-saas-foundation`, then start **13b** (org-aware auth + data-access consistency) on its own branch, fresh from `master`.
 
+
+---
+
+## Phase 13b — Completion Report (2026-07-12)
+
+**Status: ✅ COMPLETE** — Org-aware auth + data-access consistency. Branch: `phase-13b-saas-org-auth` (branched from `master` after 13a merged).
+
+### Summary of Work
+
+| Area | What Shipped |
+|------|--------------|
+| **Email-uniqueness decision (documented)** | Recorded the product decision in code: email is **globally unique**, a user belongs to **exactly one org**, org is always derived server-side. Comments added at `User.email @unique` (schema) and at the login lookup (`src/lib/login.ts`). |
+| **Login attaches org context** | Already wired in 13a; now covered by tests — login resolves the user by email alone and returns/embeds their real org. |
+| **Cross-org auth cannot be forged** | New tests prove a client-supplied `organizationId` in the login body is ignored (stripped by the zod schema; org comes from the DB user row), and that two users in different orgs each resolve to their own org. |
+| **No client-supplied org trusted anywhere** | Audit: every `organizationId` used in an API route is `session.organizationId` (server-derived) — grep-confirmed, no route reads an org from body/query/headers. |
+| **No hardcoded single-org assumption** | Audit: the literal org UUID appears only in the migration + seed; `"Let It Rain"` appears only as UI branding (page titles), never as an org id/name in application logic. |
+| **Scoping consistency** | Every service derives org from the same session object as the existing permission/driver-scoping — one uniform pattern, no parallel mechanism. |
+
+### Modified Files
+- `prisma/schema.prisma` — documentation comment at `User.email` (no structural change)
+- `src/lib/login.ts` — documentation comment at the by-email lookup
+- `src/app/api/v1/auth/login/route.test.ts` — cross-org / org-attach tests (+2)
+
+### Verification Results
+- ✅ ESLint: 0 errors
+- ✅ `next build` (type check): 0 errors
+- ✅ Web tests: **202/202** passing (was 200 after 13a; +2 login org tests)
+- ✅ Mobile tests: **15/15** passing
+- ✅ Grep audits: 0 client-supplied org ids trusted; 0 hardcoded org ids/names in app logic
+
+### Notes / Open Items
+- 13b required no structural code change beyond documentation + tests, because 13a already threaded org through login/session correctly. This report formalizes the decision, proves it can't be bypassed, and records the two audits the checklist requires.
+- Real-DB migration dry-run remains the one external step carried over from 13a (the provided API key was scoped to a different Neon project) — still to be run against a branch of the actual letitrain DB before deploy.
+
+### Suggested Next Step
+Merge `phase-13b-saas-org-auth`, then start **13c** (admin-only org-creation flow + org-level settings UI + CI-integrated isolation suite) on its own branch, fresh from `master`.
+

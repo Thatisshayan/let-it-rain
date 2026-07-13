@@ -47,6 +47,11 @@ export async function attemptLogin(
     return { ok: false, error: "Too many login attempts. Please try again later.", status: 429 };
   }
 
+  // Phase 13b: email is globally unique (see the comment on User.email in the
+  // schema), so a user is resolved by email ALONE. Their organization is then
+  // read from that row below — the caller never supplies an org, so there is no
+  // way to authenticate into a different org's context than the one the matched
+  // user actually belongs to.
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || !user.active) {
     return { ok: false, error: "Invalid email or password.", status: 401 };

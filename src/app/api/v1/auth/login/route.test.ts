@@ -69,6 +69,48 @@ describe("POST /api/v1/auth/login", () => {
     );
   });
 
+  // Phase 13b: org context is derived server-side from the matched user row.
+  it("ignores a client-supplied organizationId and uses the user's real org", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "u1",
+      email: "a@b.com",
+      name: "Ada",
+      passwordHash: "hash",
+      permissions: ["EDIT_ITEMS"],
+      active: true,
+      tokenVersion: 0,
+      organizationId: "org-real",
+    });
+    (bcrypt.compare as any).mockResolvedValue(true);
+    // Attacker attempts to smuggle a different org through the request body.
+    const res = await POST(req({ email: "a@b.com", password: "secret123", organizationId: "org-evil" }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.user.organizationId).toBe("org-real");
+    // The lookup is by email alone — no org predicate is ever passed to it.
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { email: "a@b.com" } });
+  });
+
+  it("resolves each user to their own org (two different tenants)", async () => {
+    for (const org of ["org-a", "org-b"]) {
+      vi.clearAllMocks();
+      (prisma.user.findUnique as any).mockResolvedValue({
+        id: `u-${org}`,
+        email: `user@${org}.com`,
+        name: "U",
+        passwordHash: "hash",
+        permissions: [],
+        active: true,
+        tokenVersion: 0,
+        organizationId: org,
+      });
+      (bcrypt.compare as any).mockResolvedValue(true);
+      const res = await POST(req({ email: `user@${org}.com`, password: "secret123" }));
+      const body = await res.json();
+      expect(body.user.organizationId).toBe(org);
+    }
+  });
+
   it("returns 429 after too many attempts for the same IP+email", async () => {
     (prisma.user.findUnique as any).mockResolvedValue(null);
     const email = "ratelimit-test@b.com";
