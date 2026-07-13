@@ -397,6 +397,44 @@ verified work.
 
 ---
 
+## Phase 14 — Go-live wiring for Phase 13 billing (MUST DO)
+
+**Why this is MUST DO:** Phase 13d shipped the full billing/signup/tiers/support code,
+but it is deliberately **inert until real credentials are set**. None of the items below
+are code work — they are configuration + external-service wiring — but the product
+**cannot actually charge or onboard a paying customer (e.g. LETTHESANDSHINE) until they
+are done**. Every item is already seam'd so only config or one function changes.
+
+1. **Stripe keys + test-mode dry run.** Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+   `STRIPE_PRICE_PRO`, `STRIPE_PRICE_ENTERPRISE`. Billing endpoints return 503 until set.
+   Run a full Stripe **test-mode** loop (checkout → webhook via the Stripe CLI) before
+   enabling live, per the 13d acceptance criteria.
+2. **Email provider.** `src/lib/email.ts` currently logs instead of sending. Wire a real
+   provider (Resend/SES/etc.) and set `EMAIL_PROVIDER_API_KEY` so signup verification
+   emails actually deliver. Until then, the verification token is only returned in
+   non-production responses.
+3. **Platform admin token.** Set `PLATFORM_ADMIN_TOKEN` to enable the admin
+   org-creation endpoint and the support/org-list view (both 404 while unset).
+4. **`APP_URL`.** Set it so Stripe checkout success/cancel URLs and email-verification
+   links point at the real domain.
+5. **Real-DB migration dry run.** Run all Phase 13 migrations (13a nullable→backfill→
+   NOT NULL, 13c none, 13d billing) against a branch of the **actual** letitrain
+   production Neon DB and re-confirm backfill row counts. The 13a–13d verifications were
+   done on isolated test databases because the API key provided was scoped to a
+   different Neon project.
+6. **Decide email-verification enforcement.** The signup flow issues/consumes tokens and
+   flips `emailVerified`, but login is intentionally **not** hard-gated on it (kept
+   non-breaking). Decide whether unverified orgs should be blocked from specific actions,
+   and implement if so.
+7. **Onboard LETTHESANDSHINE.** Once 1–4 are set, create their org (admin
+   org-creation flow or public signup) and take them through checkout in test mode, then
+   live.
+
+Ordering: 1–4 are independent config and can be done in any order; 5 should happen before
+any production deploy of the migrations; 7 is last.
+
+---
+
 ## Phase 0 — Completion Report (2026-07-12)
 
 **Status: ✅ COMPLETE** — All five confirmed security/data-exposure fixes implemented and verified.
