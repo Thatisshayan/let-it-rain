@@ -11,7 +11,7 @@ export default async function NewOrderPage() {
   if (!hasPermission(session, "CREATE_ORDERS")) redirect("/orders");
 
   const items = await prisma.item.findMany({
-    where: { deletedAt: null },
+    where: { deletedAt: null, organizationId: session.organizationId },
     orderBy: { name: "asc" },
     select: { id: true, name: true, quantity: true },
   });

@@ -5,16 +5,16 @@ import { toCsv } from "@/lib/csv";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export const GET = withAuth<Ctx>(async (_req, { params }) => {
+export const GET = withAuth<Ctx>(async (_req, { params }, session) => {
   const { id } = await params;
 
-  const item = await prisma.item.findUnique({ where: { id }, select: { name: true } });
+  const item = await prisma.item.findUnique({ where: { id, organizationId: session.organizationId }, select: { name: true } });
   if (!item) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
   const movements = await prisma.movement.findMany({
-    where: { itemId: id },
+    where: { itemId: id, organizationId: session.organizationId },
     orderBy: { createdAt: "desc" },
     include: { user: { select: { name: true } } },
   });

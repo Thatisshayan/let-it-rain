@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
@@ -24,9 +24,10 @@ export default async function ItemDetailPage({
   const { id } = await params;
   const { error } = await searchParams;
   const session = await getSession();
+  if (!session) redirect("/login");
 
   const item = await prisma.item.findUnique({
-    where: { id, deletedAt: null },
+    where: { id, deletedAt: null, organizationId: session.organizationId },
     include: {
       movements: {
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],

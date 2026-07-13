@@ -12,44 +12,74 @@ datasource db {
   provider = "postgresql"
 }
 
+// Phase 13a: tenant boundary. One Organization == one business ("tenant").
+// Every tenant-scoped table carries a direct organizationId so queries can
+// filter on it without joins (see per-model comments for the denormalization
+// rationale, especially Movement). Do not add speculative fields here — slug,
+// plan/tier, billing etc. belong to later sub-phases (13c/13d), not 13a.
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  users     User[]
+  items     Item[]
+  movements Movement[]
+  orders    Order[]
+  auditLogs AuditLog[]
+  appConfig AppConfig?
+}
+
 model User {
-  id           String   @id @default(uuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  permissions  String[] @default(["MANAGE_USERS", "DELETE_ITEMS", "EDIT_ITEMS", "ADJUST_STOCK", "CREATE_ORDERS", "ASSIGN_DRIVERS", "CANCEL_ORDERS", "VIEW_REPORTS", "VIEW_COSTS"])
-  active       Boolean  @default(true)
-  tokenVersion Int      @default(0)
-  createdAt    DateTime @default(now())
+  id             String       @id @default(uuid())
+  // Phase 13a: org membership. email remains GLOBALLY @unique and a user
+  // belongs to exactly one org (no multi-org membership in this phase — that
+  // is a 13c+ concern). Org is always derived server-side from the
+  // authenticated user, never client-supplied.
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  organizationId String
+  name           String
+  email          String       @unique
+  passwordHash   String
+  permissions    String[]     @default(["MANAGE_USERS", "DELETE_ITEMS", "EDIT_ITEMS", "ADJUST_STOCK", "CREATE_ORDERS", "ASSIGN_DRIVERS", "CANCEL_ORDERS", "VIEW_REPORTS", "VIEW_COSTS"])
+  active         Boolean      @default(true)
+  tokenVersion   Int          @default(0)
+  createdAt      DateTime     @default(now())
 
   movements       Movement[]
-  createdOrders   Order[]   @relation("OrderCreatedBy")
-  driverOrders    Order[]   @relation("OrderDriver")
-  cancelledOrders Order[]   @relation("OrderCancelledBy")
+  createdOrders   Order[]    @relation("OrderCreatedBy")
+  driverOrders    Order[]    @relation("OrderDriver")
+  cancelledOrders Order[]    @relation("OrderCancelledBy")
   auditLogs       AuditLog[] @relation("AuditLogActor")
   auditLogTargets AuditLog[] @relation("AuditLogTargetUser")
+
+  @@index([organizationId])
 }
 
 model Item {
-  id          String   @id @default(uuid())
-  name        String
-  category    String?
-  description String?
-  quantity    Int      @default(0)
-  minStock    Int      @default(0)
-  location    String?
-  customFields Json?
-  unitCost    Decimal  @default(0) @db.Decimal(12, 2)
-  unitPrice   Decimal  @default(0) @db.Decimal(12, 2)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deletedAt   DateTime?
+  id             String       @id @default(uuid())
+  // Phase 13a: tenant scope.
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  organizationId String
+  name           String
+  category       String?
+  description    String?
+  quantity       Int          @default(0)
+  minStock       Int          @default(0)
+  location       String?
+  customFields   Json?
+  unitCost       Decimal      @default(0) @db.Decimal(12, 2)
+  unitPrice      Decimal      @default(0) @db.Decimal(12, 2)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
 
   movements      Movement[]
   orderLineItems OrderLineItem[]
 
   @@index([name])
   @@index([deletedAt])
+  @@index([organizationId])
 }
 
 enum MovementType {
@@ -59,26 +89,38 @@ enum MovementType {
 }
 
 model Movement {
-  id        String       @id @default(uuid())
-  item      Item         @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  itemId    String
-  type      MovementType
-  delta     Int
-  quantityAfter Int
-  reason    String?
-  isSale    Boolean      @default(false)
-  cashAmount    Decimal? @db.Decimal(12, 2)
-  interacAmount Decimal? @db.Decimal(12, 2)
-  unitCostAtTime  Decimal? @db.Decimal(12, 2)
-  unitPriceAtTime Decimal? @db.Decimal(12, 2)
-  user      User         @relation(fields: [userId], references: [id])
-  userId    String
-  createdAt DateTime     @default(now())
+  id              String       @id @default(uuid())
+  // Phase 13a decision: Movement carries its OWN direct organizationId column
+  // (denormalized from its parent Item), rather than being scoped only through
+  // the Item/User relations. Rationale: Movement is the hottest read table —
+  // activity feed and revenue/COGS reports scan it by date range — and forcing
+  // every one of those queries to join Item purely to filter by tenant would
+  // be a needless cost. Writers copy organizationId from the parent Item at
+  // insert time; the two must never disagree (enforced in the service layer).
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  organizationId  String
+  item            Item         @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId          String
+  type            MovementType
+  delta           Int
+  quantityAfter   Int
+  reason          String?
+  isSale          Boolean      @default(false)
+  cashAmount      Decimal?     @db.Decimal(12, 2)
+  interacAmount   Decimal?     @db.Decimal(12, 2)
+  unitCostAtTime  Decimal?     @db.Decimal(12, 2)
+  unitPriceAtTime Decimal?     @db.Decimal(12, 2)
+  user            User         @relation(fields: [userId], references: [id])
+  userId          String
+  createdAt       DateTime     @default(now())
 
   @@index([itemId])
   @@index([userId])
   @@index([createdAt])
   @@index([isSale, createdAt])
+  @@index([organizationId])
+  // Composite: activity/report queries filter by org AND scan by date.
+  @@index([organizationId, createdAt])
 }
 
 enum OrderStatus {
@@ -89,22 +131,25 @@ enum OrderStatus {
 }
 
 model Order {
-  id               String        @id @default(uuid())
+  id               String          @id @default(uuid())
+  // Phase 13a: tenant scope.
+  organization     Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  organizationId   String
   customerName     String
   customerAddress  String?
   customerPhone    String?
-  status           OrderStatus   @default(PENDING)
+  status           OrderStatus     @default(PENDING)
   notes            String?
-  createdBy        User          @relation("OrderCreatedBy", fields: [createdById], references: [id])
+  createdBy        User            @relation("OrderCreatedBy", fields: [createdById], references: [id])
   createdById      String
-  driver           User?         @relation("OrderDriver", fields: [driverId], references: [id])
+  driver           User?           @relation("OrderDriver", fields: [driverId], references: [id])
   driverId         String?
-  cancelledBy      User?         @relation("OrderCancelledBy", fields: [cancelledById], references: [id])
+  cancelledBy      User?           @relation("OrderCancelledBy", fields: [cancelledById], references: [id])
   cancelledById    String?
   cancelledAt      DateTime?
   lineItems        OrderLineItem[]
-  auditLogs        AuditLog[]    @relation("AuditLogOrder")
-  createdAt        DateTime      @default(now())
+  auditLogs        AuditLog[]      @relation("AuditLogOrder")
+  createdAt        DateTime        @default(now())
   outForDeliveryAt DateTime?
   deliveredAt      DateTime?
 
@@ -112,8 +157,16 @@ model Order {
   @@index([createdById])
   @@index([driverId])
   @@index([cancelledById])
+  @@index([organizationId])
 }
 
+// Phase 13a decision: OrderLineItem is scoped to a tenant SOLELY through its
+// parent Order relation — it gets NO direct organizationId column. Rationale:
+// it is never queried standalone (no findMany/findFirst on OrderLineItem
+// anywhere in the codebase — verified in the 13a sweep); it is only ever
+// read/written nested under an Order that is already org-scoped, or created
+// inside a transaction guarded by an org-checked Order. A denormalized column
+// here would add write cost and a consistency invariant for zero query benefit.
 model OrderLineItem {
   id       String @id @default(uuid())
   order    Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -127,26 +180,38 @@ model OrderLineItem {
 }
 
 model AuditLog {
-  id          String   @id @default(uuid())
-  actor       User     @relation("AuditLogActor", fields: [actorId], references: [id], onDelete: Restrict)
-  actorId     String
-  action      String
-  targetUser  User?    @relation("AuditLogTargetUser", fields: [targetUserId], references: [id], onDelete: SetNull)
-  targetUserId String?
-  order       Order?   @relation("AuditLogOrder", fields: [orderId], references: [id], onDelete: SetNull)
-  orderId     String?
-  detail      String?
-  createdAt   DateTime @default(now())
+  id             String       @id @default(uuid())
+  // Phase 13a: tenant scope. Direct column so the audit-log view can filter by
+  // org and order by createdAt without joining through the actor User.
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  organizationId String
+  actor          User         @relation("AuditLogActor", fields: [actorId], references: [id], onDelete: Restrict)
+  actorId        String
+  action         String
+  targetUser     User?        @relation("AuditLogTargetUser", fields: [targetUserId], references: [id], onDelete: SetNull)
+  targetUserId   String?
+  order          Order?       @relation("AuditLogOrder", fields: [orderId], references: [id], onDelete: SetNull)
+  orderId        String?
+  detail         String?
+  createdAt      DateTime     @default(now())
 
   @@index([actorId])
   @@index([targetUserId])
   @@index([orderId])
   @@index([createdAt])
+  @@index([organizationId])
+  @@index([organizationId, createdAt])
 }
 
+// Phase 13a: AppConfig is no longer a global single row (was hardcoded id=1).
+// It is now ONE ROW PER ORGANIZATION. organizationId is the effective key
+// (@unique enforces exactly one config row per org); the surrogate uuid id
+// stays only so existing FK-free lookups keep a stable PK shape. All lookups
+// must go through organizationId — there is no id=1 global config anymore.
 model AppConfig {
-  id              Int    @id @default(1)
+  id              String       @id @default(uuid())
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  organizationId  String       @unique
   businessName    String?
-  defaultLowStock Int    @default(0)
-
+  defaultLowStock Int          @default(0)
 }

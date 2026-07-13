@@ -10,7 +10,7 @@ export async function GET() {
   }
 
   const items = await prisma.item.findMany({
-    where: { deletedAt: null },
+    where: { deletedAt: null, organizationId: session.organizationId },
     orderBy: { name: "asc" },
     select: { name: true, category: true, quantity: true, minStock: true },
   });

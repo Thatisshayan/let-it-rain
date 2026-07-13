@@ -30,7 +30,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const isActive = order.status === "PENDING" || order.status === "OUT_FOR_DELIVERY";
 
   const drivers = canManage
-    ? await prisma.user.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } })
+    ? await prisma.user.findMany({ where: { active: true, organizationId: session.organizationId }, orderBy: { name: "asc" }, select: { id: true, name: true } })
     : [];
 
   return (

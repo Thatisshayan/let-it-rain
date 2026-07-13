@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { getSession } from "@/lib/auth";
@@ -28,10 +29,12 @@ export default async function ItemsPage({
   const lowOnly = low === "1";
   const page = Math.max(1, Number(pageParam) || 1);
   const session = await getSession();
+  if (!session) redirect("/login");
   const canEdit = hasPermission(session, "EDIT_ITEMS");
 
   const where = {
     deletedAt: null,
+    organizationId: session.organizationId,
     ...(q
       ? {
           OR: [
@@ -54,11 +57,15 @@ export default async function ItemsPage({
       ? Prisma.sql`AND (name ILIKE ${"%" + q + "%"} OR category ILIKE ${"%" + q + "%"})`
       : Prisma.empty;
 
+    // Org scope is applied inside the raw SQL too — this hand-written query is
+    // NOT covered by Prisma's where-based scoping, so the tenant predicate must
+    // be added explicitly (parameterized) or it would leak every org's low stock.
     const [rows, countRows] = await Promise.all([
       prisma.$queryRaw<ItemRow[]>`
         SELECT id, name, category, quantity, "minStock"
         FROM "Item"
         WHERE "deletedAt" IS NULL
+          AND "organizationId" = ${session.organizationId}
           AND quantity < "minStock"
           ${searchClause}
         ORDER BY name ASC
@@ -68,6 +75,7 @@ export default async function ItemsPage({
         SELECT COUNT(*)::bigint AS count
         FROM "Item"
         WHERE "deletedAt" IS NULL
+          AND "organizationId" = ${session.organizationId}
           AND quantity < "minStock"
           ${searchClause}
       `,

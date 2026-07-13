@@ -4,8 +4,8 @@ import { withAuth, withPermission } from "@/lib/api-auth";
 import { createUserFormSchema } from "@/app/(app)/settings/schemas";
 import { createUser } from "@/app/(app)/settings/service";
 
-export const GET = withPermission("MANAGE_USERS", async () => {
-  const users = await prisma.user.findMany({ orderBy: { name: "asc" } });
+export const GET = withPermission("MANAGE_USERS", async (_req, _ctx, session) => {
+  const users = await prisma.user.findMany({ where: { organizationId: session.organizationId }, orderBy: { name: "asc" } });
   return NextResponse.json({
     users: users.map((u) => ({
       id: u.id,

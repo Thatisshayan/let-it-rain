@@ -19,7 +19,9 @@ export async function createOrder(
   }
 
   const items = await prisma.item.findMany({
-    where: { id: { in: input.lineItems.map((li) => li.itemId) }, deletedAt: null },
+    // Org-scoped: items from another tenant are treated as non-existent, so an
+    // order can never line-item another org's inventory.
+    where: { id: { in: input.lineItems.map((li) => li.itemId) }, deletedAt: null, organizationId: session.organizationId },
     select: { id: true },
   });
   const validIds = new Set(items.map((i) => i.id));
@@ -30,6 +32,7 @@ export async function createOrder(
 
   const order = await prisma.order.create({
     data: {
+      organizationId: session.organizationId,
       customerName: input.customerName,
       customerAddress: input.customerAddress ?? null,
       customerPhone: input.customerPhone ?? null,
@@ -60,18 +63,19 @@ export async function assignDriver(
     return { ok: false, error: "You don't have permission to assign drivers." };
   }
 
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  const order = await prisma.order.findUnique({ where: { id: orderId, organizationId: session.organizationId } });
   if (!order) return { ok: false, error: "Order not found." };
   if (order.status === "DELIVERED" || order.status === "CANCELLED") {
     return { ok: false, error: "Can't reassign a completed or cancelled order." };
   }
 
   if (input.driverId) {
-    const driver = await prisma.user.findUnique({ where: { id: input.driverId }, select: { id: true } });
+    // A driver from another org must not be assignable — scope the lookup.
+    const driver = await prisma.user.findUnique({ where: { id: input.driverId, organizationId: session.organizationId }, select: { id: true } });
     if (!driver) return { ok: false, error: "Driver not found." };
   }
 
-  await prisma.order.update({ where: { id: orderId }, data: { driverId: input.driverId } });
+  await prisma.order.update({ where: { id: orderId, organizationId: session.organizationId }, data: { driverId: input.driverId } });
 
   await writeAuditLog({
     actor: session,
@@ -92,7 +96,7 @@ function canActOnOrder(session: SessionPayload, order: { driverId: string | null
 }
 
 export async function markOutForDelivery(session: SessionPayload, orderId: string): Promise<Result> {
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  const order = await prisma.order.findUnique({ where: { id: orderId, organizationId: session.organizationId } });
   if (!order) return { ok: false, error: "Order not found." };
   if (!canActOnOrder(session, order)) {
     return { ok: false, error: "You don't have permission to update this order." };
@@ -102,7 +106,7 @@ export async function markOutForDelivery(session: SessionPayload, orderId: strin
   }
 
   await prisma.order.update({
-    where: { id: orderId },
+    where: { id: orderId, organizationId: session.organizationId },
     data: { status: "OUT_FOR_DELIVERY", outForDeliveryAt: new Date() },
   });
   return { ok: true };
@@ -113,7 +117,7 @@ export async function markDelivered(
   orderId: string,
   input: DeliverOrderInput
 ): Promise<Result> {
-  const existing = await prisma.order.findUnique({ where: { id: orderId } });
+  const existing = await prisma.order.findUnique({ where: { id: orderId, organizationId: session.organizationId } });
   if (!existing) return { ok: false, error: "Order not found." };
   if (!canActOnOrder(session, existing)) {
     return { ok: false, error: "You don't have permission to update this order." };
@@ -129,7 +133,7 @@ export async function markDelivered(
       const result = await prisma.$transaction(
         async (tx) => {
           const order = await tx.order.findUnique({
-            where: { id: orderId },
+            where: { id: orderId, organizationId: session.organizationId },
             include: { lineItems: true },
           });
           if (!order) return { error: "Order not found." } as const;
@@ -140,7 +144,7 @@ export async function markDelivered(
           // All-or-nothing: every line item's stock check + write happens in one
           // transaction, same guarantee as a manual stock removal.
           for (const li of order.lineItems) {
-            const item = await tx.item.findUnique({ where: { id: li.itemId, deletedAt: null } });
+            const item = await tx.item.findUnique({ where: { id: li.itemId, deletedAt: null, organizationId: session.organizationId } });
             if (!item) return { error: "One of this order's items no longer exists." } as const;
 
             const payment = paymentByLineItem.get(li.id);
@@ -164,9 +168,10 @@ export async function markDelivered(
               return { error: `${item.name}: ${movement.error}` } as const;
             }
 
-            await tx.item.update({ where: { id: li.itemId }, data: { quantity: movement.quantityAfter } });
+            await tx.item.update({ where: { id: li.itemId, organizationId: session.organizationId }, data: { quantity: movement.quantityAfter } });
             await tx.movement.create({
               data: {
+                organizationId: session.organizationId,
                 itemId: li.itemId,
                 type: "REMOVE",
                 delta: movement.delta,
@@ -183,7 +188,7 @@ export async function markDelivered(
           }
 
           await tx.order.update({
-            where: { id: orderId },
+            where: { id: orderId, organizationId: session.organizationId },
             data: { status: "DELIVERED", deliveredAt: new Date() },
           });
 
@@ -215,14 +220,14 @@ export async function cancelOrder(session: SessionPayload, orderId: string): Pro
     try {
       const result = await prisma.$transaction(
         async (tx) => {
-          const order = await tx.order.findUnique({ where: { id: orderId } });
+          const order = await tx.order.findUnique({ where: { id: orderId, organizationId: session.organizationId } });
           if (!order) return { error: "Order not found." } as const;
           if (order.status === "DELIVERED" || order.status === "CANCELLED") {
             return { error: "This order is already completed or cancelled." } as const;
           }
 
           await tx.order.update({
-            where: { id: orderId },
+            where: { id: orderId, organizationId: session.organizationId },
             data: {
               status: "CANCELLED",
               cancelledAt: new Date(),
@@ -232,6 +237,7 @@ export async function cancelOrder(session: SessionPayload, orderId: string): Pro
 
           await tx.auditLog.create({
             data: {
+              organizationId: session.organizationId,
               actorId: session.userId,
               action: "ORDER_CANCELLED",
               orderId,
@@ -259,7 +265,9 @@ export async function cancelOrder(session: SessionPayload, orderId: string): Pro
 export async function listOrders(session: SessionPayload) {
   const canManage = canManageOrders(session);
   return prisma.order.findMany({
-    where: canManage ? {} : { driverId: session.userId },
+    // Org filter is always applied; driver-scoping (Phase 0) narrows further
+    // for non-managers within the org.
+    where: { organizationId: session.organizationId, ...(canManage ? {} : { driverId: session.userId }) },
     orderBy: { createdAt: "desc" },
     include: {
       lineItems: { include: { item: { select: { id: true, name: true } } } },
@@ -270,7 +278,7 @@ export async function listOrders(session: SessionPayload) {
 
 export async function getOrder(session: SessionPayload, orderId: string) {
   const order = await prisma.order.findUnique({
-    where: { id: orderId },
+    where: { id: orderId, organizationId: session.organizationId },
     include: {
       lineItems: { include: { item: { select: { id: true, name: true } } } },
       driver: { select: { id: true, name: true } },

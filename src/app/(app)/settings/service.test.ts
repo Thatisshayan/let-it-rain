@@ -28,6 +28,7 @@ const admin = {
   name: "Admin",
   permissions: ["MANAGE_USERS"],
   tokenVersion: 0,
+  organizationId: "org-a",
 };
 
 beforeEach(() => vi.clearAllMocks());
@@ -70,6 +71,7 @@ describe("createUser", () => {
         email: "bob@x.com",
         passwordHash: "hashed:password1",
         permissions: ["EDIT_ITEMS"],
+        organizationId: "org-a",
       },
     });
   });
@@ -88,9 +90,22 @@ describe("updateUserPermissions", () => {
   });
 
   it("allows updating someone else's permissions", async () => {
+    // Org-scoped lookup now precedes the update; mock it as an in-org user.
+    (prisma.user.findUnique as any).mockResolvedValue({ name: "Bob", email: "bob@x.com", permissions: [] });
     (prisma.user.update as any).mockResolvedValue({});
     const result = await updateUserPermissions(admin, "u2", { permissions: ["EDIT_ITEMS"] });
     expect(result.ok).toBe(true);
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: "u2", organizationId: "org-a" },
+      data: { permissions: ["EDIT_ITEMS"] },
+    });
+  });
+
+  it("treats an out-of-org target as not found", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue(null);
+    const result = await updateUserPermissions(admin, "other-org-user", { permissions: ["EDIT_ITEMS"] });
+    expect(result.ok).toBe(false);
+    expect(prisma.user.update).not.toHaveBeenCalled();
   });
 });
 
@@ -102,9 +117,14 @@ describe("setUserActive", () => {
   });
 
   it("allows deactivating someone else", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ name: "Bob", email: "bob@x.com", active: true });
     (prisma.user.update as any).mockResolvedValue({});
     const result = await setUserActive(admin, "u2", false);
     expect(result.ok).toBe(true);
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: "u2", organizationId: "org-a" },
+      data: { active: false },
+    });
   });
 });
 
@@ -115,10 +135,15 @@ describe("resetUserPassword", () => {
   });
 
   it("hashes and sets the new password", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ name: "Bob", email: "bob@x.com" });
     (prisma.user.update as any).mockResolvedValue({});
     const result = await resetUserPassword(admin, "u2", { password: "newpassword1" });
     expect(result.ok).toBe(true);
     expect(hashPassword).toHaveBeenCalledWith("newpassword1");
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: "u2", organizationId: "org-a" },
+      data: { passwordHash: "hashed:newpassword1" },
+    });
   });
 });
 
@@ -128,7 +153,7 @@ describe("updateOwnProfile", () => {
     const result = await updateOwnProfile(admin, { name: "New Name" });
     expect(result.ok).toBe(true);
     expect(prisma.user.update).toHaveBeenCalledWith({
-      where: { id: "admin-1" },
+      where: { id: "admin-1", organizationId: "org-a" },
       data: { name: "New Name" },
     });
   });

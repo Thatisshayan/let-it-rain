@@ -6,11 +6,12 @@ import { NewItemForm } from "./new-item-form";
 
 export default async function NewItemPage() {
   const session = await getSession();
+  if (!session) redirect("/login");
   if (!hasPermission(session, "EDIT_ITEMS")) redirect("/items");
   const canViewCosts = hasPermission(session, "VIEW_COSTS");
 
   const distinctCategories = await prisma.item.findMany({
-    where: { deletedAt: null, category: { not: null } },
+    where: { deletedAt: null, category: { not: null }, organizationId: session.organizationId },
     select: { category: true },
     distinct: ["category"],
     orderBy: { category: "asc" },

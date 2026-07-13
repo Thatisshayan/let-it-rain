@@ -20,7 +20,7 @@ export default async function UserDetailPage({
   }
 
   const user = await prisma.user.findUnique({
-    where: { id },
+    where: { id, organizationId: session.organizationId },
     select: {
       id: true,
       name: true,
@@ -34,7 +34,7 @@ export default async function UserDetailPage({
   if (!user) notFound();
 
   const auditEntries = await prisma.auditLog.findMany({
-    where: { OR: [{ actorId: user.id }, { targetUserId: user.id }] },
+    where: { organizationId: session.organizationId, OR: [{ actorId: user.id }, { targetUserId: user.id }] },
     orderBy: { createdAt: "desc" },
     take: 50,
     include: {

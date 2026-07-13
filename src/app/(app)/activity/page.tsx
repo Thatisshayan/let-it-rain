@@ -32,6 +32,7 @@ function monthParam(year: number, month: number) {
 async function getMovements(session: SessionPayload, start: Date, end: Date) {
   const canManage = canManageOrders(session);
   const where: Prisma.MovementWhereInput = {
+    organizationId: session.organizationId,
     createdAt: { gte: start, lt: end },
   };
   if (!canManage) {

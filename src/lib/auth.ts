@@ -9,6 +9,10 @@ export type SessionPayload = {
   name: string;
   permissions: string[];
   tokenVersion: number;
+  // Phase 13a: the tenant this session is scoped to. Always derived server-side
+  // from the authenticated user's DB row (see resolveCurrentSession) — never
+  // read from client input. Every org-scoped query filters on this value.
+  organizationId: string;
 };
 
 export async function signSessionToken(payload: SessionPayload): Promise<string> {
@@ -30,7 +34,7 @@ export async function signSessionToken(payload: SessionPayload): Promise<string>
 async function resolveCurrentSession(userId: string, tokenVersion: number): Promise<SessionPayload | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, name: true, permissions: true, active: true, tokenVersion: true },
+    select: { id: true, email: true, name: true, permissions: true, active: true, tokenVersion: true, organizationId: true },
   });
   if (!user || !user.active) return null;
   if (user.tokenVersion !== tokenVersion) return null;
@@ -40,6 +44,9 @@ async function resolveCurrentSession(userId: string, tokenVersion: number): Prom
     name: user.name,
     permissions: user.permissions,
     tokenVersion: user.tokenVersion,
+    // Re-fetched every request (not trusted from the JWT), so an org move takes
+    // effect immediately — same freshness guarantee as active/tokenVersion.
+    organizationId: user.organizationId,
   };
 }
 

@@ -3,9 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/api-auth";
 import { toCsv } from "@/lib/csv";
 
-export const GET = withAuth(async () => {
+export const GET = withAuth(async (_req, _ctx, session) => {
   const items = await prisma.item.findMany({
-    where: { deletedAt: null },
+    where: { deletedAt: null, organizationId: session.organizationId },
     orderBy: { name: "asc" },
     select: { name: true, category: true, quantity: true, minStock: true },
   });

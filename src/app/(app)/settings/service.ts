@@ -30,6 +30,8 @@ export async function createUser(
 
   const { name, email, password, permissions } = input;
 
+  // email is GLOBALLY unique across the product, so this existence check is
+  // intentionally org-agnostic (a given email can exist in at most one org).
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     return { ok: false, error: "A user with that email already exists." };
@@ -37,7 +39,8 @@ export async function createUser(
 
   const passwordHash = await hashPassword(password);
   const user = await prisma.user.create({
-    data: { name, email, passwordHash, permissions },
+    // New users are created in the acting admin's org — never a client-supplied one.
+    data: { name, email, passwordHash, permissions, organizationId: session.organizationId },
   });
 
   await writeAuditLog({
@@ -63,9 +66,11 @@ export async function updateUserPermissions(
     return { ok: false, error: "You can't remove your own ability to manage users." };
   }
 
-  const oldUser = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true, permissions: true } });
+  // Org-scoped: an admin can only manage users within their own org.
+  const oldUser = await prisma.user.findUnique({ where: { id: userId, organizationId: session.organizationId }, select: { name: true, email: true, permissions: true } });
+  if (!oldUser) return { ok: false, error: "User not found." };
 
-  await prisma.user.update({ where: { id: userId }, data: { permissions: input.permissions } });
+  await prisma.user.update({ where: { id: userId, organizationId: session.organizationId }, data: { permissions: input.permissions } });
 
   await writeAuditLog({
     actor: session,
@@ -89,9 +94,10 @@ export async function setUserActive(
     return { ok: false, error: "You can't deactivate your own account." };
   }
 
-  const oldUser = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true, active: true } });
+  const oldUser = await prisma.user.findUnique({ where: { id: userId, organizationId: session.organizationId }, select: { name: true, email: true, active: true } });
+  if (!oldUser) return { ok: false, error: "User not found." };
 
-  await prisma.user.update({ where: { id: userId }, data: { active } });
+  await prisma.user.update({ where: { id: userId, organizationId: session.organizationId }, data: { active } });
 
   await writeAuditLog({
     actor: session,
@@ -112,10 +118,13 @@ export async function resetUserPassword(
     return { ok: false, error: "You don't have permission to manage users." };
   }
 
-  const passwordHash = await hashPassword(input.password);
-  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  // Look up (org-scoped) and guard BEFORE writing, so a cross-org target is a
+  // clean "not found" rather than a thrown update.
+  const targetUser = await prisma.user.findUnique({ where: { id: userId, organizationId: session.organizationId }, select: { name: true, email: true } });
+  if (!targetUser) return { ok: false, error: "User not found." };
 
-  const targetUser = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } });
+  const passwordHash = await hashPassword(input.password);
+  await prisma.user.update({ where: { id: userId, organizationId: session.organizationId }, data: { passwordHash } });
 
   await writeAuditLog({
     actor: session,
@@ -131,7 +140,7 @@ export async function updateOwnProfile(
   session: SessionPayload,
   input: UpdateOwnProfileInput
 ): Promise<Result> {
-  await prisma.user.update({ where: { id: session.userId }, data: { name: input.name } });
+  await prisma.user.update({ where: { id: session.userId, organizationId: session.organizationId }, data: { name: input.name } });
   return { ok: true };
 }
 
@@ -139,13 +148,13 @@ export async function changeOwnPassword(
   session: SessionPayload,
   input: ChangeOwnPasswordInput
 ): Promise<Result> {
-  const user = await prisma.user.findUnique({ where: { id: session.userId } });
+  const user = await prisma.user.findUnique({ where: { id: session.userId, organizationId: session.organizationId } });
   if (!user) return { ok: false, error: "User not found." };
 
   const valid = await verifyPassword(input.currentPassword, user.passwordHash);
   if (!valid) return { ok: false, error: "Current password is incorrect." };
 
   const passwordHash = await hashPassword(input.newPassword);
-  await prisma.user.update({ where: { id: session.userId }, data: { passwordHash } });
+  await prisma.user.update({ where: { id: session.userId, organizationId: session.organizationId }, data: { passwordHash } });
   return { ok: true };
 }
