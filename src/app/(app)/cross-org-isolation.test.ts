@@ -251,7 +251,12 @@ function seed() {
   state.idCounter = 0;
   ids = {};
 
-  db.organization.push({ id: ORG_A, name: "Alpha" }, { id: ORG_B, name: "Bravo" });
+  // plan present so 13d seat-limit checks in createUser resolve (ENTERPRISE =
+  // unlimited, so it never interferes with isolation assertions).
+  db.organization.push(
+    { id: ORG_A, name: "Alpha", plan: "ENTERPRISE" },
+    { id: ORG_B, name: "Bravo", plan: "ENTERPRISE" }
+  );
 
   const mkUser = (key: string, org: string) => {
     const id = nextId("user");

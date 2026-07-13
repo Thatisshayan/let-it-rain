@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { hashPassword, verifyPassword } from "@/lib/password";
+import { PLANS, seatLimitReached } from "@/lib/plans";
 import type { SessionPayload } from "@/lib/auth";
 import type { z } from "zod";
 import type {
@@ -37,6 +38,24 @@ export async function createUser(
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     return { ok: false, error: "A user with that email already exists." };
+  }
+
+  // Phase 13d: enforce the org's plan seat limit (counts active users only, so
+  // deactivating a user frees a seat). Org-scoped, so one tenant's headcount
+  // can't affect another's.
+  const org = await prisma.organization.findUnique({
+    where: { id: session.organizationId },
+    select: { plan: true },
+  });
+  if (!org) return { ok: false, error: "Organization not found." };
+  const activeSeats = await prisma.user.count({
+    where: { organizationId: session.organizationId, active: true },
+  });
+  if (seatLimitReached(org.plan, activeSeats)) {
+    return {
+      ok: false,
+      error: `Your ${PLANS[org.plan].label} plan is at its seat limit. Upgrade or deactivate a user to add more.`,
+    };
   }
 
   const passwordHash = await hashPassword(password);

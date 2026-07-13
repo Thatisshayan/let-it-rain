@@ -55,6 +55,38 @@ export async function revokeOwnSessions(): Promise<{ ok: true }> {
   return apiFetch("/api/v1/me/sessions", { method: "POST" });
 }
 
+// Phase 13c/13d: org-level settings + plan/billing.
+export type OrgSettings = { businessName: string | null; defaultLowStock: number };
+
+export async function fetchOrgSettings(): Promise<OrgSettings> {
+  const { settings } = await apiFetch<{ settings: OrgSettings }>("/api/v1/org/settings");
+  return settings;
+}
+
+export async function updateOrgSettings(input: OrgSettings): Promise<{ ok: true }> {
+  return apiFetch("/api/v1/org/settings", { method: "PATCH", body: JSON.stringify(input) });
+}
+
+export type OrgInfo = {
+  name: string;
+  plan: "FREE" | "PRO" | "ENTERPRISE";
+  planLabel: string;
+  seatLimit: number | null;
+  subscriptionStatus: "NONE" | "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED";
+  emailVerified: boolean;
+  usage: { activeUsers: number };
+};
+
+export async function fetchOrgInfo(): Promise<OrgInfo> {
+  const { organization } = await apiFetch<{ organization: OrgInfo }>("/api/v1/org");
+  return organization;
+}
+
+/** Returns a Stripe Checkout URL to open in the system browser to upgrade. */
+export async function startCheckout(plan: "PRO" | "ENTERPRISE"): Promise<{ url: string }> {
+  return apiFetch("/api/v1/billing/checkout", { method: "POST", body: JSON.stringify({ plan }) });
+}
+
 export const ALL_PERMISSIONS = [
   "MANAGE_USERS",
   "MANAGE_ORDERS",

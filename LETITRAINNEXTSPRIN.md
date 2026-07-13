@@ -689,3 +689,57 @@ Merge `phase-13b-saas-org-auth`, then start **13c** (admin-only org-creation flo
 ### Suggested Next Step
 Record a real 13d trigger (or explicitly authorize building it speculatively) — otherwise 13c is the stopping point for this phase.
 
+
+---
+
+## Phase 13d — Completion Report (2026-07-12)
+
+**Status: ✅ COMPLETE (code)** — Sell-ready: pricing tiers + seat enforcement, Stripe billing, public self-serve signup with email verification, customer-support visibility, and mobile parity. Branch: `phase-13d-saas-billing` (from `master` after 13c merged).
+
+**Trigger:** named prospective customer — **Organization "LETTHESANDSHINE" requested to purchase** (recorded in the 13d gate section of `PHASE13ACCEPTANCELIST.md`).
+
+### Summary of Work
+
+| Area | What Shipped |
+|------|--------------|
+| **Schema + migration** | `Organization` gains `plan` (FREE/PRO/ENTERPRISE), `subscriptionStatus`, `stripeCustomerId`/`stripeSubscriptionId` (unique), `currentPeriodEnd`, `emailVerified`; new `EmailVerificationToken` model. Additive migration with safe defaults; every pre-existing org **grandfathered to ENTERPRISE** (unlimited seats) so tiers never retroactively lock anyone out. Verified on a live DB copy. |
+| **Pricing tiers + seat limits** | `src/lib/plans.ts` (seat limits FREE=3 / PRO=25 / ENTERPRISE=∞, feature map). `createUser` enforces the org's seat limit (active users only), org-scoped. |
+| **Stripe billing** | `src/lib/stripe.ts` (lazy client, plan↔price mapping), `src/lib/billing.ts` (`createCheckoutSession` + a pure, unit-tested `handleStripeEvent`). `POST /api/v1/billing/checkout` (MANAGE_SETTINGS) and `POST /api/v1/billing/webhook` (signature-verified over the raw body). Handles checkout completion, subscription created/updated/deleted, invoice paid/failed (**dunning → PAST_DUE**). |
+| **Self-serve signup + verification** | `src/lib/signup.ts` (`signUpOrganization` builds on 13c provisioning but starts the org **unverified** and issues a single-use, SHA-256-hashed token; `verifyEmailToken`). `POST /api/v1/signup` (public, **IP rate-limited**) and `POST /api/v1/auth/verify-email`. Email delivery is a provider-agnostic seam (`src/lib/email.ts`). |
+| **Support visibility** | `GET /api/v1/admin/organizations` (platform-admin token) lists every org with plan, subscription status, and usage counts (users/items/orders). |
+| **Mobile** | `GET /api/v1/org` (plan/subscription/usage). Mobile API client gains org-settings + plan + checkout calls; new **Organization & plan** screen (view plan/seats, edit business name + low-stock, "Upgrade to Pro" → opens Stripe Checkout), gated by MANAGE_SETTINGS. |
+
+### New Files
+- `prisma/migrations/20260712170000_phase13d_billing_plan/migration.sql`
+- `src/lib/plans.ts` (+ test), `src/lib/stripe.ts`, `src/lib/billing.ts` (+ test), `src/lib/signup.ts` (+ test), `src/lib/email.ts`
+- `src/app/api/v1/billing/checkout/route.ts`, `src/app/api/v1/billing/webhook/route.ts` (+ test)
+- `src/app/api/v1/signup/route.ts` (+ test), `src/app/api/v1/auth/verify-email/route.ts`
+- `src/app/api/v1/org/route.ts`
+- `mobile/app/settings/organization.tsx`, `mobile/src/api/settings.test.ts`
+
+### Modified Files
+- `prisma/schema.prisma`, `prisma/seed.ts`
+- `src/app/(app)/settings/service.ts` (seat-limit enforcement) + tests
+- `src/lib/org-provisioning.ts` (emailVerified option) + test
+- `src/app/api/v1/admin/organizations/route.ts` (GET support view) + test
+- `src/app/api/v1/users/route.test.ts`, `src/app/(app)/cross-org-isolation.test.ts` (org plan in fixtures)
+- `mobile/src/api/settings.ts`, `mobile/app/(tabs)/settings.tsx`
+
+### Verification Results
+- ✅ ESLint 0 errors, `next build` 0 type errors, mobile `tsc --noEmit` 0 errors
+- ✅ Web tests **251/251** (was 215; +36 for plans, seat limits, billing/webhook, signup/verify, support view)
+- ✅ Mobile tests **19/19** (was 15; +4 org/plan API client)
+- ✅ **Migration verified on a live DB copy**: applied through 13c, inserted pre-13d orgs, applied the 13d migration — both orgs grandfathered to ENTERPRISE, `emailVerified=true`, `subscriptionStatus=NONE`, all six new columns present, `EmailVerificationToken` table created. Branch deleted afterward.
+
+### Notes / Open Items — external wiring required before go-live
+These are the "needs your real credentials" steps (analogous to the real-DB migration), all cleanly seam'd so only config/one function changes:
+- **Stripe keys**: set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_ENTERPRISE`. Until set, billing endpoints return 503 (inert). Run Stripe **test-mode** end-to-end (checkout + webhook via Stripe CLI) before enabling live.
+- **Email provider**: `src/lib/email.ts` currently logs instead of sending; wire Resend/SES (set `EMAIL_PROVIDER_API_KEY`) so verification emails actually deliver. Until then, signup returns the token only in non-production.
+- **Platform admin**: set `PLATFORM_ADMIN_TOKEN` to enable org creation + the support view (both 404 while unset).
+- **`APP_URL`**: set so checkout success/cancel + verification links point at the real domain.
+- **Email-verification enforcement**: the flow issues + consumes tokens and flips `emailVerified`, but login is **not** hard-gated on it (kept non-breaking). Decide whether to block unverified orgs from specific actions.
+- Carried over from 13a: the migrations still need a dry-run against a branch of the **actual** letitrain production DB (the verification key was scoped to a different Neon project).
+
+### Suggested Next Step
+Wire the Stripe test-mode keys + email provider, onboard LETTHESANDSHINE via the admin org-creation flow (or public signup), and run the Stripe test-mode checkout/webhook loop end-to-end. Phase 13 (a–d) is otherwise complete.
+

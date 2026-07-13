@@ -17,17 +17,63 @@ datasource db {
 // filter on it without joins (see per-model comments for the denormalization
 // rationale, especially Movement). Do not add speculative fields here — slug,
 // plan/tier, billing etc. belong to later sub-phases (13c/13d), not 13a.
+// Phase 13d billing/plan states.
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+// Mirrors Stripe subscription status plus a NONE for orgs without a subscription
+// (e.g. the grandfathered original tenant, or a just-signed-up free org).
+enum SubscriptionStatus {
+  NONE
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
 model Organization {
   id        String   @id @default(uuid())
   name      String
   createdAt DateTime @default(now())
 
-  users     User[]
-  items     Item[]
-  movements Movement[]
-  orders    Order[]
-  auditLogs AuditLog[]
-  appConfig AppConfig?
+  // Phase 13d: pricing tier + billing state. plan drives seat limits / feature
+  // gating (see src/lib/plans.ts). Stripe ids are null until the org checks out.
+  plan                 Plan               @default(FREE)
+  subscriptionStatus   SubscriptionStatus @default(NONE)
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  // Dunning: when a payment fails, Stripe retries until this deadline; we read
+  // it only for display / grace-period logic.
+  currentPeriodEnd     DateTime?
+  // Phase 13d self-serve signup: an org created via public signup starts
+  // unverified until its admin confirms their email. Admin-provisioned and
+  // grandfathered orgs are created already-verified.
+  emailVerified        Boolean            @default(true)
+
+  users              User[]
+  items              Item[]
+  movements          Movement[]
+  orders             Order[]
+  auditLogs          AuditLog[]
+  appConfig          AppConfig?
+  verificationTokens EmailVerificationToken[]
+}
+
+// Phase 13d: single-use email verification tokens for self-serve signup.
+model EmailVerificationToken {
+  id             String       @id @default(uuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  // SHA-256 of the token we email — the raw token is never stored at rest.
+  tokenHash      String       @unique
+  expiresAt      DateTime
+  consumedAt     DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
 }
 
 model User {
