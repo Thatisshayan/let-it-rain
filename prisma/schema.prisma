@@ -39,6 +39,13 @@ model User {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   organizationId String
   name           String
+  // Phase 13b decision: email is GLOBALLY unique across the whole product (not
+  // per-org), and a user belongs to exactly one organization. Consequences:
+  // login looks a user up by email alone and derives their org from the row —
+  // there is deliberately no per-org email namespace and no multi-org
+  // membership in this phase (that would be a later concern). Keep this @unique
+  // global; changing it to a composite (email, organizationId) is a real
+  // product change, not a refactor.
   email          String       @unique
   passwordHash   String
   permissions    String[]     @default(["MANAGE_USERS", "DELETE_ITEMS", "EDIT_ITEMS", "ADJUST_STOCK", "CREATE_ORDERS", "ASSIGN_DRIVERS", "CANCEL_ORDERS", "VIEW_REPORTS", "VIEW_COSTS"])
