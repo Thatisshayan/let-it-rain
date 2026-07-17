@@ -54,21 +54,25 @@ Goal: make the current system safe and operational for the project's own interna
 - `PLATFORM_ADMIN_TOKEN`, `APP_URL`, rotated `SESSION_SECRET`, and Upstash REST envs were set on 2026-07-17
 - Upstash Redis is now provisioned for shared rate limiting
 - public signup is intentionally enabled in production via `PUBLIC_SIGNUP_ENABLED=true`
+- the production app now runs against a fresh Neon backend (`square-shadow-17526702`) that was migrated, seeded, and live-login verified on 2026-07-17
 
 2. Migration rehearsal
-- run migrations against a Neon branch first
+- run future migrations against a Neon branch first
 - verify row counts and permission/backfill expectations
 - only then promote the same migration path to production
 
 3. Launch access policy
 - deploy-time setting is now explicit: production public signup is enabled intentionally
 - keep `PLATFORM_ADMIN_TOKEN` for the separate admin-controlled org bootstrap path
-- remaining work is to validate the live signup/auth path during manual smoke
+- live API smoke has validated signup/auth successfully
+- remaining work is UI/device-level validation of that path
 
 4. Manual smoke pass
 - sign in with the relevant internal roles
 - verify web + mobile core flows
 - verify role-based access still matches the intended permission model
+- API-level production smoke already passed on 2026-07-17
+- remaining work is actual browser/mobile UI execution
 
 ### Nice to have, but not launch blockers
 

@@ -213,6 +213,28 @@ Until that note exists, this runbook should be treated as **prepared but not exe
   - deploy production and verify `/login` returns `200`
   - verify `/api/v1/admin/organizations` returns `401` without token, proving the gate is active
 - Still open:
-  - Neon branch migration rehearsal
-  - end-to-end manual smoke pass on live web/mobile flows
-  - verification of the live public-signup flow itself
+  - Neon branch migration rehearsal for future production schema changes
+  - end-to-end UI/device smoke pass on live web/mobile flows
+
+### 2026-07-17 Production API Smoke Note
+
+- Environment: Vercel production `https://let-it-rain-ten.vercel.app`
+- Backend: fresh Neon project `square-shadow-17526702`
+- Verified live:
+  - admin login `200`
+  - limited user creation `201`
+  - limited-user reports access denied `403`
+  - item create/list/detail `201/200/200`
+  - order create/list `201/200`
+  - reports read `200`
+  - org and org-settings read `200/200`
+  - platform-admin org listing `200` with `PLATFORM_ADMIN_TOKEN`
+  - public signup `201`
+- Artifacts created during smoke:
+  - one limited user
+  - one smoke item
+  - one smoke order
+  - one smoke signup organization
+- Still open:
+  - browser-driven web smoke
+  - mobile-app smoke on a real device/build

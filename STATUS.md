@@ -69,12 +69,16 @@ These items were previously described as future work in some docs, but are alrea
   - production deploy is now configured on Vercel at `https://let-it-rain-ten.vercel.app`
   - `PLATFORM_ADMIN_TOKEN`, `APP_URL`, `SESSION_SECRET`, and Upstash REST envs were set on 2026-07-17
   - public signup is intentionally enabled in production via `PUBLIC_SIGNUP_ENABLED=true`
-- Rehearse migrations on a Neon branch before production.
-- Run end-to-end manual smoke testing by role on web and mobile.
+- Fresh Neon production backend was created on 2026-07-17, migrated, seeded, and wired to Vercel:
+  - Neon project id: `square-shadow-17526702`
+  - production login against the seeded admin was verified live
+- Rehearse migrations on a Neon branch before future production schema changes.
+- Run the remaining UI/device-level manual smoke testing on web and mobile.
 - Internal-launch-safe signup posture is repo-backed and now explicitly configured:
   - production public signup is enabled intentionally for this deploy
   - `PLATFORM_ADMIN_TOKEN` gates the separate admin org-provisioning path
-  - live check verified `/login` returns `200` and `/api/v1/admin/organizations` returns `401`
+  - live checks verified `/login` returns `200`, `/api/v1/admin/organizations` returns `401` without the token and `200` with it, and `POST /api/v1/signup` returns `201`
+  - production API smoke also verified admin login, limited-user permission denial on reports, item create/list/detail, order create/list, org/org-settings reads, and reports reads
 
 ### Phase 16 — Deferred
 
