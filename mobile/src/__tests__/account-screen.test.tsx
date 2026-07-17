@@ -149,4 +149,80 @@ describe("account screen", () => {
     expect(hapticsMocks.notificationAsync).toHaveBeenCalledWith(hapticsMocks.NotificationFeedbackType.Error);
     expect(alertMocks.alert).toHaveBeenCalledWith("Sign out failed", "Session revoke failed");
   });
+
+  it("updates the user's name and shows success feedback", async () => {
+    settingsMocks.updateOwnProfile.mockResolvedValue(undefined);
+
+    const tree = await renderAccountScreen();
+    const inputs = tree.root.findAllByType(MockTextInput);
+    const saveNameButton = tree.root.findAllByType(MockPressable)[0];
+
+    await act(async () => {
+      inputs[0].props.onChangeText("Alice Updated");
+    });
+
+    await act(async () => {
+      await saveNameButton.props.onPress();
+    });
+
+    expect(settingsMocks.updateOwnProfile).toHaveBeenCalledWith("Alice Updated");
+    expect(hapticsMocks.notificationAsync).toHaveBeenCalledWith(hapticsMocks.NotificationFeedbackType.Success);
+    expect(tree.root.findAllByProps({ children: "Name updated." })).toHaveLength(1);
+  });
+
+  it("shows the API error when updating the user's name fails", async () => {
+    settingsMocks.updateOwnProfile.mockRejectedValue(new MockApiError(400, "Display name is required"));
+
+    const tree = await renderAccountScreen();
+    const inputs = tree.root.findAllByType(MockTextInput);
+    const saveNameButton = tree.root.findAllByType(MockPressable)[0];
+
+    await act(async () => {
+      inputs[0].props.onChangeText("");
+    });
+
+    await act(async () => {
+      await saveNameButton.props.onPress();
+    });
+
+    expect(hapticsMocks.notificationAsync).toHaveBeenCalledWith(hapticsMocks.NotificationFeedbackType.Error);
+    expect(tree.root.findAllByProps({ children: "Display name is required" })).toHaveLength(1);
+  });
+
+  it("changes the password, clears the inputs, and shows success feedback", async () => {
+    settingsMocks.changeOwnPassword.mockResolvedValue(undefined);
+
+    const tree = await renderAccountScreen();
+    const inputs = tree.root.findAllByType(MockTextInput);
+    const changePasswordButton = tree.root.findAllByType(MockPressable)[1];
+
+    await act(async () => {
+      inputs[1].props.onChangeText("current-secret");
+      inputs[2].props.onChangeText("new-secret");
+    });
+
+    await act(async () => {
+      await changePasswordButton.props.onPress();
+    });
+
+    expect(settingsMocks.changeOwnPassword).toHaveBeenCalledWith("current-secret", "new-secret");
+    expect(hapticsMocks.notificationAsync).toHaveBeenCalledWith(hapticsMocks.NotificationFeedbackType.Success);
+    expect(tree.root.findAllByProps({ children: "Password changed." })).toHaveLength(1);
+    expect(inputs[1].props.value).toBe("");
+    expect(inputs[2].props.value).toBe("");
+  });
+
+  it("shows a generic fallback when changing the password fails unexpectedly", async () => {
+    settingsMocks.changeOwnPassword.mockRejectedValue(new Error("boom"));
+
+    const tree = await renderAccountScreen();
+    const changePasswordButton = tree.root.findAllByType(MockPressable)[1];
+
+    await act(async () => {
+      await changePasswordButton.props.onPress();
+    });
+
+    expect(hapticsMocks.notificationAsync).toHaveBeenCalledWith(hapticsMocks.NotificationFeedbackType.Error);
+    expect(tree.root.findAllByProps({ children: "Could not change password." })).toHaveLength(1);
+  });
 });
