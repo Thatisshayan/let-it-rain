@@ -221,13 +221,14 @@ Useful after a device loss or "I forgot to sign out somewhere."
   doesn't exist anywhere in this stack yet.
 - **No iOS Home Screen widget.** Would require a native Xcode widget extension target,
   which Expo's managed workflow can only add via an unofficial config plugin.
-- **No automated test suite** was a Phase 11 gap. It now has one: 64 vitest tests
-  across 15 files, covering JWT utilities, auth-context bootstrap/lock flows,
+- **No automated test suite** was a Phase 11 gap. It now has one: 68 vitest tests
+  across 16 files, covering JWT utilities, auth-context bootstrap/lock flows,
   `AuthGate` lock handling, entry-route auth redirects, login success/failure flows,
   account profile/password/session flows, create-user permission/mutation flows,
   users-list permission/query/navigation flows, user-detail permission/mutation flows,
-  order-detail mutation/offline-queue flows, org settings/plan API calls, permission
-  helpers, and mobile API-client auth/error handling — run via
+  order-detail mutation/offline-queue flows, new-order validation/mutation flows, org
+  settings/plan API calls, permission helpers, and mobile API-client auth/error
+  handling — run via
   `npm test`.
 - **No error monitoring** was a Phase 11 gap. It now has [Sentry](https://sentry.io/)
   integrated via `@sentry/react-native` + `sentry-expo` plugin, initialized at app
