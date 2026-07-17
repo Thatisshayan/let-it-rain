@@ -1,10 +1,23 @@
-# PHASE13_INIT.md — Fast Onboarding for Phase 13 Work
+# PHASE13_INIT.md — Historical Onboarding Note For Phase 13
 
-**Purpose of this file:** get an agent productive on this repo for Phase 13 work
-without spending tokens re-discovering things already known. Read this file, then
-`PHASE13.md` (the spec), then `PHASE13ACCEPTANCELIST.md` (the checklist), in that
-order. Do not re-explore the whole repo from scratch — this file front-loads what
-you'd otherwise burn tool calls finding out.
+> Historical document only.
+>
+> As of **2026-07-17**, **Phase 13 is already complete**. This file is preserved for
+> historical context about that phase, but it is **not** the current task list and it
+> should not be used as the active source of truth for what to do next.
+>
+> For current repo state and active work, read these instead:
+> 1. `README.md`
+> 2. `STATUS.md`
+> 3. `LETITRAINNEXTSPRIN.md`
+>
+> If anything below conflicts with current code or those canon docs, trust the current
+> code and canon docs. Treat the rest of this file as phase-specific historical context.
+
+**Original purpose of this file:** get an agent productive on this repo for Phase 13
+work without spending tokens re-discovering things already known. At the time it was
+written, the intended read order was this file, then `PHASE13.md`, then
+`PHASE13ACCEPTANCELIST.md`.
 
 ---
 
@@ -17,10 +30,9 @@ you'd otherwise burn tool calls finding out.
 - **Database** — one shared Postgres (Neon), accessed via Prisma from the web app;
   mobile talks to the web app's `/api/v1` JSON API, never the DB directly.
 
-You are being brought in specifically for **Phase 13: multi-tenant SaaS foundation**.
-The task itself is fully specified in `PHASE13.md` (context/spec) and
-`PHASE13ACCEPTANCELIST.md` (checklist to satisfy). This file is only the "how this
-repo works" primer.
+At the time this was written, the work in scope was **Phase 13: multi-tenant SaaS
+foundation**. That work is no longer the active phase. This file remains only as a
+"how the repo worked during that phase" primer.
 
 ---
 
@@ -155,20 +167,14 @@ migration.
 
 ---
 
-## 6. What you're actually here to do
+## 6. What this file originally pointed agents to do
 
-Read **`PHASE13.md`** next — it has the full why/what/how for multi-tenant
-foundation work (Organization model, `organizationId` scoping across every table and
-query, session changes, migration plan, and the phased 13a→13d breakdown with a hard
-gate before 13d). Then read **`PHASE13ACCEPTANCELIST.md`** — that's the literal
-checklist you're checking off, sub-phase by sub-phase, each on its own branch, with a
-completion report written into three files at the end of each sub-phase (the exact
-mechanics are spelled out in `PHASE13.md`'s "Branching & completion reporting"
-section).
+Historically, this file directed agents to read **`PHASE13.md`** for the full
+multi-tenant foundation spec and **`PHASE13ACCEPTANCELIST.md`** for the phase
+checklist. That was correct for the original Phase 13 execution window.
 
-**Do not start on `master`.** Create `phase-13a-saas-foundation` (or whichever
-sub-phase you're starting) as your first action, and confirm with the human which
-sub-phase to begin with if that isn't already obvious from context.
+Those instructions are no longer current execution guidance. Do not treat them as the
+active branching or task policy for the repo today.
 
 **If anything in `PHASE13.md` or the checklist conflicts with what you actually find
 in the code** (e.g. a file has moved, a function signature is different than

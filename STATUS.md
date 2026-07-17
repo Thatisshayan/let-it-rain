@@ -29,6 +29,7 @@ Verified on 2026-07-17:
 - explicit web/mobile `typecheck` scripts exist, and CI runs them
 - audit-covered user/session mutations and order lifecycle writes fail closed atomically
 - web/mobile permission re-sweep completed; direct-route mobile permission gaps were closed
+- Phase 13 historical docs are now explicitly marked as historical context, not active execution guidance
 
 ## Read Order
 
@@ -61,7 +62,6 @@ These items were previously described as future work in some docs, but are alrea
 
 - Expand mobile automated coverage beyond the current 7 files / 33 tests.
 - Add Stripe webhook isolation and negative-path tests when billing work resumes.
-- Clean up historical docs that still blur "planned" vs "completed".
 
 ### Phase 14 — Internal-Team Launch
 

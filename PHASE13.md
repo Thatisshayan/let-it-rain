@@ -1,5 +1,20 @@
 # Phase 13 — Multi-Tenant SaaS Foundation: Full Agent Handoff
 
+> Historical phase document only.
+>
+> As of **2026-07-17**, **Phase 13 is complete**. This file is preserved as the
+> detailed spec and handoff that guided that completed phase, but it is **not** the
+> active roadmap for current repo work.
+>
+> For current repo state and active tasks, use:
+> 1. `README.md`
+> 2. `STATUS.md`
+> 3. `LETITRAINNEXTSPRIN.md`
+>
+> The branching and execution instructions below applied during the original Phase 13
+> delivery window. Treat them as historical context unless a human explicitly asks you
+> to audit or revisit that phase.
+
 **Audience:** this document is written for an autonomous coding agent picking this up
 with zero prior context on this conversation. Read this file top to bottom before
 touching code. Do not re-derive architecture decisions already made here — follow them,

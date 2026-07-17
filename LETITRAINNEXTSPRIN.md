@@ -41,6 +41,7 @@ Verified directly in code and tests on Friday, July 17, 2026:
 - explicit web/mobile `typecheck` scripts exist, and CI runs them
 - audit-covered user/session mutations and order lifecycle writes fail closed atomically
 - web/mobile permission re-sweep completed; direct-route mobile permission gaps were closed
+- Phase 13 historical docs are explicitly marked as historical context rather than active execution guidance
 
 ## Phase 14 — Internal-Team Go-Live
 
@@ -86,14 +87,10 @@ Goal: close the remaining correctness and governance gaps without inventing fake
 
 ### Open documentation/governance work
 
-1. Clean up misleading historical docs
-- no file labeled "completion report" should still read like a speculative plan
-- planning artifacts must be clearly marked as planning artifacts
-
-2. Keep handoff docs discoverable
+1. Keep handoff docs discoverable
 - `README.md`, `STATUS.md`, and this roadmap must remain enough for a new agent to orient itself
 
-3. Keep docs synced with code
+2. Keep docs synced with code
 - changes to behavior require corresponding doc updates in the same change-set
 
 ## Phase 16 — First Paying Customer

@@ -1,5 +1,19 @@
 # Phase 13 — Acceptance Criteria Checklist
 
+> Historical phase checklist only.
+>
+> As of **2026-07-17**, **Phase 13 is complete**. This checklist is preserved as the
+> acceptance record for that finished phase, but it is **not** the current task list
+> for the repo.
+>
+> For current active work, use:
+> 1. `README.md`
+> 2. `STATUS.md`
+> 3. `LETITRAINNEXTSPRIN.md`
+>
+> The checked items below are historical evidence of what Phase 13 required and landed;
+> they should not be treated as today's roadmap.
+
 This is the authoritative, checkable list for Phase 13 (multi-tenant SaaS
 foundation). It exists separately from `PHASE13.md` (the narrative handoff/spec) so
 there is one unambiguous place to check items off and report against — do not
