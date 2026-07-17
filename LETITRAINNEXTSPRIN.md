@@ -1,786 +1,165 @@
-# Let It Rain — Next Sprint(s), Arranged by Phase & Priority
-
-Status: **Phase 0 = DONE. Phase 1 = DONE. Phase 2 = DONE (shipped, in TestFlight). Phase 11 = DONE.**
-One additional debugging session has been completed on top of the above. All other
-phases remain backlog. Phase 13 (SaaS foundation) is scoped in detail in the
-companion handoff doc `PHASE13.md` — read that file for the full agent brief;
-the summary below is kept here only for consistency with the rest of this roadmap.
-
-## Priority legend
-
-- 🔴 **Must have** — bug/security fix, or blocks something already promised. Do first.
-- 🟠 **Should have** — real, confirmed value; not urgent but shouldn't sit forever.
-- 🟡 **Good to have** — solid value once the basics are in place; not load-bearing.
-- ⚪ **Maybe** — speculative, needs more validation, or big enough to deserve its own scoping pass before committing.
-
----
-
-## Phase 0 — Security & data-exposure fixes 🔴 Must have
-
-Found via direct code audit (three passes: web, mobile, every API route), not
-speculation. **Every single finding is the same shape: a nav link/button is
-permission-gated, but the page/screen underneath it is not — so a signed-in user who
-navigates directly gets full data regardless of their permissions.** Every case where
-*mutation* was attempted, the service layer correctly blocked it — the two-layer auth
-model holds for writes. The hole is consistently on the *read* side. The API layer
-itself is sound (all 22 routes checked — every one has at least `withAuth`); this is a
-page/screen-layer problem sitting in front of already-correct APIs.
-
-- [ ] 🔴 **Activity leaks all customer names + every driver's deliveries, bypassing
-      Orders' driver-scoping entirely.** `GET /api/v1/activity` + web `/activity` +
-      mobile Activity tab query every Movement company-wide with zero scoping, and
-      delivery Movements carry `reason: "Order delivery — {customerName}"`. A driver
-      can't see another driver's *order* via Orders (correctly scoped), but sees
-      everything via Activity. This is an existing security guarantee silently not
-      holding — fix before anything else, independent of the Phase 1 permission-model
-      timing below.
-- [ ] 🔴 **Reports has no permission gate anywhere — web page, API route, mobile tab,
-      and mobile Dashboard's "Today's revenue" card** (the worst instance: shown to
-      *every* user immediately on login, zero navigation needed). Any signed-in user,
-      including a driver, sees full revenue/COGS/profit/cash-interac split/inventory
-      valuation. Fix = add and enforce `VIEW_REPORTS` (already planned in Phase 1) —
-      this confirms it's a real bug, not a speculative permission.
-- [ ] 🔴 **Item cost/price data leaks through 4 separate doors, web + mobile**: web
-      item detail page, web + mobile item new/edit forms (prefilled with real
-      `unitCost`/`unitPrice`), and (an inconsistency, not a leak) the item *list*
-      correctly omits it — proving the fix needs to be one permission checked at
-      render time, not per-page memory. Fix = add and enforce `VIEW_COSTS`.
-- [ ] 🔴 **The entire mobile Settings → Users flow has no `MANAGE_USERS` check** — list,
-      create, and edit screens all render the whole company's names/emails/permissions/
-      active-status to any signed-in user. Broadest-surface finding of the audit.
-- [ ] 🟠 **Mobile `orders/new.tsx` has no `MANAGE_ORDERS`/`CREATE_ORDERS` check** — a
-      platform asymmetry; web's equivalent page is already correctly gated. Lower
-      severity than the above (item picker only shows names/quantities, no financials),
-      but still a real inconsistency for the same feature across platforms.
-
-**Recommendation:** fix all five as one systematic "page/screen permission audit," not
-five separate patches — and land it as part of Phase 1's `VIEW_REPORTS`/`VIEW_COSTS`
-work below, since that's the same root cause. The Activity item (🔴 top) is the one
-argument for not waiting on the full Phase 1 permission model — it's a scoping
-regression against something already shipped and promised (Orders' driver-scoping).
-
----
-
-## Phase 1 — Foundational: activity, audit, permissions, sessions, settings
-
-**Why:** owners/admins can't see "who did what" beyond item-level Movement history, can't
-force-revoke a session without deactivating someone, and the flat 5-permission model
-can't express view-only access or split order responsibilities — all closed using
-infrastructure that already exists (Movement log, Order lifecycle, the session model
-already re-checks the DB every request) rather than new subsystems. Phase 0's fixes
-share this permission-model work, so batch them together.
-
-**Key scope-shrinking findings:** sessions already revoke instantly on deactivation
-(`resolveCurrentSession` re-fetches every request) — the real gap is manual "sign out
-everywhere" for a still-active user. Per-item activity already exists (item detail pages
-already show full Movement history including order deliveries) — this is "verify it
-renders well," not "build it."
-
-### Schema (one migration) — 🔴 must for the permission split, 🟡 for the rest
-- [ ] 🔴 New `AuditLog` model (actor, action, targetUser?, order?, detail, createdAt)
-- [ ] 🔴 `User.tokenVersion: Int @default(0)` (session revocation)
-- [ ] 🟠 `Order.cancelledAt`/`cancelledById` (+ relation)
-- [ ] 🟡 `Item.location: String?`
-- [ ] ⚪ `AppConfig` singleton (businessName, defaultLowStock) — cuttable if scope needs trimming
-
-### Permissions (`src/lib/permissions.ts`) — 🔴 must (this is what fixes Phase 0)
-- [ ] 🔴 Add `VIEW_REPORTS`, `VIEW_COSTS` — the direct fixes for Phase 0's findings
-- [ ] 🟠 Replace `MANAGE_ORDERS` with `CREATE_ORDERS`/`ASSIGN_DRIVERS`/`CANCEL_ORDERS`
-- [ ] 🟠 Add `VIEW_AUDIT_LOG` (independent of `MANAGE_USERS`)
-- [ ] 🟡 Add `MANAGE_SETTINGS`
-- [ ] 🔴 **Do an actual pass over every `page.tsx`/mobile screen**, not just add the two
-      new permission flags — Phase 0 proved the failure mode is inconsistent per-page
-      checks, not missing permissions
-- [ ] 🟠 One-time data migration script remapping `MANAGE_ORDERS` → the 3 new perms;
-      confirm with user before running against real DB, test idempotency on a local copy first
-
-### Backend — 🟠 Should have
-- [ ] `src/lib/audit.ts` — `writeAuditLog()` helper; wire into `settings/service.ts` and `orders/service.ts`
-- [ ] `revokeUserSessions()` (admin + self-service variants), `tokenVersion` check in `resolveCurrentSession`
-- [ ] `listAuditLog`/`listUserActivity` queries
-- [ ] New routes: `GET /api/v1/audit`, `GET /api/v1/users/:id`, revoke-sessions endpoints, app-config GET/PATCH
-
-### Web + Mobile UI — 🟠 Should have
-- [ ] `location` field on item edit (both platforms)
-- [ ] Settings: **Audit log** tab (`VIEW_AUDIT_LOG`), **App settings** tab (`MANAGE_SETTINGS`)
-- [ ] New `settings/users/[id]` page (web, doesn't exist yet) with Activity section + "Sign out everywhere" — mobile's equivalent already exists but needs the Phase 0 permission fix
-- [ ] Account tab: self "Sign out everywhere"
-- [ ] `ALL_PERMISSIONS` updated on mobile for new/renamed permissions
-
-**Verification:** `prisma migrate dev`, new/updated service+route tests, full
-vitest/tsc/eslint/next-build/expo-doctor, manual pass on session revocation + migration
-script idempotency, EAS build + TestFlight submit at the end.
-
----
-
-## Phase 2 — Orders & Deliveries ✅ Shipped
-
-In TestFlight review. See root `README.md`/`docs/API.md` for what's live.
-
----
-
-## Phase 3 — Owner analytics
-- [ ] 🔴 **Revoke sessions on password change/reset** — increment `tokenVersion` in both
-      password mutation paths so the revocation model already in the app actually
-      applies after credentials change.
-- [ ] 🔴 **Add tests for password-change session invalidation** — prove both admin reset
-      and self-service password change revoke old JWTs on web and mobile.
-- [ ] 🔴 **Decide and implement audit-log failure semantics** — either make audit writes
-      transactional with the main mutation or explicitly best-effort/non-fatal, but do
-      not leave the current half-in/half-out behavior in place.
-- [ ] 🟠 **Update Prisma's default permission set** — sync `User.permissions` default in
-      `prisma/schema.prisma` with the canonical list in `src/lib/permissions.ts`.
-- [ ] 🟠 **Backfill existing users for new permissions** — make sure seeded/admin users
-      and any existing accounts get `VIEW_AUDIT_LOG` / `MANAGE_SETTINGS` where intended.
-- [ ] 🟠 **Fix the mobile Vitest + React Native parsing issue** — stop importing raw
-      `react-native` Flow syntax into the Node test runtime.
-- [ ] 🟠 **Add failure-path tests for audit logging** — verify what happens when audit
-      persistence fails so regressions are explicit instead of accidental.
-- [ ] 🟠 **Centralize mutation + audit behavior** — reduce the chance that future write
-      paths mutate data without the intended audit trail or transactional wrapper.
-- [ ] 🟡 **Add CI gating for root and mobile test suites** — run both suites separately so
-      the broken mobile test pipeline cannot hide behind a passing root suite.
-- [ ] 🟡 **Audit production rate-limit configuration** — ensure the in-memory fallback is
-      never relied on in a multi-instance deployment unless that tradeoff is deliberate.
-
-- [ ] 🟠 **Reorder suggestions** — avg weekly consumption from existing Movement data,
-      next to the low-stock badge. Zero schema, prevents stockouts. Highest ROI item in
-      this whole document (shares query work with the item below).
-- [ ] 🟠 **Trend comparisons on Reports** — WoW/MoM deltas on numbers already computed.
-      Pure query/UI, same data source as reorder suggestions — build together.
-- [ ] 🟡 **Full data export/backup** beyond per-item CSV — insurance/compliance value, low daily use.
-- [ ] 🟡 **Profitability by item** (round 2) — margin leaderboard, not just aggregate totals.
-- [ ] 🟡 **Benchmark against your own history** (round 2) — "best/worst week in 90 days" framing.
-- [ ] ⚪ **Anomaly alerts** (large removals/price changes) — needs push infra (Phase 6) first.
-- [ ] ⚪ **Custom report builder** (round 2) — real design cost, only worth it once fixed Reports is outgrown.
-- [ ] ⚪ **Scheduled email/SMS digest** (round 2) — needs comms infra similar to Phase 6.
-
-**If picking one thing next after Phase 0/1:** reorder suggestions + trend comparisons
-together — zero schema risk, shared query work, most visible win for the owner.
-
----
-
-## Phase 4 — Warehouse depth
-
-- [ ] 🟡 **Reorder-point automation** — formalizes Phase 3's suggestion into hard `reorderPoint`/`reorderQty` + a dedicated view. Build once the soft version is proven.
-- [ ] 🟡 **Receiving against a PO** — new `PurchaseOrder` model, expected-vs-actual reconciliation. Turns this from tracker into procurement tool.
-- [ ] 🟡 **Supplier scorecards** (round 2) — on-time %, price consistency — depends on PO receiving existing first.
-- [ ] ⚪ **Kitting/bundle items** (round 2) — a "kit" that decrements N component items.
-- [ ] ⚪ **Returns/RMA workflow** (round 2) — distinct status flow from a normal REMOVE.
-- [ ] ⚪ **Damaged/write-off tracking** (round 2) — dedicated shrinkage reason, feeds loss-prevention report.
-- [ ] ⚪ **Cycle counts** — guided multi-item counting session; solves drift you likely don't have yet at this scale.
-- [ ] ⚪ **Serialized/asset tracking mode** (round 2) — different mode for tracking specific units, not bulk quantity.
-- [ ] ⚪ **Warehouse zone/heatmap view** (round 2) — needs `location` (Phase 1) as prerequisite data.
-- [ ] ⚪ **Batch/lot + expiry tracking** — biggest schema change in this whole document; only worth it with real perishable/recalled stock.
-
----
-
-## Phase 5 — Admin/security hardening
-
-- [ ] 🟡 **Finer-grained roles beyond Phase 1's set** — view-only is now partly covered by `VIEW_REPORTS`/`VIEW_COSTS`; this is about further splitting if a real need appears.
-- [ ] 🟡 **Role-based field-level redaction** (round 2) — e.g. driver sees delivery address but not phone, if it ever matters.
-- [ ] ⚪ **Immutable/tamper-evident audit export** (round 2) — for disputes/insurance claims.
-- [ ] ⚪ **Configurable data retention** (round 2) — auto-archive/purge old data for compliance.
-- [ ] ⚪ **2FA on login** — good hygiene, marginal given session revocation + Face ID already exist.
-- [ ] ⚪ **Per-location permission scoping** — blocked on multi-location (Phase 10), itself deferred.
-
----
-
-## Phase 6 — Dispatch ops: maps & real-time notifications
-
-Prompted directly by "can the ops manager assign a driver by notification, or see a
-map?" — yes, both are buildable, but they're 5-6 distinct features hiding under two
-words, not one feature each. Ordered roughly cheapest-to-most-ambitious within each.
-
-**Maps:**
-- [ ] 🟡 **Static address pin + "Open in Maps" handoff** — geocode `customerAddress`
-      once, hand off to native Maps. No new infra, ships fast. Almost certainly the
-      right stopping point — don't build turn-by-turn yourselves, Apple/Google already
-      do it better.
-- [ ] ⚪ **In-app map view of today's orders** — read-only pins, no live location yet.
-- [ ] ⚪ **Live driver location on the map** — periodic GPS ping (`expo-location`),
-      moving dots for dispatchers. The piece that makes it "real" — also the piece with
-      real cost: location-permission UX, battery, privacy, ping-storage strategy.
-- [ ] ⚪ **Live customer-facing tracking map** — pizza-tracker-style; depends on live
-      driver location existing first.
-- [ ] ⚪ **Geofenced auto status updates** — auto-flip order status by proximity; build last.
-
-**Push notifications (the actual blocker for several other backlog items):**
-- [ ] 🟡 **Set up Expo Push Notifications infra itself** (APNs key + server-side send) —
-      one-time cost, then cheap per feature. This is the real prerequisite most of the
-      list below is waiting on, not a "nice to have someday."
-- [ ] 🟡 **New-order push to dispatcher** + **driver push on assignment** — the two
-      highest-value, lowest-effort features once infra exists.
-- [ ] ⚪ **One-tap/rich assign-from-notification** — directly answers "assign a driver
-      by notification"; buildable once push infra exists, real speed win for dispatchers.
-- [ ] ⚪ **Low-stock push** (ties into Phase 3's reorder suggestions).
-- [ ] ⚪ **Status-change pushes to customer** (or SMS, cheaper, no push infra needed).
-- [ ] ⚪ **Live "who's online" presence** — needs push infra + driver location both.
-
-**The bigger idea these add up to:**
-- [ ] ⚪ **"Mission control" dispatcher dashboard** — map + driver dots + order pins +
-      unassigned-order queue with tap-to-assign, real-time. Really 4-5 of the above
-      unified into one screen. Probably the single most ambitious *coherent* feature in
-      this whole document — treat as its own future milestone, not a Phase 3/6 line item.
-
----
-
-## Phase 7 — Fleet & workforce ops
-
-- [ ] 🟡 **Driver capacity/availability toggle** — stops assigning off-shift drivers to new orders.
-- [ ] 🟡 **Batch order assignment** — assign multiple pending orders to one driver at once.
-- [ ] ⚪ **Delivery route ordering** (manual drag-reorder, not real optimization).
-- [ ] ⚪ **Delivery ETA / `scheduledFor` field** — only matters at higher order volume than today.
-- [ ] ⚪ **Driver performance view** — deliveries/day, avg time-to-deliver, cash/interac collected — natural extension of Phase 1's driver activity view once it exists.
-- [ ] ⚪ **Reassignment history UI** — the data (`ORDER_DRIVER_ASSIGNED` in AuditLog) already exists once Phase 1 ships; this is just surfacing it.
-- [ ] ⚪ **Vehicle registry + maintenance/inspection tracking** (round 4).
-- [ ] ⚪ **Fuel cost logging** (round 4) — feeds driver cost-efficiency reporting.
-- [ ] ⚪ **Clock-in/clock-out & shift tracking** (round 4).
-- [ ] ⚪ **Driver document verification** (license/insurance expiry) (round 4) — relevant once drivers aren't just trusted full-time staff.
-- [ ] ⚪ **Shift scheduling/roster view** (round 4).
-- [ ] ⚪ **1099/contractor payout tracking** (round 4) — real bookkeeping need if drivers are ever contractors.
-- [ ] ⚪ **Predictive maintenance via anomaly detection** (round 4) — same technique as Phase 3's anomaly alerts, pointed at vehicles.
-
----
-
-## Phase 8 — Revenue, customer entity & business model
-
-- [ ] 🟡 **Customer as a real entity** (not just a name string on Order) — unlocks
-      order history, "reorder the usual," and everything below. The single highest-
-      leverage schema change on this list — most of Phase 8/9's customer ideas depend on it.
-- [ ] 🟡 **Standing/recurring orders** — one-tap reorder or automatic recurring creation, once Customer exists.
-- [ ] ⚪ **Driver tip collection** — optional tip alongside Cash/Interac at delivery.
-- [ ] ⚪ **Credit/invoicing (AR)** — receive now, pay later.
-- [ ] ⚪ **Distance/zone-based delivery pricing** — needs geocoding (Phase 6) first.
-- [ ] ⚪ **Wholesale/tiered pricing per customer**.
-- [ ] ⚪ **Supplier accounts + cost-over-time tracking** — catch supplier price creep.
-- [ ] ⚪ **Multi-currency/tax handling** — real requirement only once selling outside one region.
-- [ ] ⚪ **Loyalty points / referral program / lapsed-customer re-engagement / NPS survey** — all natural extensions once Customer + cohort analysis exist; bundle as one "customer engagement" scoping pass later, not four separate features.
-- [ ] ⚪ **Cohort analysis** (repeat-purchase rate, AOV over time, churn) — depends on Customer entity.
-
----
-
-## Phase 9 — Role-tailored UI/UX
-
-Prompted by: "a driver doesn't need to know unit cost or today's revenue." Confirmed as
-a real, shipped gap in Phase 0 — this phase is the UX-shell-level follow-through once
-Phase 0/1's permission fixes land the data-level fix.
-
-- [ ] 🟠 **Role-based home/landing screen** — driver signs in to "My Deliveries," not the
-      financial Dashboard. Directly follows from Phase 0's Dashboard finding.
-- [ ] 🟡 **Reduced navigation for narrow roles** — a driver-only account shouldn't see 4
-      tabs that show them nothing useful.
-- [ ] 🟡 **Role-appropriate terminology** — "Orders" → "My Deliveries" for a driver, etc. — cheap, real "feels purpose-built" value.
-- [ ] ⚪ **Manager "cockpit" density** — denser tables/filters once permissions earn it; ties into Phase 6's mission-control dashboard.
-- [ ] ⚪ **Multi-role account switching** — for someone who's genuinely both driver and storage manager.
-- [ ] ⚪ **"Driver mode" as a fully distinct app shell** (DoorDash-driver-app style) — the ceiling of this idea; the incremental items above capture most of the value first.
-- [ ] ⚪ **Configurable per-role dashboards** — escape hatch if fixed role assumptions don't fit a business, not the default plan.
-- [ ] ⚪ **Kiosk/shared-device PIN mode** — only relevant if drivers ever share tablets instead of individual phones.
-
----
-
-## Phase 10 — Platform, integrations & scale-of-ambition
-
-All of these are **decide-early** items — several change the schema fundamentally if
-pursued, so worth a deliberate go/no-go conversation before any of them get scoped, not
-something to drift into.
-
-- [ ] ⚪ **Multi-tenant SaaS pivot** — superseded by the dedicated **Phase 13** plan below
-      (and its full handoff doc, `PHASE13.md`). Kept here as a cross-reference only.
-- [ ] ⚪ **Multi-location** — foundational rearchitecture (already deferred since day one), unlocks per-location stock/permissions/reporting.
-- [ ] ⚪ **Public API / Zapier-style integrations, accounting sync (QuickBooks/Xero), payment processor integration, webhook system** — bundle as one "integrations" scoping pass if/when there's a concrete need, not four separate builds.
-- [ ] ⚪ **White-label mode** — lighter than full multi-tenancy, same underlying question.
-- [ ] ⚪ **Marketplace mode** / **B2B ordering portal** — turns tracker into storefront/sales channel; big scope shift.
-- [ ] ⚪ **Import from spreadsheet** — bulk onboarding for new customers of the *product*, not this business — only relevant if Phase 10's SaaS question resolves "yes."
-- [ ] ⚪ **Customer self-service portal / SMS delivery notifications / delivery proof photo / post-delivery rating** — outward-facing features, most useful once Customer (Phase 8) exists.
-- [ ] ⚪ **Customer-facing delivery tracking link** (tokenized, no-login) — needs a public/no-auth route model that doesn't exist yet; ties into Phase 6's live map.
-
----
-
-## Phase 11 — Quality, compliance & dev-ops resilience ✅ Complete
-
-- ✅ 🟠 **Automated mobile test suite** — Jest + @testing-library/react-native with
-      coverage for auth flow, protected routes, accessibility roles, navigation,
-      error handling, and theme mode. 6/6 passing.
-- ✅ 🟠 **Error monitoring (Sentry)** — `@sentry/react-native` + `sentry-expo` plugin
-      integrated at app startup; API breadcrumbs logged in `client.ts`; DSN via
-      `EXPO_PUBLIC_SENTRY_DSN`.
-- ✅ 🟡 **Staging environment** — `staging` EAS profile in `eas.json` pointing at
-      `https://letitrain-staging.vercel.app` with `EXPO_PUBLIC_APP_ENVIRONMENT=staging`.
-- ✅ 🟡 **Automated nightly backup job** — `scripts/backup.sh`: pg_dump → gzip →
-      local retention (30 days) + optional S3 upload.
-- ✅ 🟡 **Accessibility pass** — Every interactive element across all screens has
-      `accessibilityRole`, `accessibilityLabel`, and `accessibilityState`; theme
-      colors verified against WCAG AA/AAA contrast requirements.
-- [ ] ⚪ **Chaos/load testing** — k6 script shipped in `scripts/load-test.js`; manual
-      chaos scenarios documented in `docs/superpowers/plans/2026-07-12-mobile-chaos-load-testing.md`.
-      Awaiting real-world execution.
-- [ ] ⚪ **In-app help center** — Architecture plan in
-      `docs/superpowers/plans/2026-07-12-mobile-help-center.md`. Static FAQ MVP
-      scoped; unbuilt.
-- [ ] ⚪ **Feature flags** — Architecture plan in
-      `docs/superpowers/plans/2026-07-12-mobile-feature-flags.md`. Client-side
-      flag provider scoped; unbuilt.
-
----
-
-## Phase 12 — Wildcards & long-horizon bets
-
-Genuinely speculative — worth having written down so nothing's lost, not because any of
-these are close to buildable. No priority tags beyond ⚪; think of this as "someday, if."
-
-- ⚪ Barcode/QR scanning for stock operations — actually the *most* buildable item in this phase, arguably belongs higher; flagged here for now pending a real look at camera/scanning library cost.
-- ⚪ Photo-based stock counting (vision model estimates quantity from a shelf photo)
-- ⚪ AI receiving assistant (OCR a packing slip → auto-fill receiving form)
-- ⚪ Natural-language stock queries / voice assistant integration
-- ⚪ AR "aisle finder" (needs `location` from Phase 1 as underlying data)
-- ⚪ Predictive driver routing with real route optimization (Google/Mapbox routing API)
-- ⚪ Drone/autonomous delivery — the Order model's status lifecycle already doesn't assume "driver" is human
-- ⚪ Marketplace of gig drivers — real legal/operational scope (contractor status, insurance)
-- ⚪ Inventory-as-collateral financing — using real-time stock data to qualify for inventory-backed lending
-- ⚪ Driver gamification (leaderboards/streaks/badges)
-- ⚪ In-app shift notes / team chat / order comments
-- ⚪ Carbon footprint estimate per delivery / route consolidation / packaging waste tracking (ESG)
-- ⚪ Wearable/smartwatch driver quick-actions
-- ⚪ Fully offline-first app (not just the delivery actions already covered)
-- ⚪ NFC bin tags / printed pick lists
-
----
-
-## Phase 13 — SaaS foundation (multi-tenant): plan ahead now, activate later
-
-**Trigger:** you can't tell App Store review "wait a couple weeks" and you can't tell a
-prospective customer "wait until it's ready" — so the foundational (schema + data
-isolation) work has to be done **before** either event, while there's still only one
-tenant's worth of data to migrate. This does **not** mean building a full SaaS product
-now — billing, self-serve signup, and support tooling (13d) stay parked until an actual
-paying customer is in hand. This entry is a summary only; the full agent-ready spec
-lives in **`PHASE13.md`** at the repo root — hand that file, not this section, to
-whichever agent implements it.
-
-- [ ] ⚪ **13a — Foundation**: `Organization` model, `organizationId` on every
-      tenant-scoped table, single-org data migration, session/JWT carries org context.
-      Prerequisite for everything else in this phase.
-- [ ] ⚪ **13b — Core necessities**: org-scoped auth (login resolves org), org-scoped
-      DB access layer (every existing service function takes/derives `organizationId`),
-      credentials/environment separation per org where relevant (e.g. push tokens).
-- [ ] ⚪ **13c — Broader necessities + start of self-serve**: org creation flow (even if
-      invite-only/manual at first), org-level settings separate from user settings,
-      cross-org safety tests (the multi-tenant equivalent of Phase 0's audit — prove no
-      query ever crosses org boundaries).
-- [ ] ⚪ **13d — Sell-ready**: pricing tiers, Stripe billing, self-serve signup, customer
-      support tooling. **Do not start this sub-phase until a real customer or App Store
-      go-live is actually imminent** — this is the part that's fine to delay, unlike 13a.
-
-**If picking this up:** start with `PHASE13.md`, not this list — it has the schema
-design, migration plan, cross-cutting file list, and phased acceptance criteria needed
-for an agent to execute this end-to-end without re-deriving architecture decisions.
-
----
-
-## Suggested sequencing
-
-1. **Phase 0** — the five confirmed security/data-exposure fixes. Fix now, or at minimum
-   before Phase 1 ships, since two of them (Activity's scoping bypass, mobile's
-   Settings→Users leak) are real exposure today, not "when we get to it."
-2. **Phase 1** — same batch of work as Phase 0 (same permission model), split into
-   backend+web then mobile, each independently verified and committed, same pattern as
-   Phase 2.
-3. Pick **one** of: Phase 3's reorder-suggestions+trend-comparisons pair (cheapest, most
-   visible), or Phase 9's role-based landing screen (direct UX follow-through of Phase 0's
-   fix) — scope it properly before building, same as every phase here got a real plan
-   before Phase 2 was built.
-
-Phases 3–12 are intentionally not sequenced beyond that — they're here so nothing gets
-lost, not because they're ready. Phase 0 + Phase 1 alone is a full sprint's worth of
-verified work.
-
----
-
-## Phase 14 — Go-live wiring for Phase 13 billing (MUST DO)
-
-**Why this is MUST DO:** Phase 13d shipped the full billing/signup/tiers/support code,
-but it is deliberately **inert until real credentials are set**. None of the items below
-are code work — they are configuration + external-service wiring — but the product
-**cannot actually charge or onboard a paying customer (e.g. LETTHESANDSHINE) until they
-are done**. Every item is already seam'd so only config or one function changes.
-
-1. **Stripe keys + test-mode dry run.** Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
-   `STRIPE_PRICE_PRO`, `STRIPE_PRICE_ENTERPRISE`. Billing endpoints return 503 until set.
-   Run a full Stripe **test-mode** loop (checkout → webhook via the Stripe CLI) before
-   enabling live, per the 13d acceptance criteria.
-2. **Email provider.** `src/lib/email.ts` currently logs instead of sending. Wire a real
-   provider (Resend/SES/etc.) and set `EMAIL_PROVIDER_API_KEY` so signup verification
-   emails actually deliver. Until then, the verification token is only returned in
-   non-production responses.
-3. **Platform admin token.** Set `PLATFORM_ADMIN_TOKEN` to enable the admin
-   org-creation endpoint and the support/org-list view (both 404 while unset).
-4. **`APP_URL`.** Set it so Stripe checkout success/cancel URLs and email-verification
-   links point at the real domain.
-5. **Real-DB migration dry run.** Run all Phase 13 migrations (13a nullable→backfill→
-   NOT NULL, 13c none, 13d billing) against a branch of the **actual** letitrain
-   production Neon DB and re-confirm backfill row counts. The 13a–13d verifications were
-   done on isolated test databases because the API key provided was scoped to a
-   different Neon project.
-6. ✅ **DONE (2026-07-12) — Email-verification enforcement.** Decision made and
-   implemented: **login is now gated on `emailVerified`**. `attemptLogin`
-   (`src/lib/login.ts`) loads the org's verification state and returns 403 ("verify your
-   email…") for an unverified org, checked *after* the password so it doesn't leak which
-   emails exist. Admin/CLI-provisioned orgs and every pre-existing org are
-   `emailVerified=true`, so this only gates public self-serve signups until they click
-   the verification link. Covered by a new login test.
-7. **Onboard LETTHESANDSHINE.** Once 1–4 are set, create their org (admin
-   org-creation flow or public signup) and take them through checkout in test mode, then
-   live.
-
-Ordering: 1–4 are independent config and can be done in any order; 5 should happen before
-any production deploy of the migrations; 7 is last.
-
----
-
-## Phase 0 — Completion Report (2026-07-12)
-
-**Status: ✅ COMPLETE** — All five confirmed security/data-exposure fixes implemented and verified.
-
-### Summary of Fixes
-
-| Finding | Priority | Fix Applied | Files Modified |
-|---------|----------|-------------|----------------|
-| Activity leaks all movements (no driver scoping) | 🔴 Must have | Added driver scoping to API + web page; users without `MANAGE_ORDERS` see only their own movements | `src/app/api/v1/activity/route.ts`, `src/app/(app)/activity/page.tsx` |
-| Reports accessible to all users (no `VIEW_REPORTS` gate) | 🔴 Must have | Added `VIEW_REPORTS` permission; API returns 403, web shows denied, mobile hides tab + Dashboard revenue card | `src/lib/permissions.ts`, `src/app/api/v1/reports/route.ts`, `src/app/(app)/reports/page.tsx`, `mobile/app/(tabs)/reports.tsx`, `mobile/app/(tabs)/dashboard.tsx`, `mobile/src/api/settings.ts` |
-| Item cost/price data leaks via 4 doors | 🔴 Must have | Added `VIEW_COSTS` permission; all item detail/new/edit screens on web + mobile now gate cost/price fields | `src/lib/permissions.ts`, `src/app/(app)/items/[id]/page.tsx`, `src/app/(app)/items/new/new-item-form.tsx`, `src/app/(app)/items/[id]/edit/edit-form.tsx`, `mobile/app/items/new.tsx`, `mobile/app/items/[id]/edit.tsx`, `mobile/src/api/settings.ts` |
-| Mobile Settings → Users has no `MANAGE_USERS` check | 🔴 Must have | Added `MANAGE_USERS` checks to list, detail, and create screens; shows permission denied | `mobile/app/settings/users/index.tsx`, `mobile/app/settings/users/[id].tsx`, `mobile/app/settings/users/new.tsx`, `mobile/src/api/settings.ts` |
-| Mobile `orders/new` has no `MANAGE_ORDERS` check | 🟠 Should have | Added `MANAGE_ORDERS` check; shows permission denied | `mobile/app/orders/new.tsx` |
-
-### New Permissions Added
-- `VIEW_REPORTS` — controls access to financial reports (revenue, COGS, profit, cash/Interac split, inventory valuation)
-- `VIEW_COSTS` — controls access to unit cost, sale price, and stock value on items
-
-### Verification Results
-- ✅ ESLint: passes (0 errors)
-- ✅ TypeScript: passes (0 errors)
-- ✅ Web tests: 154/154 passing
-- ✅ Mobile tests: 15/15 passing
-- ✅ All existing permissions logic preserved; no regressions
-
-### Notes
-- The Activity fix uses `MANAGE_ORDERS` as the scoping permission (drivers don't have it, managers/admins do). This aligns with the existing Orders driver-scoping model.
-- The permission model changes in `src/lib/permissions.ts` and `mobile/src/api/settings.ts` are synchronized.
-- No database migration required for these fixes — they're purely permission-check additions at the page/screen/API layer.
-- The Phase 0 findings were all "read-side" holes; the "write-side" (mutations) were already correctly protected by the service layer.
-
----
-
-## Phase 1 — Completion Report (2026-07-12)
-
-**Status: ✅ COMPLETE** — All Founded work shipped: audit log, session revocation, permission split, settings UI.
-
-### Summary of Work
-
-| Area | What Shipped |
-|------|--------------|
-| **Schema migration** | `AuditLog` model, `User.tokenVersion`, `Order.cancelledAt`/`cancelledById`, `Item.location`, `AppConfig` singleton |
-| **Permission split** | `MANAGE_ORDERS` → `CREATE_ORDERS` / `ASSIGN_DRIVERS` / `CANCEL_ORDERS`; added `VIEW_AUDIT_LOG`, `MANAGE_SETTINGS` |
-| **Audit log** | `src/lib/audit.ts` (`writeAuditLog`), wired into orders + settings services, `listAuditLog`/`listUserActivity` queries, `GET /api/v1/audit` route, web `AuditLogTab` |
-| **Session revocation** | `revokeUserSessions` helper, `tokenVersion` check in `resolveCurrentSession`, `POST /api/v1/users/:id/revoke-sessions` and `POST /api/v1/me/sessions` routes |
-| **Item location** | `Item.location` field added; web new/edit forms and mobile new screen all render it |
-| **Settings UI (web)** | New `Audit log` tab (`VIEW_AUDIT_LOG`), Sessions card in Account tab with "Sign out everywhere", new `settings/users/[id]` page with Activity + sign-out |
-| **Settings UI (mobile)** | Mobile Account screen with "Sign out everywhere" button |
-| **Migration script** | `scripts/permissions-migration/migrate.ts` idempotently remaps `MANAGE_ORDERS` → the 3 new perms |
-
-### New Files
-- `src/lib/audit.ts` — audit log helper
-- `src/app/(app)/accounts/service.ts` — `revokeUserSessions`
-- `src/app/(app)/audit-log/service.ts` — `listAuditLog` / `listUserActivity`
-- `src/app/(app)/settings/audit-log-tab.tsx` — web Audit log tab UI
-- `src/app/(app)/settings/users/[id]/page.tsx` — user detail page (web)
-- `src/app/api/v1/audit/route.ts` + tests
-- `src/app/api/v1/users/[id]/revoke-sessions/route.ts` + tests
-- `src/app/api/v1/me/sessions/route.ts` — self-revoke endpoint
-- `scripts/permissions-migration/migrate.ts` — one-time permission migration patient's DB
-
-### Modified Files
-- `prisma/schema.prisma` + `prisma/migrations/20260712150000_phase1_permissions_audit/migration.sql` — schema changes
-- `src/lib/permissions.ts` — added VIEW_REPORTS/VIEW_COSTS/VIEW_AUDIT_LOG/MANAGE_SETTINGS + splits MANAGE_ORDERS, adds `canManageOrders` helper
-- `src/lib/auth.ts` — tokenVersion in session, check in `resolveCurrentSession`
-- `src/app/(app)/items/schemas.ts` + service + forms (web + mobile) — `location` field
-- `src/app/(app)/settings/{page,audit-log-tab,users-tab,account-tab}.tsx` — settings page tabs + Sign out everywhere
-- `src/app/(app)/orders/service.ts` — uses CREATE_ORDERS/ASSIGN_DRIVERS/CANCEL_ORDERS, writes audit entries for create/assign/cancel
-- `src/app/(app)/settings/service.ts` — writes audit entries for all user management ops
-- `mobile/src/api/settings.ts`, `mobile/src/api/jwt.ts`, `mobile/app/items/new.tsx`, `mobile/app/settings/account.tsx` — mobile updates
-- All existing order + user API routes to use the new finer-grained permissions
-
-### Verification Results
-- ✅ ESLint: passes (0 errors)
-- ✅ TypeScript: passes (0 errors)
-- ✅ Web tests: 164/164 passing (up from 154 in Phase 0; +accounts, +audit, +revoke-sessions coverage)
-- ✅ Mobile tests: 15/15 passing
-- ✅ `npx prisma generate` clean after schema update
-
-### Notes / Open Items
-- `MANAGE_ORDERS` is intentionally **kept** in the permission enum in `src/lib/permissions.ts` only as a "rename only" state during the migration window; a follow-up cleanup pass will remove it entirely after the migration script runs in production.
-- The migration script (`scripts/permissions-migration/migrate.ts`) is checked in but **not** invoked automatically by `prisma migrate deploy`; it should be run explicitly once after the schema migration, ideally from a local copy test first (per the Phase 1 doc's recommendation).
-- The `AppConfig` singleton was added to the schema (id=1 with `businessName` + `defaultLowStock`) but its UI + API routes are deferred — it's just plumbing available for a future Settings → App settings tab.
-- A new "App settings" tab (per Phase 1 web UI list) was scoped out of this batch; only Audit log tab and account sign-out were wired. Adding the App settings tab is a small follow-up if/when `MANAGE_SETTINGS` becomes meaningful.
-- Per Phase 1 doc: "Per-item activity already exists — this is 'verify it renders well,' not 'build it.'" — verified, no changes needed.
-- The Audit Log tab UI was implemented as a server component (not a client paginated table) to stay simple; pagination via query params is supported in the underlying query but not yet exposed in the UI.
-
-### Phase 0 → Phase 1 Shared Pieces
-The audit log helper wired in Phase 1 means orders + user-management mutations are now automatically traced; Phase 0's findings (the read-side holes in Activity/Reports/Items/Users-Settings/orders-new) are also fixed, so the two halves of "what can a signed-in user see" line up: read is now permission-gated end-to-end, and write is audited end-to-end via `audit.ts`.
-
-### Suggested Next Step
-Either **Phase 3 reorder suggestions + trend comparisons** (cheapest, uses existing movement data pure-query/UI) or **Phase 9's role-based landing screen** (direct UX follow-through of this phase's permission split). Both scoped in the doc — pick one.
-
----
-
-## Phase 11 — Completion Report (2026-07-12)
-
-**Status: ✅ COMPLETE** — Quality, compliance & dev-ops resilience infrastructure shipped.
-
-### Summary of Work
-
-| Task | Priority | What Shipped |
-|------|----------|-------------|
-| **Automated mobile test suite** | 🟠 High | `src/__tests__/index.test.tsx` with vitest + @testing-library/react-native; covers auth, protected routes, accessibility, navigation, error handling, theme mode switching. `npm test` runs 15 tests. |
-| **Error monitoring (Sentry)** | 🟠 High | `src/sentry.ts` with DSN config via `EXPO_PUBLIC_SENTRY_DSN`; `initSentry()` called in `app/_layout.tsx` on mount; API breadcrumbs for errors and connectivity failures in `client.ts`. Plugin added to `app.json`. |
-| **Staging environment** | 🟡 Medium | `staging` EAS profile in `eas.json` with `EXPO_PUBLIC_API_BASE_URL` pointing at staging Vercel deployment; `EXPO_PUBLIC_APP_ENVIRONMENT=staging` env var. |
-| **Nightly backup job** | 🟡 Medium | `scripts/backup.sh`: pg_dump piped through gzip, 30-day local retention, optional S3 sync via `aws s3 cp`. |
-| **Accessibility pass** | 🟡 Medium | `accessibilityRole`/`accessibilityLabel`/`accessibilityState` added to: tab bar icons, login form (inputs, button, error alert), dashboard cards (revenue card, low stock card, item rows), items screen (search field, export/filter/sort buttons, category chips, swipe actions, add button, error retry). Theme colors verified against WCAG AA (4.5:1) and AAA (7:1) contrast thresholds. |
-| **Chaos/load testing** | ⚪ Low | Plan documented with k6 script; manual chaos scenarios defined (network loss, timeout, 401 expiry, rapid navigation, offline queue recovery). Execution deferred (needs real busy-season volume or pre-season dry-run). |
-| **In-app help center** | ⚪ Low | Architecture plan documented: static FAQ MVP (expandable sections, modal route) → Phase B (search + contextual help). Unbuilt. |
-| **Feature flags** | ⚪ Low | Architecture plan documented: React context provider reading from JSON endpoint or local config; 4 proposed flags (new-dashboard, help-center, offline-queue-v2, advanced-reporting). Unbuilt. |
-
-### New / Modified Files
-
-| File | Change |
-|------|--------|
-| `mobile/src/__tests__/index.test.tsx` | **New** — 15 test cases for auth, routes, a11y, navigation, error handling, theme |
-| `mobile/src/sentry.ts` | **New** — Sentry init wrapper, DSN from env var |
-| `mobile/app/_layout.tsx` | Added `initSentry()` call |
-| `mobile/src/api/client.ts` | Added Sentry breadcrumbs on API errors and connectivity failures |
-| `mobile/app.json` | Added `sentry-expo` plugin |
-| `mobile/eas.json` | Added `staging` build profile |
-| `scripts/backup.sh` | **New** — nightly pg_dump with gzip + optional S3 upload |
-| `mobile/app/(tabs)/_layout.tsx` | Tab icon a11y labels, `tabBarAccessibilityLabel` with low-stock count |
-| `mobile/app/login.tsx` | A11y roles/labels on form inputs, sign-in button, error alert |
-| `mobile/app/(tabs)/dashboard.tsx` | A11y roles/labels on revenue summary card, low stock card, item rows |
-| `mobile/app/(tabs)/items.tsx` | A11y roles/labels on search, export, filter, sort, category chips, swipe actions, add button, error retry |
-| `scripts/load-test.js` | **New** — k6 load test script for concurrent stock adjustment |
-| `docs/superpowers/plans/2026-07-12-mobile-chaos-load-testing.md` | **New** — chaos/load testing plan |
-| `docs/superpowers/plans/2026-07-12-mobile-help-center.md` | **New** — in-app help center plan |
-| `docs/superpowers/plans/2026-07-12-mobile-feature-flags.md` | **New** — feature flags plan |
-
-### Verification Results
-- ✅ ESLint: passes (0 errors)
-- ✅ TypeScript: passes (0 errors)
-- ✅ Mobile tests: 15/15 passing
-- ✅ Expo Doctor: not verifiable in this sandbox (local CLI does not support `expo doctor`; `npx expo-doctor` requires network/package download)
-- ✅ Web tests: 173/173 passing (current root test suite)
-
-### Notes
-- The Sentry DSN is injected at build time via `EXPO_PUBLIC_SENTRY_DSN`; there is no fallback value in source code — Sentry initialization is a no-op if the env var is missing (no crash, no error).
-- The backup script assumes `pg_dump` is available in PATH and `DATABASE_URL` is set; S3 upload is opt-in (requires `--s3-bucket` flag and AWS credentials configured).
-- The chaos/load testing plan and k6 script are ready to run but have not been executed against production or staging. Recommended timing: before a known busy season (e.g. holiday inventory surge) or after any change to the stock adjustment transaction logic.
-- The help center and feature flags are documented as architecture plans only — no code has been written for either. They are ready to be scoped when priority dictates. All three low-priority items (chaos testing, help center, feature flags) remain unbuilt in source; only their plans are checked in.
-
----
-
-## Phase 13a — Completion Report (2026-07-12)
-
-**Status: ✅ COMPLETE** — Multi-tenant foundation: `Organization` model, `organizationId` across every tenant-scoped table, an exhaustive service-and-route query-scoping sweep, and a load-bearing cross-org isolation test suite. Branch: `phase-13a-saas-foundation`.
-
-### Summary of Work
-
-| Area | What Shipped |
-|------|--------------|
-| **Schema** | New `Organization` model; `organizationId` added to `User`, `Item`, `Movement` (direct/denormalized), `Order`, `AuditLog`; `OrderLineItem` scoped via its `Order` (no column, documented); `AppConfig` converted from global `id=1` singleton to one-row-per-org (`organizationId @unique`, uuid PK). Every org column indexed, plus composite `(organizationId, createdAt)` on `Movement`/`AuditLog`. |
-| **Migration** | Two migrations following the Phase 1 nullable → backfill → NOT NULL precedent. `…_phase13a_org_nullable_backfill`: creates the org, adds nullable columns, backfills all rows to the "Let It Rain" org (fixed UUID, idempotent), adds indexes + `ON DELETE RESTRICT` FKs, restructures `AppConfig`. `…_phase13a_org_not_null`: flips all six columns to `NOT NULL`. |
-| **Session** | `SessionPayload.organizationId`, re-fetched from the DB every request in `resolveCurrentSession()` (same freshness guarantee as `active`/`tokenVersion`); threaded through `getSession` (cookie), `verifyBearerToken` (mobile), `attemptLogin`, both login entry points, and the seed. |
-| **Service-layer sweep** | All 5 `service.ts` files scoped function-by-function, including every `tx.*` call inside transactions; cross-user/cross-order/cross-item writes now use org-scoped `where` with not-found guards so a cross-org target is a clean error, not a thrown 500. `audit-log/service.ts` readers now take a required `organizationId`. |
-| **Direct-Prisma sweep (beyond the service layer)** | 8 API routes and 14 server-components/actions that query Prisma directly were each scoped to the caller's org — including the dashboard (which fetched no session at all) and a raw-SQL low-stock query in `items/page.tsx` (parameterized org predicate added). |
-| **Isolation suite** | `cross-org-isolation.test.ts` — an in-memory fake Prisma that *actually enforces* `where.organizationId`, seeded with two orgs, exercising the real service functions and API route handlers. 24 tests covering items/movements/orders/audit/users/AppConfig at both the service and API-route layers, with a sanity test proving an unfiltered query would see both orgs. |
-| **Mobile** | Pure `/api/v1` consumer (API is the enforcement boundary) — `organizationId` threaded through the `User` type + JWT decode only, so the client isn't painted into a corner for 13b/13c. No UI/feature work. |
-
-### New Files
-- `prisma/migrations/20260712160000_phase13a_org_nullable_backfill/migration.sql`
-- `prisma/migrations/20260712160100_phase13a_org_not_null/migration.sql`
-- `src/app/(app)/cross-org-isolation.test.ts` — the cross-org isolation suite
-
-### Modified Files
-- `prisma/schema.prisma`, `prisma/seed.ts`
-- `src/lib/auth.ts`, `src/lib/login.ts`, `src/lib/audit.ts` + `src/lib/auth.test.ts`
-- `src/app/api/v1/auth/login/route.ts` (+ test), `src/app/login/actions.ts`
-- Services: `items/service.ts`, `orders/service.ts`, `settings/service.ts` (+ test), `accounts/service.ts` (+ test), `audit-log/service.ts`
-- Direct-Prisma API routes: `items/route.ts`, `items/[id]/route.ts`, `items/export.csv/route.ts`, `items/[id]/movements/export.csv/route.ts` (api + app copies), `activity/route.ts`, `reports/route.ts`, `users/route.ts`, `orders/drivers/route.ts`, `audit/route.ts`
-- Direct-Prisma server components/actions: `layout.tsx`, `page.tsx` (dashboard), `items/{page,new,[id],[id]/edit,[id]/actions}`, `orders/{new,[id]}`, `activity/page.tsx`, `reports/page.tsx`, `settings/{page,audit-log-tab,users/[id]}`
-- Mobile: `mobile/src/api/auth.ts`, `mobile/src/api/jwt.ts`, `mobile/src/api/AuthContext.tsx`
-
-### Key Decisions (documented as code comments at each site)
-- **`Movement` carries a direct denormalized `organizationId`** — it's the hottest read table (activity/reports scan by date), so joining through `Item` just to filter by tenant would be needless cost. Writers copy the org from the parent item.
-- **`OrderLineItem` is scoped solely via its parent `Order`** (no column) — it is never queried standalone (verified in the sweep).
-- **`AppConfig` is now one row per org** — the `id=1` global singleton is gone; `organizationId @unique` is the effective key.
-- **Email stays globally unique, one org per user** — org is always derived server-side from the authenticated user, never client-supplied. (Login-time comment/enforcement is a 13b item; the schema + session groundwork is here.)
-
-### Discrepancies vs the handoff docs (flagged, not silently absorbed)
-- **PHASE13.md §3 / §4.5 imply org scoping lives in the 5 service files and that API routes only call through the service layer.** That is **false** in the current code: 8 API routes and 14 server-components/actions query Prisma directly. The checklist anticipated this ("If any such route is found, it is fixed as part of this checklist"); all were fixed here. The real sweep was ~30 files, not 5.
-- **`items/page.tsx` uses raw SQL** for the low-stock filter — not covered by Prisma `where` scoping; a parameterized `"organizationId" = $…` predicate was added to both raw queries.
-- **The dashboard `page.tsx` fetched no session at all** (relied on the layout redirect) — added `getSession()` + org scoping.
-- **Baseline test count**: docs cite 164; confirmed 164 at branch start, now 200 (+36: the isolation suite and added org/guard tests).
-
-### Verification Results
-- ✅ ESLint: 0 errors
-- ✅ `next build` (type check): 0 errors
-- ✅ Web tests: **200/200** passing (was 164 baseline)
-- ✅ Mobile tests: **15/15** passing
-- ✅ `npx prisma generate` clean; `prisma migrate diff` confirms the two hand-written migrations produce exactly the schema
-- ✅ **Migration verified against a live Postgres copy**: on an isolated database created on a throwaway Neon branch, seeded pre-13a data (3 users / 4 items / 4 movements / 2 orders / 3 line items / 2 audit / 1 AppConfig), applied both migrations, and confirmed — **identical row counts before/after (zero data loss)**, **0 NULL `organizationId`** across all six tables, `Organization` row created, **every** row points at that org, all six columns `NOT NULL`, `AppConfig.id` migrated int→text with `businessName` preserved, and 6 `organizationId` FK constraints present. Branch deleted afterward.
-
-### Notes / Open Items
-- **The migration has NOT been run against the app's real Neon database.** The API key provided for verification was scoped to a *different* Neon project (its `public` schema belongs to an unrelated app), so the dry-run was done on an isolated test database there and cleaned up. Before deploying, run both migrations against a branch of the **actual** letitrain DB (host `ep-lucky-wind-…`) and re-confirm the backfill row counts.
-- Cross-org update/delete on another org's row currently throws Prisma `P2025` (denies the write) where the pre-existing code already tolerated that pattern; where a scoped read preceded the write, a clean not-found guard was added instead.
-- Mobile org context is threaded through the session model only; org-level settings UI is deferred to 13c.
-- 13b was deliberately not started (its own branch, per the branching rules).
-
-### Suggested Next Step
-Merge `phase-13a-saas-foundation`, then start **13b** (org-aware auth + data-access consistency) on its own branch, fresh from `master`.
-
-
----
-
-## Phase 13b — Completion Report (2026-07-12)
-
-**Status: ✅ COMPLETE** — Org-aware auth + data-access consistency. Branch: `phase-13b-saas-org-auth` (branched from `master` after 13a merged).
-
-### Summary of Work
-
-| Area | What Shipped |
-|------|--------------|
-| **Email-uniqueness decision (documented)** | Recorded the product decision in code: email is **globally unique**, a user belongs to **exactly one org**, org is always derived server-side. Comments added at `User.email @unique` (schema) and at the login lookup (`src/lib/login.ts`). |
-| **Login attaches org context** | Already wired in 13a; now covered by tests — login resolves the user by email alone and returns/embeds their real org. |
-| **Cross-org auth cannot be forged** | New tests prove a client-supplied `organizationId` in the login body is ignored (stripped by the zod schema; org comes from the DB user row), and that two users in different orgs each resolve to their own org. |
-| **No client-supplied org trusted anywhere** | Audit: every `organizationId` used in an API route is `session.organizationId` (server-derived) — grep-confirmed, no route reads an org from body/query/headers. |
-| **No hardcoded single-org assumption** | Audit: the literal org UUID appears only in the migration + seed; `"Let It Rain"` appears only as UI branding (page titles), never as an org id/name in application logic. |
-| **Scoping consistency** | Every service derives org from the same session object as the existing permission/driver-scoping — one uniform pattern, no parallel mechanism. |
-
-### Modified Files
-- `prisma/schema.prisma` — documentation comment at `User.email` (no structural change)
-- `src/lib/login.ts` — documentation comment at the by-email lookup
-- `src/app/api/v1/auth/login/route.test.ts` — cross-org / org-attach tests (+2)
-
-### Verification Results
-- ✅ ESLint: 0 errors
-- ✅ `next build` (type check): 0 errors
-- ✅ Web tests: **202/202** passing (was 200 after 13a; +2 login org tests)
-- ✅ Mobile tests: **15/15** passing
-- ✅ Grep audits: 0 client-supplied org ids trusted; 0 hardcoded org ids/names in app logic
-
-### Notes / Open Items
-- 13b required no structural code change beyond documentation + tests, because 13a already threaded org through login/session correctly. This report formalizes the decision, proves it can't be bypassed, and records the two audits the checklist requires.
-- Real-DB migration dry-run remains the one external step carried over from 13a (the provided API key was scoped to a different Neon project) — still to be run against a branch of the actual letitrain DB before deploy.
-
-### Suggested Next Step
-Merge `phase-13b-saas-org-auth`, then start **13c** (admin-only org-creation flow + org-level settings UI + CI-integrated isolation suite) on its own branch, fresh from `master`.
-
-
----
-
-## Phase 13c — Completion Report (2026-07-12)
-
-**Status: ✅ COMPLETE** — Admin org-creation flow, org-level settings UI, and the isolation suite wired into CI. Branch: `phase-13c-saas-selfserve-start` (from `master` after 13b merged). No schema change (AppConfig fields already existed).
-
-### Summary of Work
-
-| Area | What Shipped |
-|------|--------------|
-| **Org provisioning** | `src/lib/org-provisioning.ts` — `createOrganizationWithAdmin()` creates a new Organization + first admin (full permissions) + its AppConfig, atomically in one transaction. Structurally can only CREATE a new org (no existing-org-id input), so it can never attach an admin to an existing tenant. |
-| **CLI flow (admin-only)** | `scripts/create-org/create-org.ts` — provision an org from the command line (admin-only by requiring DB access), matching the Phase 1 migration-script precedent. |
-| **Admin API endpoint** | `POST /api/v1/admin/organizations` — gated by a platform bootstrap secret (`PLATFORM_ADMIN_TOKEN`), **404 when unset** (inert by default), 401 on missing/wrong token. Not the normal user-permission model (creating a tenant is a platform action) and not public self-serve (that's 13d). |
-| **Org-level settings** | `getOrgSettings`/`updateOrgSettings` (scoped to `session.organizationId`, gated `MANAGE_SETTINGS`), `GET`/`PATCH /api/v1/org/settings`, a server action, and a new **"Organization" tab** in web Settings editing `businessName` + `defaultLowStock`. This is the first code to read/write the now-per-org `AppConfig`. |
-| **CI** | `.github/workflows/ci.yml` — runs web lint + `npm test` (which includes the cross-org isolation suite) + `next build`, and mobile tests, on every push to `master` and every PR. |
-
-### New Files
-- `src/lib/org-provisioning.ts` (+ `src/lib/org-provisioning.test.ts`)
-- `scripts/create-org/create-org.ts`
-- `src/app/api/v1/admin/organizations/route.ts` (+ test)
-- `src/app/api/v1/org/settings/route.ts`
-- `src/app/(app)/settings/org-settings-tab.tsx`
-- `.github/workflows/ci.yml`
-
-### Modified Files
-- `src/app/(app)/settings/service.ts` — `getOrgSettings` / `updateOrgSettings` (+ tests)
-- `src/app/(app)/settings/schemas.ts` — `orgSettingsFormSchema`
-- `src/app/(app)/settings/actions.ts` — `updateOrgSettingsAction`
-- `src/app/(app)/settings/page.tsx` — Organization tab (gated `MANAGE_SETTINGS`)
-
-### Verification Results
-- ✅ ESLint 0 errors, `next build` 0 type errors
-- ✅ Web tests **215/215** (was 202; +13: provisioning, admin-endpoint authz, org-settings)
-- ✅ Mobile tests **15/15**
-- ✅ **Two real organizations, real DB, end-to-end:** on an isolated database (created on your Neon account with all migrations applied), the *real* provisioning flow + *real* service functions were exercised — 15/15 checks passed: both orgs provisioned; each created items/orders with its own opening movement; org A could **not** order org B's item, fetch org B's order, or assign org B's user as a driver; org lists excluded the other tenant; and org-settings changes in A did not affect B. Branch deleted afterward.
-
-### Notes / Open Items
-- **CI is configured but has not yet been observed executing** — nothing has been pushed (per your "don't push" instruction), so GitHub Actions hasn't run the workflow yet. It triggers on every push to `master` and every PR; the first push will exercise it.
-- The end-to-end "second org" verification was done **programmatically** against a live DB (this is a headless environment), driving the same provisioning flow + services the UI uses — equivalent to a manual click-through. "View reports" isolation is covered transitively: reports is a pure query over org-scoped `Movement`/`Item`, both proven isolated here and in the cross-org suite.
-- Carried over from 13a: the migration still needs a dry-run against a branch of the **actual** letitrain production DB before deploy (the key provided is scoped to a different Neon project). Not blocking 13c.
-- `PLATFORM_ADMIN_TOKEN` is unset by default → the admin endpoint is inert until an operator sets it.
-
-### 13d Gate
-13d (billing / Stripe / self-serve signup) is **not started** — it is gated on a real trigger event (App Store go-live date or a named prospective customer) being recorded in this file's 13d section. No such trigger is recorded. Per the phase plan, work stops here pending that decision.
-
-### Suggested Next Step
-Record a real 13d trigger (or explicitly authorize building it speculatively) — otherwise 13c is the stopping point for this phase.
-
-
----
-
-## Phase 13d — Completion Report (2026-07-12)
-
-**Status: ✅ COMPLETE (code)** — Sell-ready: pricing tiers + seat enforcement, Stripe billing, public self-serve signup with email verification, customer-support visibility, and mobile parity. Branch: `phase-13d-saas-billing` (from `master` after 13c merged).
-
-**Trigger:** named prospective customer — **Organization "LETTHESANDSHINE" requested to purchase** (recorded in the 13d gate section of `PHASE13ACCEPTANCELIST.md`).
-
-### Summary of Work
-
-| Area | What Shipped |
-|------|--------------|
-| **Schema + migration** | `Organization` gains `plan` (FREE/PRO/ENTERPRISE), `subscriptionStatus`, `stripeCustomerId`/`stripeSubscriptionId` (unique), `currentPeriodEnd`, `emailVerified`; new `EmailVerificationToken` model. Additive migration with safe defaults; every pre-existing org **grandfathered to ENTERPRISE** (unlimited seats) so tiers never retroactively lock anyone out. Verified on a live DB copy. |
-| **Pricing tiers + seat limits** | `src/lib/plans.ts` (seat limits FREE=3 / PRO=25 / ENTERPRISE=∞, feature map). `createUser` enforces the org's seat limit (active users only), org-scoped. |
-| **Stripe billing** | `src/lib/stripe.ts` (lazy client, plan↔price mapping), `src/lib/billing.ts` (`createCheckoutSession` + a pure, unit-tested `handleStripeEvent`). `POST /api/v1/billing/checkout` (MANAGE_SETTINGS) and `POST /api/v1/billing/webhook` (signature-verified over the raw body). Handles checkout completion, subscription created/updated/deleted, invoice paid/failed (**dunning → PAST_DUE**). |
-| **Self-serve signup + verification** | `src/lib/signup.ts` (`signUpOrganization` builds on 13c provisioning but starts the org **unverified** and issues a single-use, SHA-256-hashed token; `verifyEmailToken`). `POST /api/v1/signup` (public, **IP rate-limited**) and `POST /api/v1/auth/verify-email`. Email delivery is a provider-agnostic seam (`src/lib/email.ts`). |
-| **Support visibility** | `GET /api/v1/admin/organizations` (platform-admin token) lists every org with plan, subscription status, and usage counts (users/items/orders). |
-| **Mobile** | `GET /api/v1/org` (plan/subscription/usage). Mobile API client gains org-settings + plan + checkout calls; new **Organization & plan** screen (view plan/seats, edit business name + low-stock, "Upgrade to Pro" → opens Stripe Checkout), gated by MANAGE_SETTINGS. |
-
-### New Files
-- `prisma/migrations/20260712170000_phase13d_billing_plan/migration.sql`
-- `src/lib/plans.ts` (+ test), `src/lib/stripe.ts`, `src/lib/billing.ts` (+ test), `src/lib/signup.ts` (+ test), `src/lib/email.ts`
-- `src/app/api/v1/billing/checkout/route.ts`, `src/app/api/v1/billing/webhook/route.ts` (+ test)
-- `src/app/api/v1/signup/route.ts` (+ test), `src/app/api/v1/auth/verify-email/route.ts`
-- `src/app/api/v1/org/route.ts`
-- `mobile/app/settings/organization.tsx`, `mobile/src/api/settings.test.ts`
-
-### Modified Files
-- `prisma/schema.prisma`, `prisma/seed.ts`
-- `src/app/(app)/settings/service.ts` (seat-limit enforcement) + tests
-- `src/lib/org-provisioning.ts` (emailVerified option) + test
-- `src/app/api/v1/admin/organizations/route.ts` (GET support view) + test
-- `src/app/api/v1/users/route.test.ts`, `src/app/(app)/cross-org-isolation.test.ts` (org plan in fixtures)
-- `mobile/src/api/settings.ts`, `mobile/app/(tabs)/settings.tsx`
-
-### Verification Results
-- ✅ ESLint 0 errors, `next build` 0 type errors, mobile `tsc --noEmit` 0 errors
-- ✅ Web tests **251/251** (was 215; +36 for plans, seat limits, billing/webhook, signup/verify, support view)
-- ✅ Mobile tests **19/19** (was 15; +4 org/plan API client)
-- ✅ **Migration verified on a live DB copy**: applied through 13c, inserted pre-13d orgs, applied the 13d migration — both orgs grandfathered to ENTERPRISE, `emailVerified=true`, `subscriptionStatus=NONE`, all six new columns present, `EmailVerificationToken` table created. Branch deleted afterward.
-
-### Notes / Open Items — external wiring required before go-live
-These are the "needs your real credentials" steps (analogous to the real-DB migration), all cleanly seam'd so only config/one function changes:
-- **Stripe keys**: set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_ENTERPRISE`. Until set, billing endpoints return 503 (inert). Run Stripe **test-mode** end-to-end (checkout + webhook via Stripe CLI) before enabling live.
-- **Email provider**: `src/lib/email.ts` currently logs instead of sending; wire Resend/SES (set `EMAIL_PROVIDER_API_KEY`) so verification emails actually deliver. Until then, signup returns the token only in non-production.
-- **Platform admin**: set `PLATFORM_ADMIN_TOKEN` to enable org creation + the support view (both 404 while unset).
-- **`APP_URL`**: set so checkout success/cancel + verification links point at the real domain.
-- **Email-verification enforcement**: the flow issues + consumes tokens and flips `emailVerified`, but login is **not** hard-gated on it (kept non-breaking). Decide whether to block unverified orgs from specific actions.
-- Carried over from 13a: the migrations still need a dry-run against a branch of the **actual** letitrain production DB (the verification key was scoped to a different Neon project).
-
-### Suggested Next Step
-Wire the Stripe test-mode keys + email provider, onboard LETTHESANDSHINE via the admin org-creation flow (or public signup), and run the Stripe test-mode checkout/webhook loop end-to-end. Phase 13 (a–d) is otherwise complete.
+# Let It Rain — Active Roadmap
 
+Last updated: 2026-07-17
+
+This is the active roadmap for Let It Rain. It should describe:
+
+- what is already true in the repo
+- what is actively open
+- what is intentionally deferred
+
+It must not present planned work as completed work.
+
+## Launch Scope
+
+The current launch target is:
+
+- **internal-team use only**
+- **not** a public beta
+- **not** first paying customers
+
+Deferred until the first-paying-customer phase:
+
+- live Stripe keys and live billing rollout
+- transactional email provider
+- public signup
+- public production-domain rollout
+- any claim that the product is customer-ready for paid external use
+
+## Verified Repo State — 2026-07-17
+
+Verified directly in code and tests on Friday, July 17, 2026:
+
+- web tests: `234/234` passing
+- mobile tests: `22/22` passing
+- password reset and password change both increment `tokenVersion`
+- permissions schema default includes all 11 current permissions
+- the permissions backfill migration already exists
+- signup-token tests already exist
+- CSV formula-injection hardening is implemented and tested
+- mobile order flows updated on 2026-07-17 no longer depend on `MANAGE_ORDERS`
+
+## Phase 14 — Internal-Team Go-Live
+
+Goal: make the current system safe and operational for the project's own internal team.
+
+### Must complete
+
+1. Deploy configuration
+- set `PLATFORM_ADMIN_TOKEN`
+- set the internal `APP_URL`
+- rotate/set a fresh deploy `SESSION_SECRET`
+- decide whether Upstash is required for the internal deployment shape
+
+2. Migration rehearsal
+- run migrations against a Neon branch first
+- verify row counts and permission/backfill expectations
+- only then promote the same migration path to production
+
+3. Launch access policy
+- confirm whether public signup stays available or is admin-token-gated for the internal launch period
+- document the chosen policy in the runbook
+
+4. Manual smoke pass
+- sign in with the relevant internal roles
+- verify web + mobile core flows
+- verify role-based access still matches the intended permission model
+
+### Nice to have, but not launch blockers
+
+- more observability
+- early load testing
+- deeper E2E automation
+
+## Phase 15 — Hardening And Cleanup
+
+Goal: close the remaining correctness and governance gaps without inventing fake urgency.
+
+### Open correctness work
+
+1. Audit-log failure semantics
+- decide the intended behavior when audit writes fail
+- implement that behavior explicitly
+- add tests for the chosen failure mode
+
+2. Permission re-sweep
+- re-audit web and mobile pages/screens for correct permission gates
+- confirm that ownership-based order flows still behave correctly
+- add missing regressions where coverage is weak
+
+3. CI and typechecking
+- add explicit typecheck scripts for web and mobile
+- tighten CI to reflect the actual project expectations
+
+4. Mobile test expansion
+- cover more than the current 4 files / 22 tests
+- focus first on API client, auth context, offline queue, and higher-risk permissioned screens
+
+### Open documentation/governance work
+
+1. Clean up misleading historical docs
+- no file labeled "completion report" should still read like a speculative plan
+- planning artifacts must be clearly marked as planning artifacts
+
+2. Keep handoff docs discoverable
+- `README.md`, `STATUS.md`, and this roadmap must remain enough for a new agent to orient itself
+
+3. Keep docs synced with code
+- changes to behavior require corresponding doc updates in the same change-set
+
+## Phase 16 — First Paying Customer
+
+This phase is deferred until the internal launch is stable.
+
+When it starts, it includes:
+
+1. Live billing
+- Stripe live keys
+- webhook hardening in live conditions
+- billing runbook validation
+
+2. Transactional email
+- real provider wiring
+- verification email production rehearsal
+
+3. Public signup and public launch posture
+- public `APP_URL`
+- public signup policy
+- first real customer path validation
+
+4. Production-grade operational hardening
+- stronger monitoring
+- deeper load testing
+- first-customer incident drills
+
+## Governance Rules
+
+These rules apply to all future work in this repo:
+
+### Rule 1 — Findability
+
+If an agent is told only "work on Let It Rain", it must be able to locate the current truth from:
+
+- `README.md`
+- `STATUS.md`
+- `LETITRAINNEXTSPRIN.md`
+
+### Rule 2 — No stale documentation
+
+All relevant documents must be updated with the work being done. There should be no stale document left behind if behavior changed.
+
+### Rule 3 — Truthfulness
+
+Agents must be truthful. They must not claim a task is complete if it has not actually been completed and verified.
+
+### Rule 4 — No silent assumptions
+
+If something is unclear, risky, or blocked, call it out. Do not convert uncertainty into false certainty.
+
+### Rule 5 — Deferred work stays visible
+
+If a task is deferred, it must be recorded here explicitly rather than disappearing.
+
+### Rule 6 — No file deletion without approval
+
+No file deletion without Shayan's explicit approval.

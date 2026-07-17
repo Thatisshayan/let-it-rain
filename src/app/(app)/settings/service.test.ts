@@ -167,7 +167,17 @@ describe("resetUserPassword", () => {
     expect(hashPassword).toHaveBeenCalledWith("newpassword1");
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: "u2", organizationId: "org-a" },
-      data: { passwordHash: "hashed:newpassword1" },
+      data: { passwordHash: "hashed:newpassword1", tokenVersion: { increment: 1 } },
+    });
+  });
+
+  it("increments tokenVersion when resetting password", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ name: "Bob", email: "bob@x.com" });
+    (prisma.user.update as any).mockResolvedValue({});
+    await resetUserPassword(admin, "u2", { password: "newpassword1" });
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: "u2", organizationId: "org-a" },
+      data: { passwordHash: "hashed:newpassword1", tokenVersion: { increment: 1 } },
     });
   });
 });
@@ -234,5 +244,16 @@ describe("changeOwnPassword", () => {
     (prisma.user.update as any).mockResolvedValue({});
     const result = await changeOwnPassword(admin, { currentPassword: "right", newPassword: "newpassword1" });
     expect(result.ok).toBe(true);
+  });
+
+  it("increments tokenVersion when changing password", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ id: "admin-1", passwordHash: "h" });
+    (verifyPassword as any).mockResolvedValue(true);
+    (prisma.user.update as any).mockResolvedValue({});
+    await changeOwnPassword(admin, { currentPassword: "right", newPassword: "newpassword1" });
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: "admin-1", organizationId: "org-a" },
+      data: { passwordHash: "hashed:newpassword1", tokenVersion: { increment: 1 } },
+    });
   });
 });

@@ -1,8 +1,13 @@
+function escapeFormulaField(field: string): string {
+  return /^[=+\-@\t\r]/.test(field) ? `'${field}` : field;
+}
+
 function escapeCsvField(field: string): string {
-  if (/[",\n\r]/.test(field)) {
-    return `"${field.replace(/"/g, '""')}"`;
+  const safeField = escapeFormulaField(field);
+  if (/[",\n\r]/.test(safeField)) {
+    return `"${safeField.replace(/"/g, '""')}"`;
   }
-  return field;
+  return safeField;
 }
 
 /**

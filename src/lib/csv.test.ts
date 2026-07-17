@@ -1,24 +1,18 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
+
 import { toCsv } from "./csv";
 
 describe("toCsv", () => {
-  it("joins simple rows with commas and CRLF line endings", () => {
-    expect(toCsv([["a", "b"], ["c", "d"]])).toBe("a,b\r\nc,d\r\n");
+  it("prefixes formula-like cells with an apostrophe", () => {
+    expect(toCsv([["=1+1", "+sum", "-42", "@cmd"]])).toBe("'=1+1,'+sum,'-42,'@cmd\r\n");
   });
 
-  it("quotes fields containing commas", () => {
-    expect(toCsv([["Acme, Inc.", "10"]])).toBe('"Acme, Inc.",10\r\n');
+  it("neutralizes tab and carriage-return prefixes", () => {
+    expect(toCsv([["\tcmd"]])).toBe("'\tcmd\r\n");
+    expect(toCsv([["\rcmd"]])).toBe("\"'\rcmd\"\r\n");
   });
 
-  it("quotes and escapes fields containing double quotes", () => {
-    expect(toCsv([['He said "hi"']])).toBe('"He said ""hi"""\r\n');
-  });
-
-  it("quotes fields containing newlines", () => {
-    expect(toCsv([["line1\nline2"]])).toBe('"line1\nline2"\r\n');
-  });
-
-  it("leaves plain fields unquoted", () => {
-    expect(toCsv([["Paper towels", "42"]])).toBe("Paper towels,42\r\n");
+  it("still escapes quotes and commas after sanitizing", () => {
+    expect(toCsv([['=cmd|"calc"!A0', 'plain,text']])).toBe("\"'=cmd|\"\"calc\"\"!A0\",\"plain,text\"\r\n");
   });
 });

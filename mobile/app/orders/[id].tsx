@@ -15,6 +15,7 @@ import {
 import { ApiError } from "../../src/api/client";
 import { enqueueOrderAction } from "../../src/offlineQueue";
 import { useAuth } from "../../src/api/AuthContext";
+import { canManageOrders, hasPermission } from "../../src/lib/permissions";
 import { useTheme } from "../../src/theme";
 import { useToast } from "../../src/toast";
 
@@ -31,7 +32,9 @@ export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const canManage = user?.permissions.includes("MANAGE_ORDERS") ?? false;
+  const canManage = canManageOrders(user);
+  const canAssignDrivers = hasPermission(user, "ASSIGN_DRIVERS");
+  const canCancelOrders = hasPermission(user, "CANCEL_ORDERS");
 
   const { data: order, isLoading, error } = useQuery({
     queryKey: ["order", id],
@@ -40,7 +43,7 @@ export default function OrderDetailScreen() {
   const { data: drivers } = useQuery({
     queryKey: ["orderDrivers"],
     queryFn: fetchDrivers,
-    enabled: canManage,
+    enabled: canAssignDrivers,
   });
 
   const [payments, setPayments] = useState<Record<string, { cash: string; interac: string }>>({});
@@ -151,7 +154,7 @@ export default function OrderDetailScreen() {
         </View>
       ))}
 
-      {canManage && isActive && (
+      {canAssignDrivers && isActive && (
         <>
           <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Driver</Text>
           <View style={styles.driverRow}>
@@ -174,7 +177,7 @@ export default function OrderDetailScreen() {
           </View>
         </>
       )}
-      {!canManage && order.driver && (
+      {!canAssignDrivers && order.driver && (
         <Text style={{ color: theme.mutedForeground }}>Assigned to {order.driver.name}</Text>
       )}
 
@@ -221,7 +224,7 @@ export default function OrderDetailScreen() {
         </>
       )}
 
-      {canManage && isActive && (
+      {canCancelOrders && isActive && (
         <Pressable style={[styles.buttonSecondary, { borderColor: theme.border }]} onPress={onCancel} disabled={busy}>
           <Text style={{ color: theme.destructive }}>Cancel order</Text>
         </Pressable>

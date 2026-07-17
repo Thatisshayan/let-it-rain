@@ -16,7 +16,7 @@ export default function NewOrderScreen() {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const { user: session } = useAuth();
-  const canManageOrders = hasPermission(session, "MANAGE_ORDERS");
+  const canCreateOrders = hasPermission(session, "CREATE_ORDERS");
 
   const { data: items } = useQuery({ queryKey: ["items", "", false], queryFn: () => fetchItems() });
 
@@ -28,7 +28,7 @@ export default function NewOrderScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  if (!canManageOrders) {
+  if (!canCreateOrders) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <Text style={{ color: theme.destructive }}>You don&apos;t have permission to create orders.</Text>

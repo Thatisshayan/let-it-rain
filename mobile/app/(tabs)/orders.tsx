@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchOrders, type Order, type OrderStatus } from "../../src/api/orders";
 import { useAuth } from "../../src/api/AuthContext";
+import { canManageOrders, hasPermission } from "../../src/lib/permissions";
 import { useTheme } from "../../src/theme";
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
@@ -17,7 +18,8 @@ export default function OrdersScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const canManage = user?.permissions.includes("MANAGE_ORDERS") ?? false;
+  const canManage = canManageOrders(user);
+  const canCreateOrders = hasPermission(user, "CREATE_ORDERS");
 
   const { data: orders, isLoading, isRefetching, error, refetch } = useQuery({
     queryKey: ["orders"],
@@ -35,7 +37,7 @@ export default function OrdersScreen() {
     <View style={[styles.container, { paddingTop: insets.top + 16, backgroundColor: theme.background }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.foreground }]}>Orders</Text>
-        {canManage && (
+        {canCreateOrders && (
           <Pressable style={[styles.newButton, { backgroundColor: theme.primary }]} onPress={() => router.push("/orders/new")}>
             <Text style={[styles.newButtonText, { color: theme.primaryForeground }]}>+ New</Text>
           </Pressable>

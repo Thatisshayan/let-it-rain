@@ -1,4 +1,5 @@
 import { apiFetch } from "./client";
+import { PERMISSIONS } from "../lib/permissions";
 
 export type UserRow = {
   id: string;
@@ -87,17 +88,4 @@ export async function startCheckout(plan: "PRO" | "ENTERPRISE"): Promise<{ url: 
   return apiFetch("/api/v1/billing/checkout", { method: "POST", body: JSON.stringify({ plan }) });
 }
 
-export const ALL_PERMISSIONS = [
-  "MANAGE_USERS",
-  "MANAGE_ORDERS",
-  "DELETE_ITEMS",
-  "EDIT_ITEMS",
-  "ADJUST_STOCK",
-  "CREATE_ORDERS",
-  "ASSIGN_DRIVERS",
-  "CANCEL_ORDERS",
-  "VIEW_REPORTS",
-  "VIEW_COSTS",
-  "VIEW_AUDIT_LOG",
-  "MANAGE_SETTINGS",
-] as const;
+export const ALL_PERMISSIONS = PERMISSIONS;

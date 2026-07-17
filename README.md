@@ -7,6 +7,19 @@ per-user permissions, browse activity on a calendar, and pull lean accounting
 reports (revenue, COGS, profit, inventory valuation) — from a desktop browser
 or a phone.
 
+## Start Here
+
+If you're new to this repo, read these first:
+
+1. [`STATUS.md`](STATUS.md) — current verified state and repo rules
+2. [`LETITRAINNEXTSPRIN.md`](LETITRAINNEXTSPRIN.md) — active roadmap
+3. [`RUNBOOK-INTERNAL-LAUNCH.md`](RUNBOOK-INTERNAL-LAUNCH.md) — launch operations for the internal-team phase
+
+As of **2026-07-17**, the current verified test state is:
+
+- web: `234/234` passing
+- mobile: `22/22` passing
+
 ## Contents
 
 - [Apps in this repo](#apps-in-this-repo)
@@ -140,17 +153,24 @@ and troubleshooting — lives in [`mobile/README.md`](mobile/README.md).
 
 ## Testing
 
+Web / API:
+
 ```bash
 npm test
 ```
 
-Runs the full Vitest suite for the web app and API: stock-movement math
-(`src/app/(app)/items/movement.ts`), custom-field parsing, the shared service modules
-(`items/service.ts`, `settings/service.ts`) covering every permission check and
-self-protection guard, and every `/api/v1/*` Route Handler (auth, permission
-enforcement, validation, and success paths). The mobile app has no automated test suite
-of its own — it's a thin client over the already-tested API, verified manually via
-Expo Go.
+Mobile:
+
+```bash
+npm --prefix mobile test
+```
+
+The root Vitest suite covers the web app and API: stock-movement math
+(`src/app/(app)/items/movement.ts`), custom-field parsing, shared service modules,
+and `/api/v1/*` route handlers.
+
+The mobile app also has an automated Vitest suite now. It is still much smaller than
+the web suite, but it exists and should be kept green alongside the web tests.
 
 ## Data model
 
@@ -188,10 +208,9 @@ and every `/api/v1` Route Handler that mutates data. Permissions (11 in total):
 | `VIEW_AUDIT_LOG` | Read the system audit log (admin "who did what") |
 | `MANAGE_SETTINGS` | (Reserved — for a future Settings → App settings tab) |
 
-The three order perms replace a legacy `MANAGE_ORDERS` umbrella that still exists in the
-schema during the post-Phase 1 migration window; new grants should use the three. See
-[Phase 1 — Completion Report](./LETITRAINNEXTSPRIN.md#phase-1--completion-report-2026-07-12)
-in the sprint doc and `scripts/permissions-migration/migrate.ts` for the migration script.
+The legacy `MANAGE_ORDERS` umbrella is no longer the active model. Order access is now
+expressed through the three explicit permissions above plus driver ownership rules. The
+historical migration logic lives in `scripts/permissions-migration/migrate.ts`.
 
 An order's **assigned driver** is a separate, non-permission authorization path: they can
 act on that one order (mark it out-for-delivery/delivered) without holding
@@ -250,9 +269,10 @@ direct URL or API hit still gets `403` from the API layer.
 - Every signed-in user can edit their own name and change their own password.
 
 ### Orders (driver deliveries) (web + mobile)
-- `MANAGE_ORDERS` holders create an order for a named customer (name, optional address/
-  phone/notes) with one or more line items, and assign a driver.
-- The assigned driver — without needing `MANAGE_ORDERS` — marks their own order
+- Users with `CREATE_ORDERS` create orders.
+- Users with `ASSIGN_DRIVERS` assign or reassign drivers.
+- Users with `CANCEL_ORDERS` cancel orders.
+- The assigned driver — without needing any of those three permissions — marks their own order
   out-for-delivery, then delivered.
 - Marking delivered captures optional per-line-item Cash/Interac payment, exactly like a
   manual stock removal: whenever a line item's payment is greater than `0`, it becomes a
