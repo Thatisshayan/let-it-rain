@@ -9,6 +9,8 @@ import {
   type OrgInfo,
 } from "../../src/api/settings";
 import { ApiError } from "../../src/api/client";
+import { useAuth } from "../../src/api/AuthContext";
+import { hasPermission } from "../../src/lib/permissions";
 import { useTheme } from "../../src/theme";
 
 const SUBSCRIPTION_LABEL: Record<OrgInfo["subscriptionStatus"], string> = {
@@ -21,6 +23,8 @@ const SUBSCRIPTION_LABEL: Record<OrgInfo["subscriptionStatus"], string> = {
 
 export default function OrganizationScreen() {
   const theme = useTheme();
+  const { user } = useAuth();
+  const canManageSettings = hasPermission(user, "MANAGE_SETTINGS");
   const [loading, setLoading] = useState(true);
   const [info, setInfo] = useState<OrgInfo | null>(null);
   const [businessName, setBusinessName] = useState("");
@@ -30,6 +34,10 @@ export default function OrganizationScreen() {
   const [upgrading, setUpgrading] = useState(false);
 
   useEffect(() => {
+    if (!canManageSettings) {
+      setLoading(false);
+      return;
+    }
     (async () => {
       try {
         const [settings, orgInfo] = await Promise.all([fetchOrgSettings(), fetchOrgInfo()]);
@@ -42,7 +50,15 @@ export default function OrganizationScreen() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [canManageSettings]);
+
+  if (!canManageSettings) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <Text style={{ color: theme.destructive }}>You don&apos;t have permission to manage organization settings.</Text>
+      </View>
+    );
+  }
 
   async function save() {
     setError(null);

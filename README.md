@@ -18,7 +18,7 @@ If you're new to this repo, read these first:
 As of **2026-07-17**, the current verified test state is:
 
 - web: `236/236` passing
-- mobile: `22/22` passing
+- mobile: `25/25` passing
 
 ## Contents
 
@@ -259,6 +259,10 @@ access is no longer a default. Every page that shows the underlying data
 (`Activity`, `Reports`, the item detail's cost block, the Settings → Audit log tab) checks
 the permission server-side and renders a "permission denied" state if missing — so a
 direct URL or API hit still gets `403` from the API layer.
+
+On mobile, the direct-route screens for creating/editing items, adjusting stock, and
+organization settings now mirror that pattern with explicit local permission-denied
+states instead of only relying on a later API `403`.
 
 ## Features
 

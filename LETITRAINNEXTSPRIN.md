@@ -31,7 +31,7 @@ Deferred until the first-paying-customer phase:
 Verified directly in code and tests on Friday, July 17, 2026:
 
 - web tests: `236/236` passing
-- mobile tests: `22/22` passing
+- mobile tests: `25/25` passing
 - password reset and password change both increment `tokenVersion`
 - permissions schema default includes all 11 current permissions
 - the permissions backfill migration already exists
@@ -40,6 +40,7 @@ Verified directly in code and tests on Friday, July 17, 2026:
 - mobile order flows updated on 2026-07-17 no longer depend on `MANAGE_ORDERS`
 - explicit web/mobile `typecheck` scripts exist, and CI runs them
 - audit-covered user/session mutations and order lifecycle writes fail closed atomically
+- web/mobile permission re-sweep completed; direct-route mobile permission gaps were closed
 
 ## Phase 14 — Internal-Team Go-Live
 
@@ -79,13 +80,8 @@ Goal: close the remaining correctness and governance gaps without inventing fake
 
 ### Open correctness work
 
-1. Permission re-sweep
-- re-audit web and mobile pages/screens for correct permission gates
-- confirm that ownership-based order flows still behave correctly
-- add missing regressions where coverage is weak
-
-2. Mobile test expansion
-- cover more than the current 4 files / 22 tests
+1. Mobile test expansion
+- cover more than the current 5 files / 25 tests
 - focus first on API client, auth context, offline queue, and higher-risk permissioned screens
 
 ### Open documentation/governance work

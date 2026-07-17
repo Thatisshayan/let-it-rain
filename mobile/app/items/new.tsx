@@ -24,7 +24,16 @@ export default function NewItemScreen() {
   const [submitting, setSubmitting] = useState(false);
   const queryClient = useQueryClient();
 
+  const canEditItems = hasPermission(session, "EDIT_ITEMS");
   const canViewCosts = hasPermission(session, "VIEW_COSTS");
+
+  if (!canEditItems) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <Text style={{ color: theme.destructive }}>You don&apos;t have permission to create items.</Text>
+      </View>
+    );
+  }
 
   async function onSubmit() {
     setError(null);

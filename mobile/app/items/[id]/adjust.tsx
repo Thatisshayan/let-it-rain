@@ -5,6 +5,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { adjustStock } from "../../../src/api/items";
 import { ApiError } from "../../../src/api/client";
+import { useAuth } from "../../../src/api/AuthContext";
+import { hasPermission } from "../../../src/lib/permissions";
 import { useTheme } from "../../../src/theme";
 import { useToast } from "../../../src/toast";
 
@@ -13,6 +15,7 @@ const TYPES = ["RECEIVE", "REMOVE", "ADJUST"] as const;
 export default function AdjustStockScreen() {
   const theme = useTheme();
   const toast = useToast();
+  const { user: session } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [type, setType] = useState<(typeof TYPES)[number]>("RECEIVE");
   const [amount, setAmount] = useState("");
@@ -22,6 +25,15 @@ export default function AdjustStockScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const queryClient = useQueryClient();
+  const canAdjustStock = hasPermission(session, "ADJUST_STOCK");
+
+  if (!canAdjustStock) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <Text style={{ color: theme.destructive }}>You don&apos;t have permission to adjust stock.</Text>
+      </View>
+    );
+  }
 
   const total = useMemo(
     () => (Number(cashAmount) || 0) + (Number(interacAmount) || 0),

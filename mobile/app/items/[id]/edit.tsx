@@ -14,10 +14,20 @@ export default function EditItemScreen() {
   const theme = useTheme();
   const { user: session } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const canEditItems = hasPermission(session, "EDIT_ITEMS");
   const { data, isLoading, error: loadError } = useQuery({
     queryKey: ["item", id],
     queryFn: () => fetchItem(id),
+    enabled: canEditItems,
   });
+
+  if (!canEditItems) {
+    return (
+      <View style={[styles.padded, { backgroundColor: theme.background }]}>
+        <Text style={{ color: theme.destructive }}>You don&apos;t have permission to edit items.</Text>
+      </View>
+    );
+  }
 
   if (isLoading)
     return <Text style={[styles.padded, { color: theme.foreground, backgroundColor: theme.background }]}>Loading...</Text>;

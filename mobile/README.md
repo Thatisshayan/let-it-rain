@@ -164,7 +164,7 @@ still trusts the bearer token regardless of Face ID state, same as before.
 | Dashboard | `/dashboard` | signed in (landing screen after login) |
 | Items list | `/items` | signed in |
 | Item detail | `/items/:id` | signed in (cost/price fields hidden if no `VIEW_COSTS`) |
-| New item | `/items/new` | `EDIT_ITEMS` (enforced server-side; the screen itself doesn't hide the link) |
+| New item | `/items/new` | `EDIT_ITEMS` |
 | Edit item | `/items/:id/edit` | `EDIT_ITEMS` |
 | Adjust stock | `/items/:id/adjust` | `ADJUST_STOCK` |
 | Orders list | `/orders` | signed in (role-scoped: all orders with any order-management perm, else only assigned) |
@@ -173,6 +173,7 @@ still trusts the bearer token regardless of Face ID state, same as before.
 | Activity calendar | `/activity` | signed in (driver-scoped unless caller holds order-management perm) |
 | Reports | `/reports` | `VIEW_REPORTS` (tab hidden entirely if missing) |
 | Settings | `/settings` | signed in |
+| Organization & plan | `/settings/organization` | `MANAGE_SETTINGS` |
 | Users list | `/settings/users` | `MANAGE_USERS` |
 | New user | `/settings/users/new` | `MANAGE_USERS` |
 | User detail | `/settings/users/:id` | `MANAGE_USERS` |
@@ -181,6 +182,9 @@ still trusts the bearer token regardless of Face ID state, same as before.
 Permission checks are always enforced by the API — the screens hide/show links based on
 the signed-in user's `permissions` as a UX convenience, but attempting a
 disallowed action always fails server-side with `403` regardless of what the UI shows.
+The highest-risk direct-route screens (`/items/new`, `/items/:id/edit`,
+`/items/:id/adjust`, `/settings/organization`) now also render explicit local
+permission-denied states before any mutation attempt.
 
 ## Offline queue (order delivery actions)
 
@@ -217,9 +221,10 @@ Useful after a device loss or "I forgot to sign out somewhere."
   doesn't exist anywhere in this stack yet.
 - **No iOS Home Screen widget.** Would require a native Xcode widget extension target,
   which Expo's managed workflow can only add via an unofficial config plugin.
-- **No automated test suite** was a Phase 11 gap. It now has one: 6 vitest tests
-  (`src/__tests__/index.test.tsx`) covering auth flow, protected routes, accessibility
-  roles, navigation, error handling, and theme mode switching — run via `npm test`.
+- **No automated test suite** was a Phase 11 gap. It now has one: 25 vitest tests
+  across 5 files, covering JWT utilities, offline queue behavior, org settings/plan API
+  calls, permission helpers, and mobile API-client auth/error handling — run via
+  `npm test`.
 - **No error monitoring** was a Phase 11 gap. It now has [Sentry](https://sentry.io/)
   integrated via `@sentry/react-native` + `sentry-expo` plugin, initialized at app
   startup (`src/sentry.ts`) with API breadcrumbs logged in `src/api/client.ts`.

@@ -5,14 +5,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useAuth } from "../../src/api/AuthContext";
 import { getFaceIdEnabled, setFaceIdEnabled } from "../../src/api/client";
+import { hasPermission } from "../../src/lib/permissions";
 import { useTheme } from "../../src/theme";
 
 export default function SettingsScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
-  const canManageUsers = user?.permissions.includes("MANAGE_USERS");
-  const canManageSettings = user?.permissions.includes("MANAGE_SETTINGS");
+  const canManageUsers = hasPermission(user, "MANAGE_USERS");
+  const canManageSettings = hasPermission(user, "MANAGE_SETTINGS");
   const [faceIdOn, setFaceIdOn] = useState(false);
   const [faceIdAvailable, setFaceIdAvailable] = useState(false);
 
