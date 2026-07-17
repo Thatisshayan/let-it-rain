@@ -25,6 +25,7 @@ vi.mock("@/lib/prisma", () => ({
           update: vi.fn(),
         },
         movement: { create: vi.fn() },
+        auditLog: { create: vi.fn() },
       })
     ),
   },
@@ -42,6 +43,7 @@ async function tokenFor(userId: string, permissions: string[]) {
     name: "Ada",
     permissions,
     active: true,
+    organizationId: "org-1",
   });
   return new SignJWT({ userId, email: "a@b.com", name: "Ada", permissions })
     .setProtectedHeader({ alg: "HS256" })

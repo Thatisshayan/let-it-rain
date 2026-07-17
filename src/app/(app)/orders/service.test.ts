@@ -38,7 +38,10 @@ const driver = {
   organizationId: "org-1",
 };
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  (prisma.$transaction as any).mockImplementation(async (fn: any) => fn(prisma));
+});
 
 describe("createOrder", () => {
   it("rejects without CREATE_ORDERS permission", async () => {
@@ -67,6 +70,9 @@ describe("createOrder", () => {
     } as any);
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.orderId).toBe("o1");
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ action: "ORDER_CREATED", orderId: "o1" }),
+    });
   });
 });
 
@@ -82,6 +88,9 @@ describe("assignDriver", () => {
     (prisma.user.findUnique as any).mockResolvedValue({ name: "Driver" });
     const result = await assignDriver(manager, "o1", { driverId: "u2" });
     expect(result.ok).toBe(true);
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ action: "ORDER_ASSIGNED", orderId: "o1" }),
+    });
   });
 });
 
@@ -91,10 +100,14 @@ describe("markOutForDelivery", () => {
       id: "o1",
       driverId: "u2",
       status: "PENDING",
+      customerName: "Acme",
     });
     (prisma.order.update as any).mockResolvedValue({});
     const result = await markOutForDelivery(driver, "o1");
     expect(result.ok).toBe(true);
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ action: "ORDER_OUT_FOR_DELIVERY", orderId: "o1" }),
+    });
   });
 
   it("rejects a different, unassigned user without MANAGE_ORDERS", async () => {
@@ -139,6 +152,7 @@ describe("markDelivered", () => {
           update: itemUpdate,
         },
         movement: { create: movementCreate },
+        auditLog: { create: vi.fn() },
       })
     );
 
@@ -193,6 +207,7 @@ describe("markDelivered", () => {
           update: vi.fn(),
         },
         movement: { create: vi.fn() },
+        auditLog: { create: vi.fn() },
       })
     );
 

@@ -6,6 +6,7 @@ vi.mock("@/lib/prisma", () => ({
     organization: { findUnique: vi.fn() },
     auditLog: { create: vi.fn() },
     appConfig: { findUnique: vi.fn(), upsert: vi.fn() },
+    $transaction: vi.fn(),
   },
 }));
 vi.mock("@/lib/password", () => ({
@@ -35,7 +36,10 @@ const admin = {
   organizationId: "org-a",
 };
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  (prisma.$transaction as any).mockImplementation(async (fn: any) => fn(prisma));
+});
 
 describe("createUser", () => {
   it("rejects without MANAGE_USERS", async () => {
@@ -227,6 +231,18 @@ describe("org settings", () => {
         create: expect.objectContaining({ organizationId: "org-a" }),
       })
     );
+  });
+
+  it("fails closed when the org-settings audit write fails", async () => {
+    (prisma.appConfig.upsert as any).mockResolvedValue({});
+    (prisma.auditLog.create as any).mockRejectedValue(new Error("audit unavailable"));
+    await expect(
+      updateOrgSettings(
+        { ...admin, permissions: ["MANAGE_SETTINGS"] },
+        { businessName: "New", defaultLowStock: 3 }
+      )
+    ).rejects.toThrow("audit unavailable");
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
   });
 });
 

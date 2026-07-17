@@ -4,6 +4,7 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     user: { update: vi.fn(), findUnique: vi.fn() },
     auditLog: { create: vi.fn() },
+    $transaction: vi.fn(),
   },
 }));
 
@@ -28,7 +29,10 @@ const other = {
   organizationId: "org-a",
 };
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  (prisma.$transaction as any).mockImplementation(async (fn: any) => fn(prisma));
+});
 
 describe("revokeUserSessions", () => {
   it("self-revoke is always allowed", async () => {
@@ -48,6 +52,14 @@ describe("revokeUserSessions", () => {
     (prisma.user.update as any).mockResolvedValue({});
     const result = await revokeUserSessions(admin, other.userId);
     expect(result.ok).toBe(true);
+  });
+
+  it("fails closed when the audit write fails", async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ id: other.userId });
+    (prisma.user.update as any).mockResolvedValue({});
+    (prisma.auditLog.create as any).mockRejectedValue(new Error("audit unavailable"));
+    await expect(revokeUserSessions(admin, other.userId)).rejects.toThrow("audit unavailable");
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
   });
 
   it("treats an out-of-org target as not found", async () => {

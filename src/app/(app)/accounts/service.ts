@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import type { SessionPayload } from "@/lib/auth";
-import { writeAuditLog } from "@/lib/audit";
+import { writeAuditLogTx } from "@/lib/audit";
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -33,16 +33,18 @@ export async function revokeUserSessions(
   });
   if (!target) return { ok: false, error: "User not found." };
 
-  await prisma.user.update({
-    where: { id: targetUserId, organizationId: actor.organizationId },
-    data: { tokenVersion: { increment: 1 } },
-  });
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: targetUserId, organizationId: actor.organizationId },
+      data: { tokenVersion: { increment: 1 } },
+    });
 
-  await writeAuditLog({
-    actor,
-    action: "USER_TOKEN_VERSION_BUMPED",
-    targetUserId,
-    detail: "All sessions revoked (token version incremented)",
+    await writeAuditLogTx(tx, {
+      actor,
+      action: "USER_TOKEN_VERSION_BUMPED",
+      targetUserId,
+      detail: "All sessions revoked (token version incremented)",
+    });
   });
 
   return { ok: true };

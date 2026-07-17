@@ -12,7 +12,7 @@ import type {
   changeOwnPasswordFormSchema,
   orgSettingsFormSchema,
 } from "./schemas";
-import { writeAuditLog } from "@/lib/audit";
+import { writeAuditLogTx } from "@/lib/audit";
 
 type OrgSettingsInput = z.infer<typeof orgSettingsFormSchema>;
 type CreateUserInput = z.infer<typeof createUserFormSchema>;
@@ -59,16 +59,20 @@ export async function createUser(
   }
 
   const passwordHash = await hashPassword(password);
-  const user = await prisma.user.create({
-    // New users are created in the acting admin's org — never a client-supplied one.
-    data: { name, email, passwordHash, permissions, organizationId: session.organizationId },
-  });
+  const user = await prisma.$transaction(async (tx) => {
+    const createdUser = await tx.user.create({
+      // New users are created in the acting admin's org — never a client-supplied one.
+      data: { name, email, passwordHash, permissions, organizationId: session.organizationId },
+    });
 
-  await writeAuditLog({
-    actor: session,
-    action: "USER_CREATED",
-    targetUserId: user.id,
-    detail: `Created user ${name} (${email}) with permissions: ${permissions.join(", ")}`,
+    await writeAuditLogTx(tx, {
+      actor: session,
+      action: "USER_CREATED",
+      targetUserId: createdUser.id,
+      detail: `Created user ${name} (${email}) with permissions: ${permissions.join(", ")}`,
+    });
+
+    return createdUser;
   });
 
   return { ok: true, userId: user.id };
@@ -91,13 +95,15 @@ export async function updateUserPermissions(
   const oldUser = await prisma.user.findUnique({ where: { id: userId, organizationId: session.organizationId }, select: { name: true, email: true, permissions: true } });
   if (!oldUser) return { ok: false, error: "User not found." };
 
-  await prisma.user.update({ where: { id: userId, organizationId: session.organizationId }, data: { permissions: input.permissions } });
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: userId, organizationId: session.organizationId }, data: { permissions: input.permissions } });
 
-  await writeAuditLog({
-    actor: session,
-    action: "USER_PERMISSIONS_CHANGED",
-    targetUserId: userId,
-    detail: `Updated permissions for ${oldUser?.name} (${oldUser?.email}): ${oldUser?.permissions.join(", ")} -> ${input.permissions.join(", ")}`,
+    await writeAuditLogTx(tx, {
+      actor: session,
+      action: "USER_PERMISSIONS_CHANGED",
+      targetUserId: userId,
+      detail: `Updated permissions for ${oldUser?.name} (${oldUser?.email}): ${oldUser?.permissions.join(", ")} -> ${input.permissions.join(", ")}`,
+    });
   });
 
   return { ok: true };
@@ -118,13 +124,15 @@ export async function setUserActive(
   const oldUser = await prisma.user.findUnique({ where: { id: userId, organizationId: session.organizationId }, select: { name: true, email: true, active: true } });
   if (!oldUser) return { ok: false, error: "User not found." };
 
-  await prisma.user.update({ where: { id: userId, organizationId: session.organizationId }, data: { active } });
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: userId, organizationId: session.organizationId }, data: { active } });
 
-  await writeAuditLog({
-    actor: session,
-    action: active ? "USER_ACTIVATED" : "USER_DEACTIVATED",
-    targetUserId: userId,
-    detail: `${active ? "Activated" : "Deactivated"} user ${oldUser?.name} (${oldUser?.email})`,
+    await writeAuditLogTx(tx, {
+      actor: session,
+      action: active ? "USER_ACTIVATED" : "USER_DEACTIVATED",
+      targetUserId: userId,
+      detail: `${active ? "Activated" : "Deactivated"} user ${oldUser?.name} (${oldUser?.email})`,
+    });
   });
 
   return { ok: true };
@@ -145,13 +153,15 @@ export async function resetUserPassword(
   if (!targetUser) return { ok: false, error: "User not found." };
 
   const passwordHash = await hashPassword(input.password);
-  await prisma.user.update({ where: { id: userId, organizationId: session.organizationId }, data: { passwordHash, tokenVersion: { increment: 1 } } });
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: userId, organizationId: session.organizationId }, data: { passwordHash, tokenVersion: { increment: 1 } } });
 
-  await writeAuditLog({
-    actor: session,
-    action: "USER_PASSWORD_RESET",
-    targetUserId: userId,
-    detail: `Reset password for ${targetUser?.name} (${targetUser?.email})`,
+    await writeAuditLogTx(tx, {
+      actor: session,
+      action: "USER_PASSWORD_RESET",
+      targetUserId: userId,
+      detail: `Reset password for ${targetUser?.name} (${targetUser?.email})`,
+    });
   });
 
   return { ok: true };
@@ -189,20 +199,22 @@ export async function updateOrgSettings(
   // Upsert keyed on the org — creates the row if this org somehow has none yet
   // (e.g. the original tenant whose AppConfig predates provisioning), always
   // scoped so it can never touch another org's config.
-  await prisma.appConfig.upsert({
-    where: { organizationId: session.organizationId },
-    update: { businessName: input.businessName, defaultLowStock: input.defaultLowStock },
-    create: {
-      organizationId: session.organizationId,
-      businessName: input.businessName,
-      defaultLowStock: input.defaultLowStock,
-    },
-  });
+  await prisma.$transaction(async (tx) => {
+    await tx.appConfig.upsert({
+      where: { organizationId: session.organizationId },
+      update: { businessName: input.businessName, defaultLowStock: input.defaultLowStock },
+      create: {
+        organizationId: session.organizationId,
+        businessName: input.businessName,
+        defaultLowStock: input.defaultLowStock,
+      },
+    });
 
-  await writeAuditLog({
-    actor: session,
-    action: "SETTINGS_CHANGED",
-    detail: `Updated org settings (businessName=${input.businessName ?? "—"}, defaultLowStock=${input.defaultLowStock})`,
+    await writeAuditLogTx(tx, {
+      actor: session,
+      action: "SETTINGS_CHANGED",
+      detail: `Updated org settings (businessName=${input.businessName ?? "—"}, defaultLowStock=${input.defaultLowStock})`,
+    });
   });
 
   return { ok: true };

@@ -4,7 +4,7 @@ import { hasPermission } from "@/lib/permissions";
 import type { SessionPayload } from "@/lib/auth";
 import { computeMovement } from "../items/movement";
 import type { CreateOrderInput, AssignDriverInput, DeliverOrderInput } from "./schemas";
-import { writeAuditLog } from "@/lib/audit";
+import { writeAuditLogTx } from "@/lib/audit";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
@@ -30,25 +30,29 @@ export async function createOrder(
     return { ok: false, error: "One or more items in this order no longer exist." };
   }
 
-  const order = await prisma.order.create({
-    data: {
-      organizationId: session.organizationId,
-      customerName: input.customerName,
-      customerAddress: input.customerAddress ?? null,
-      customerPhone: input.customerPhone ?? null,
-      notes: input.notes ?? null,
-      createdById: session.userId,
-      lineItems: {
-        create: input.lineItems.map((li) => ({ itemId: li.itemId, quantity: li.quantity })),
+  const order = await prisma.$transaction(async (tx) => {
+    const createdOrder = await tx.order.create({
+      data: {
+        organizationId: session.organizationId,
+        customerName: input.customerName,
+        customerAddress: input.customerAddress ?? null,
+        customerPhone: input.customerPhone ?? null,
+        notes: input.notes ?? null,
+        createdById: session.userId,
+        lineItems: {
+          create: input.lineItems.map((li) => ({ itemId: li.itemId, quantity: li.quantity })),
+        },
       },
-    },
-  });
+    });
 
-  await writeAuditLog({
-    actor: session,
-    action: "ORDER_CREATED",
-    orderId: order.id,
-    detail: `Created order for ${input.customerName} with ${input.lineItems.length} item(s)`,
+    await writeAuditLogTx(tx, {
+      actor: session,
+      action: "ORDER_CREATED",
+      orderId: createdOrder.id,
+      detail: `Created order for ${input.customerName} with ${input.lineItems.length} item(s)`,
+    });
+
+    return createdOrder;
   });
 
   return { ok: true, orderId: order.id };
@@ -75,13 +79,15 @@ export async function assignDriver(
     if (!driver) return { ok: false, error: "Driver not found." };
   }
 
-  await prisma.order.update({ where: { id: orderId, organizationId: session.organizationId }, data: { driverId: input.driverId } });
+  await prisma.$transaction(async (tx) => {
+    await tx.order.update({ where: { id: orderId, organizationId: session.organizationId }, data: { driverId: input.driverId } });
 
-  await writeAuditLog({
-    actor: session,
-    action: "ORDER_ASSIGNED",
-    orderId,
-    detail: `Assigned driver ${input.driverId} to order for ${order.customerName}`,
+    await writeAuditLogTx(tx, {
+      actor: session,
+      action: "ORDER_ASSIGNED",
+      orderId,
+      detail: `Assigned driver ${input.driverId} to order for ${order.customerName}`,
+    });
   });
 
   return { ok: true };
@@ -105,9 +111,18 @@ export async function markOutForDelivery(session: SessionPayload, orderId: strin
     return { ok: false, error: "Only a pending order can be marked out for delivery." };
   }
 
-  await prisma.order.update({
-    where: { id: orderId, organizationId: session.organizationId },
-    data: { status: "OUT_FOR_DELIVERY", outForDeliveryAt: new Date() },
+  await prisma.$transaction(async (tx) => {
+    await tx.order.update({
+      where: { id: orderId, organizationId: session.organizationId },
+      data: { status: "OUT_FOR_DELIVERY", outForDeliveryAt: new Date() },
+    });
+
+    await writeAuditLogTx(tx, {
+      actor: session,
+      action: "ORDER_OUT_FOR_DELIVERY",
+      orderId,
+      detail: `Marked order for ${order.customerName} out for delivery`,
+    });
   });
   return { ok: true };
 }
@@ -192,6 +207,13 @@ export async function markDelivered(
             data: { status: "DELIVERED", deliveredAt: new Date() },
           });
 
+          await writeAuditLogTx(tx, {
+            actor: session,
+            action: "ORDER_DELIVERED",
+            orderId,
+            detail: `Marked order for ${order.customerName} delivered`,
+          });
+
           return { error: undefined } as const;
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
@@ -235,14 +257,11 @@ export async function cancelOrder(session: SessionPayload, orderId: string): Pro
             },
           });
 
-          await tx.auditLog.create({
-            data: {
-              organizationId: session.organizationId,
-              actorId: session.userId,
-              action: "ORDER_CANCELLED",
-              orderId,
-              detail: `Cancelled order for ${order.customerName}`,
-            },
+          await writeAuditLogTx(tx, {
+            actor: session,
+            action: "ORDER_CANCELLED",
+            orderId,
+            detail: `Cancelled order for ${order.customerName}`,
           });
 
           return { error: undefined } as const;

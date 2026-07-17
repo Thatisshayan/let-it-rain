@@ -17,7 +17,7 @@ If you're new to this repo, read these first:
 
 As of **2026-07-17**, the current verified test state is:
 
-- web: `234/234` passing
+- web: `236/236` passing
 - mobile: `22/22` passing
 
 ## Contents
@@ -292,6 +292,9 @@ direct URL or API hit still gets `403` from the API layer.
   no separate delivery-accounting system. All line items in a delivery are decremented in
   one all-or-nothing `SERIALIZABLE` transaction — if any single item can't be fulfilled
   (e.g. insufficient stock), nothing is written.
+- Order lifecycle audit rows are recorded for create, assign, out-for-delivery, deliver,
+  and cancel, and those audited mutations commit atomically with their audit entry rather
+  than succeeding first and failing audit later.
 - Mobile has an offline queue for the out-for-delivery/delivered actions specifically
   (not the whole app): a driver can confirm a delivery with no signal, and it syncs
   automatically once back online. See [`mobile/README.md`](mobile/README.md) for how.
@@ -326,10 +329,12 @@ direct URL or API hit still gets `403` from the API layer.
 ### Audit log (web)
 - Settings → Audit log tab (`VIEW_AUDIT_LOG`) — every user/perms/session change and
   every order lifecycle event is recorded with actor, target, timestamp, and a
-  human-readable detail via `src/lib/audit.ts` (`writeAuditLog`), called from the user and
-  order service layers. The web UI is a server-rendered list (paginated via `?page=`/`?pageSize=`
-  query params on the underlying query); the mobile app does not currently expose
-  Audit log.
+  human-readable detail via `src/lib/audit.ts` (`writeAuditLog` / `writeAuditLogTx`),
+  called from the user and order service layers. Audit-covered mutations now write
+  their audit row inside the same transaction, so an audit failure aborts the mutation
+  instead of leaving a committed change with no audit trail. The web UI is a
+  server-rendered list (paginated via `?page=`/`?pageSize=` query params on the
+  underlying query); the mobile app does not currently expose Audit log.
 
 ### Items — costs visible only with `VIEW_COSTS`
 - `unitHV_COSTS` (`unitCost`/`unitPrice`/`stockValue`) only renders in the item detail
@@ -405,6 +410,10 @@ its cookie-based redirect-to-login behavior — each `/api/v1` route does its ow
 - **Historical accuracy in reports:** sale movements snapshot `unitPriceAtTime` and
   `unitCostAtTime` at the moment of the sale, so editing an item's current price/cost
   later doesn't retroactively change past revenue/profit figures.
+- **Audit-log semantics:** user-management/session actions and order lifecycle writes that
+  are supposed to be audited now fail closed. Their primary mutation and audit row are
+  written in the same transaction, so a broken audit insert cannot silently leave behind
+  an unaudited committed change.
 - **Mobile money formatting:** the mobile Reports screen uses a small manual `$X,XXX.XX`
   formatter instead of `toLocaleString('en-US', {style:'currency'})`, since some
   React Native JS engines (Hermes on older SDKs) ship a stripped-down `Intl`

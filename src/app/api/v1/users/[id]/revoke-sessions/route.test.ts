@@ -8,6 +8,7 @@ vi.mock("@/lib/prisma", () => ({
       update: vi.fn(),
     },
     auditLog: { create: vi.fn() },
+    $transaction: vi.fn(),
   },
 }));
 
@@ -24,6 +25,7 @@ async function tokenFor(permissions: string[]) {
     permissions,
     active: true,
     tokenVersion: 0,
+    organizationId: "org-a",
   });
   return new SignJWT({
     userId: "u1",
@@ -40,6 +42,7 @@ async function tokenFor(permissions: string[]) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  (prisma.$transaction as any).mockImplementation(async (fn: any) => fn(prisma));
   process.env.SESSION_SECRET = SECRET;
 });
 

@@ -6,6 +6,7 @@ vi.mock("@/lib/prisma", () => ({
     user: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), count: vi.fn() },
     organization: { findUnique: vi.fn() },
     auditLog: { create: vi.fn() },
+    $transaction: vi.fn(),
   },
 }));
 vi.mock("@/lib/password", () => ({
@@ -41,6 +42,7 @@ async function tokenFor(permissions: string[]) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  (prisma.$transaction as any).mockImplementation(async (fn: any) => fn(prisma));
   process.env.SESSION_SECRET = SECRET;
 });
 

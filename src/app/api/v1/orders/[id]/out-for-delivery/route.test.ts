@@ -5,6 +5,8 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     order: { findUnique: vi.fn(), update: vi.fn() },
     user: { findUnique: vi.fn() },
+    auditLog: { create: vi.fn() },
+    $transaction: vi.fn(),
   },
 }));
 
@@ -20,6 +22,7 @@ async function tokenFor(userId: string, permissions: string[]) {
     name: "Ada",
     permissions,
     active: true,
+    organizationId: "org-1",
   });
   return new SignJWT({ userId, email: "a@b.com", name: "Ada", permissions })
     .setProtectedHeader({ alg: "HS256" })
@@ -30,12 +33,13 @@ async function tokenFor(userId: string, permissions: string[]) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  (prisma.$transaction as any).mockImplementation(async (fn: any) => fn(prisma));
   process.env.SESSION_SECRET = SECRET;
 });
 
 describe("POST /api/v1/orders/:id/out-for-delivery", () => {
   it("allows the assigned driver", async () => {
-    (prisma.order.findUnique as any).mockResolvedValue({ id: "o1", driverId: "u2", status: "PENDING" });
+    (prisma.order.findUnique as any).mockResolvedValue({ id: "o1", driverId: "u2", status: "PENDING", customerName: "Acme" });
     (prisma.order.update as any).mockResolvedValue({});
     const token = await tokenFor("u2", []);
     const res = await POST(
