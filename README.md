@@ -17,8 +17,8 @@ If you're new to this repo, read these first:
 
 As of **2026-07-17**, the current verified test state is:
 
-- web: `236/236` passing
-- mobile: `84/84` passing
+- web: `237/237` passing
+- mobile: `110/110` passing
 
 ## Contents
 
@@ -74,13 +74,26 @@ The mobile app is a separate Node project in `mobile/` that talks to the API ove
 
    ```bash
    DATABASE_URL="postgresql://user:password@host:5432/dbname"
+   DIRECT_URL="postgresql://user:password@host:5432/dbname?sslmode=require"
    SESSION_SECRET="a long random string used to sign session JWTs"
+   APP_URL="http://localhost:3000"
    ```
 
    (`npx create-db` can provision a free hosted Postgres instance if you don't
    have one.) `SESSION_SECRET` signs both the web app's session cookie **and**
    the mobile API's Bearer tokens — it's the same secret, the same `jose`
    signing logic, just delivered two different ways (cookie vs. header).
+   `APP_URL` is the canonical base URL used for absolute verification/billing
+   links. `DIRECT_URL` is recommended for Prisma migrations against Neon.
+
+   Optional launch/runtime envs:
+
+   ```bash
+   PLATFORM_ADMIN_TOKEN="long-random-secret"   # enables /api/v1/admin/organizations
+   PUBLIC_SIGNUP_ENABLED="false"               # keep unset/false for internal-only launch
+   # UPSTASH_REDIS_REST_URL="https://your-redis.upstash.io"
+   # UPSTASH_REDIS_REST_TOKEN="your-token"
+   ```
 
 3. Apply the database schema:
 
@@ -184,8 +197,11 @@ profile/password/session flows, create-user permission/mutation flows, users-lis
 permission/query/navigation flows, user-detail permission/mutation flows, order-detail
 mutation/offline-queue flows, new-order validation/mutation flows, item-detail
 loading/export/navigation flows, adjust-stock permission/mutation flows, orders-list
-role/error/navigation flows, organization-settings UI flows, and permission helpers,
-and it should be kept green alongside the web tests.
+role/error/navigation flows, settings-tab permission/Face ID/sign-out flows,
+organization-settings UI flows, reports tab permission/month-navigation flows,
+dashboard card/refresh/navigation flows, activity month/day drill-down flows,
+items-list query/filter/export/navigation flows, and permission helpers, and it
+should be kept green alongside the web tests.
 
 The web typecheck uses the Next 16-supported flow `next typegen && tsc --noEmit`,
 and clears stale `.next/dev/types` first so a corrupted local dev artifact cannot
@@ -381,6 +397,7 @@ Quick summary of what's exposed:
 | Area | Endpoints |
 |---|---|
 | Auth | `POST /api/v1/auth/login`, `POST /api/v1/auth/logout` |
+| Signup | `POST /api/v1/signup`, `POST /api/v1/auth/verify-email` |
 | Items | `GET/POST /api/v1/items`, `GET/PATCH/DELETE /api/v1/items/:id`, `POST /api/v1/items/:id/movements` |
 | Movements CSV | `GET /api/v1/items/export.csv`, `GET /api/v1/items/:id/movements/export.csv` |
 | Users | `GET/POST /api/v1/users`, `PATCH /api/v1/users/:id/permissions`, `PATCH /api/v1/users/:id/active`, `POST /api/v1/users/:id/reset-password` |
@@ -394,6 +411,11 @@ Quick summary of what's exposed:
 `src/proxy.ts` (the route-protection middleware) exempts everything under `/api/v1` from
 its cookie-based redirect-to-login behavior — each `/api/v1` route does its own
 `verifyBearerToken` check instead, since it has no cookie to check in the first place.
+
+For internal launch posture, public self-serve signup is now **disabled by default in
+production** unless `PUBLIC_SIGNUP_ENABLED=true` is set explicitly. The separate
+platform-admin tenant bootstrap endpoint (`/api/v1/admin/organizations`) remains gated
+behind `PLATFORM_ADMIN_TOKEN`.
 
 ## Notable implementation details
 

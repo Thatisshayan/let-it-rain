@@ -623,3 +623,7 @@ If you're extending this API, follow the existing pattern:
    pattern in any existing `route.test.ts` file under `src/app/api/v1/`.
 5. Update this document and, if the mobile app should use the new endpoint, add a typed
    wrapper in `mobile/src/api/<feature>.ts`.
+> Internal-launch posture as of 2026-07-17: `POST /api/v1/signup` is disabled by
+> default in production unless `PUBLIC_SIGNUP_ENABLED=true` is set explicitly.
+> The separate operator bootstrap route `/api/v1/admin/organizations` remains
+> gated by `PLATFORM_ADMIN_TOKEN`.

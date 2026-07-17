@@ -21,8 +21,8 @@ As of **Friday, July 17, 2026**, the codebase is functionally at **Phase 13 comp
 
 Verified on 2026-07-17:
 
-- web tests are green: `236/236`
-- mobile tests are green: `84/84`
+- web tests are green: `237/237`
+- mobile tests are green: `110/110`
 - password reset/change increments `tokenVersion`
 - CSV formula-injection hardening is implemented
 - mobile no longer relies on the legacy `MANAGE_ORDERS` permission in the updated order flows
@@ -60,7 +60,7 @@ These items were previously described as future work in some docs, but are alrea
 
 ### Phase 15 — Hardening
 
-- Expand mobile automated coverage beyond the current 20 files / 84 tests.
+- Expand mobile automated coverage beyond the current 27 files / 110 tests.
 - Add Stripe webhook isolation and negative-path tests when billing work resumes.
 
 ### Phase 14 — Internal-Team Launch
@@ -72,7 +72,10 @@ These items were previously described as future work in some docs, but are alrea
   - Upstash envs if multi-instance rate limiting matters
 - Rehearse migrations on a Neon branch before production.
 - Run end-to-end manual smoke testing by role on web and mobile.
-- Lock public signup appropriately for internal launch if that remains the launch policy.
+- Internal-launch-safe signup posture is now repo-backed:
+  - production public signup is disabled by default unless `PUBLIC_SIGNUP_ENABLED=true`
+  - `PLATFORM_ADMIN_TOKEN` still gates the separate admin org-provisioning path
+  - the remaining operational task is to set the intended deploy env values explicitly
 
 ### Phase 16 — Deferred
 

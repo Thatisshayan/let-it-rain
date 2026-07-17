@@ -24,7 +24,17 @@ const bodySchema = z.object({
   }),
 });
 
+function isPublicSignupEnabled() {
+  const configured = process.env.PUBLIC_SIGNUP_ENABLED;
+  if (configured != null) return configured === "true";
+  return process.env.NODE_ENV !== "production";
+}
+
 export async function POST(req: Request) {
+  if (!isPublicSignupEnabled()) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
+
   const ip = getClientIp(req.headers);
   const allowed = await checkRateLimit(`signup:${ip}`, SIGNUP_LIMIT, SIGNUP_WINDOW_MS);
   if (!allowed) {

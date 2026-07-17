@@ -13,9 +13,18 @@ const req = () => new Request("http://localhost/api/v1/signup", { method: "POST"
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv("NODE_ENV", "test");
+  vi.unstubAllEnvs();
+  vi.stubEnv("NODE_ENV", "test");
 });
 
 describe("POST /api/v1/signup", () => {
+  it("404s in production when public signup is not explicitly enabled", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const res = await POST(req());
+    expect(res.status).toBe(404);
+    expect(signUpOrganization).not.toHaveBeenCalled();
+  });
+
   it("429s when the IP rate limit is exceeded (abuse protection)", async () => {
     (checkRateLimit as any).mockResolvedValue(false);
     const res = await POST(req());
@@ -41,6 +50,7 @@ describe("POST /api/v1/signup", () => {
 
   it("does not leak the verification token in production", async () => {
     vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("PUBLIC_SIGNUP_ENABLED", "true");
     (checkRateLimit as any).mockResolvedValue(true);
     (signUpOrganization as any).mockResolvedValue({ ok: true, organizationId: "o1", adminUserId: "u1", verificationToken: "raw-token", emailSent: true });
     const res = await POST(req());

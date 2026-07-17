@@ -30,8 +30,8 @@ Deferred until the first-paying-customer phase:
 
 Verified directly in code and tests on Friday, July 17, 2026:
 
-- web tests: `236/236` passing
-- mobile tests: `84/84` passing
+- web tests: `237/237` passing
+- mobile tests: `110/110` passing
 - password reset and password change both increment `tokenVersion`
 - permissions schema default includes all 11 current permissions
 - the permissions backfill migration already exists
@@ -61,8 +61,9 @@ Goal: make the current system safe and operational for the project's own interna
 - only then promote the same migration path to production
 
 3. Launch access policy
-- confirm whether public signup stays available or is admin-token-gated for the internal launch period
-- document the chosen policy in the runbook
+- production public signup is now disabled by default unless `PUBLIC_SIGNUP_ENABLED=true`
+- keep `PLATFORM_ADMIN_TOKEN` for the separate admin-controlled org bootstrap path
+- document the actual deploy-time setting in the runbook
 
 4. Manual smoke pass
 - sign in with the relevant internal roles
@@ -82,7 +83,7 @@ Goal: close the remaining correctness and governance gaps without inventing fake
 ### Open correctness work
 
 1. Mobile test expansion
-- cover more than the current 20 files / 84 tests
+- cover more than the current 27 files / 110 tests
 - focus first on API client, auth context, offline queue, and higher-risk permissioned screens
 
 ### Open documentation/governance work
