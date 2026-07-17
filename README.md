@@ -18,7 +18,7 @@ If you're new to this repo, read these first:
 As of **2026-07-17**, the current verified test state is:
 
 - web: `236/236` passing
-- mobile: `36/36` passing
+- mobile: `39/39` passing
 
 ## Contents
 
