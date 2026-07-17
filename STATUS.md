@@ -22,7 +22,7 @@ As of **Friday, July 17, 2026**, the codebase is functionally at **Phase 13 comp
 Verified on 2026-07-17:
 
 - web tests are green: `236/236`
-- mobile tests are green: `39/39`
+- mobile tests are green: `42/42`
 - password reset/change increments `tokenVersion`
 - CSV formula-injection hardening is implemented
 - mobile no longer relies on the legacy `MANAGE_ORDERS` permission in the updated order flows
@@ -60,7 +60,7 @@ These items were previously described as future work in some docs, but are alrea
 
 ### Phase 15 — Hardening
 
-- Expand mobile automated coverage beyond the current 9 files / 39 tests.
+- Expand mobile automated coverage beyond the current 10 files / 42 tests.
 - Add Stripe webhook isolation and negative-path tests when billing work resumes.
 
 ### Phase 14 — Internal-Team Launch

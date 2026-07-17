@@ -37,7 +37,7 @@ Use these files as the real current sources of truth:
 Directly verified on Friday, July 17, 2026:
 
 - web tests are green: `236/236`
-- mobile tests are green: `39/39`
+- mobile tests are green: `42/42`
 - password reset/change token-version bump is implemented
 - CSV formula hardening is implemented
 - signup-token tests already exist
@@ -51,7 +51,7 @@ Directly verified on Friday, July 17, 2026:
 The real remaining work is described in `LETITRAINNEXTSPRIN.md`, especially:
 
 - internal-team launch wiring
-- mobile coverage expansion beyond the new 9 files / 39 tests baseline
+- mobile coverage expansion beyond the new 10 files / 42 tests baseline
 - cleanup of other stale historical planning/completion docs
 - future first-paying-customer work
 
