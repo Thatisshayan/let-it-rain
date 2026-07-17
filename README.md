@@ -18,7 +18,7 @@ If you're new to this repo, read these first:
 As of **2026-07-17**, the current verified test state is:
 
 - web: `236/236` passing
-- mobile: `51/51` passing
+- mobile: `54/54` passing
 
 ## Contents
 
@@ -180,8 +180,9 @@ and `/api/v1/*` route handlers.
 The mobile app also has an automated Vitest suite now. It is still much smaller than
 the web suite, but it covers JWT helpers, API-client auth/error handling, auth-context
 bootstrap/lock flows, `AuthGate` lock handling, entry/login auth flows, account
-profile/password/session flows, create-user permission/mutation flows, offline queue
-retries, and permission helpers, and it should be kept green alongside the web tests.
+profile/password/session flows, create-user permission/mutation flows, users-list
+permission/query/navigation flows, offline queue retries, and permission helpers, and
+it should be kept green alongside the web tests.
 
 The web typecheck uses the Next 16-supported flow `next typegen && tsc --noEmit`,
 and clears stale `.next/dev/types` first so a corrupted local dev artifact cannot
