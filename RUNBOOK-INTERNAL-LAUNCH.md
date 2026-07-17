@@ -49,29 +49,31 @@ As of 2026-07-17, the verified baseline is:
 
 These items are still operationally open until explicitly completed in the target environment:
 
-1. Set `PLATFORM_ADMIN_TOKEN`.
-2. Set the internal `APP_URL`.
-3. Rotate or set a fresh deploy `SESSION_SECRET`.
-4. Decide whether Upstash is required for the actual internal deployment shape.
-5. Confirm the public-signup posture via `PUBLIC_SIGNUP_ENABLED`.
+1. Verify the already-set `PLATFORM_ADMIN_TOKEN`.
+2. Verify the production `APP_URL`.
+3. Verify the rotated `SESSION_SECRET`.
+4. Verify Upstash rate limiting stays healthy under the actual deployment shape.
+5. Smoke the live public-signup posture via `PUBLIC_SIGNUP_ENABLED=true`.
 
 Record the exact deployed values outside git if they are sensitive. This repo should only
 record that the step was performed, not the secret values themselves.
 
-Recommended internal-launch setting on 2026-07-17:
+Applied production setting on 2026-07-17:
 
-- leave `PUBLIC_SIGNUP_ENABLED` unset or set it to `false`
-- set `PLATFORM_ADMIN_TOKEN` only if operators need the admin org bootstrap route
-- set `APP_URL` to the real internal origin used by email verification and billing redirects
+- `APP_URL=https://let-it-rain-ten.vercel.app`
+- `PUBLIC_SIGNUP_ENABLED=true`
+- `PLATFORM_ADMIN_TOKEN` is set in Vercel production envs
+- `SESSION_SECRET` was rotated in Vercel production envs
+- Upstash Redis REST URL/token are set in Vercel production envs
 
 Example non-secret checklist:
 
 ```text
-APP_URL=https://letitrain-internal.example.com
-PUBLIC_SIGNUP_ENABLED=false
+APP_URL=https://let-it-rain-ten.vercel.app
+PUBLIC_SIGNUP_ENABLED=true
 PLATFORM_ADMIN_TOKEN=set in deploy platform secret store
 SESSION_SECRET=rotated in deploy platform secret store
-UPSTASH_REDIS_REST_URL/TOKEN=set only if running more than one app instance
+UPSTASH_REDIS_REST_URL/TOKEN=set in deploy platform secret store
 ```
 
 ## Migration Rehearsal
@@ -149,13 +151,13 @@ Before internal launch, explicitly choose one of these:
 1. Public signup remains enabled temporarily.
 2. Public signup is gated behind admin-controlled flow for the internal period.
 
-As of 2026-07-17, the repo-backed default is:
+As of 2026-07-17, the repo-backed behavior is:
 
-- production public signup is disabled unless `PUBLIC_SIGNUP_ENABLED=true`
+- production public signup is enabled intentionally on the live Vercel deploy
 - the separate admin org bootstrap endpoint remains gated by `PLATFORM_ADMIN_TOKEN`
 
-If internal launch intentionally keeps public signup open anyway, that must be an explicit
-deploy-time choice and should be recorded in the completion note below.
+This was an explicit deploy-time choice and should remain visible until manual smoke
+proves the path is acceptable.
 
 ## Manual Smoke Pass
 
@@ -197,3 +199,20 @@ with:
 - what remains open, if anything
 
 Until that note exists, this runbook should be treated as **prepared but not executed**.
+
+### 2026-07-17 Partial Execution Note
+
+- Environment: Vercel production `https://let-it-rain-ten.vercel.app`
+- Performed by: Codex with user-provided Vercel and Upstash credentials
+- Completed:
+  - set `APP_URL`
+  - set `PUBLIC_SIGNUP_ENABLED=true`
+  - rotate `SESSION_SECRET`
+  - set `PLATFORM_ADMIN_TOKEN`
+  - provision Upstash Redis and set `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`
+  - deploy production and verify `/login` returns `200`
+  - verify `/api/v1/admin/organizations` returns `401` without token, proving the gate is active
+- Still open:
+  - Neon branch migration rehearsal
+  - end-to-end manual smoke pass on live web/mobile flows
+  - verification of the live public-signup flow itself

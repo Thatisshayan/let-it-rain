@@ -66,16 +66,15 @@ These items were previously described as future work in some docs, but are alrea
 ### Phase 14 — Internal-Team Launch
 
 - Set internal deploy configuration:
-  - `PLATFORM_ADMIN_TOKEN`
-  - internal `APP_URL`
-  - fresh deploy `SESSION_SECRET`
-  - Upstash envs if multi-instance rate limiting matters
+  - production deploy is now configured on Vercel at `https://let-it-rain-ten.vercel.app`
+  - `PLATFORM_ADMIN_TOKEN`, `APP_URL`, `SESSION_SECRET`, and Upstash REST envs were set on 2026-07-17
+  - public signup is intentionally enabled in production via `PUBLIC_SIGNUP_ENABLED=true`
 - Rehearse migrations on a Neon branch before production.
 - Run end-to-end manual smoke testing by role on web and mobile.
-- Internal-launch-safe signup posture is now repo-backed:
-  - production public signup is disabled by default unless `PUBLIC_SIGNUP_ENABLED=true`
-  - `PLATFORM_ADMIN_TOKEN` still gates the separate admin org-provisioning path
-  - the remaining operational task is to set the intended deploy env values explicitly
+- Internal-launch-safe signup posture is repo-backed and now explicitly configured:
+  - production public signup is enabled intentionally for this deploy
+  - `PLATFORM_ADMIN_TOKEN` gates the separate admin org-provisioning path
+  - live check verified `/login` returns `200` and `/api/v1/admin/organizations` returns `401`
 
 ### Phase 16 — Deferred
 

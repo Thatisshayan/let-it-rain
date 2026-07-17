@@ -47,3 +47,4 @@ next-env.d.ts
 
 # local audit reports (agent-generated, not for version control)
 14.07.2026CurrentStateofRepo.md
+.vercel.production.env

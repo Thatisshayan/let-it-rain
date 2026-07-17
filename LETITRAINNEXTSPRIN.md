@@ -50,10 +50,10 @@ Goal: make the current system safe and operational for the project's own interna
 ### Must complete
 
 1. Deploy configuration
-- set `PLATFORM_ADMIN_TOKEN`
-- set the internal `APP_URL`
-- rotate/set a fresh deploy `SESSION_SECRET`
-- decide whether Upstash is required for the internal deployment shape
+- production Vercel deploy now uses `https://let-it-rain-ten.vercel.app`
+- `PLATFORM_ADMIN_TOKEN`, `APP_URL`, rotated `SESSION_SECRET`, and Upstash REST envs were set on 2026-07-17
+- Upstash Redis is now provisioned for shared rate limiting
+- public signup is intentionally enabled in production via `PUBLIC_SIGNUP_ENABLED=true`
 
 2. Migration rehearsal
 - run migrations against a Neon branch first
@@ -61,9 +61,9 @@ Goal: make the current system safe and operational for the project's own interna
 - only then promote the same migration path to production
 
 3. Launch access policy
-- production public signup is now disabled by default unless `PUBLIC_SIGNUP_ENABLED=true`
+- deploy-time setting is now explicit: production public signup is enabled intentionally
 - keep `PLATFORM_ADMIN_TOKEN` for the separate admin-controlled org bootstrap path
-- document the actual deploy-time setting in the runbook
+- remaining work is to validate the live signup/auth path during manual smoke
 
 4. Manual smoke pass
 - sign in with the relevant internal roles
