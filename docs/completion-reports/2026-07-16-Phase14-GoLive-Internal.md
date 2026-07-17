@@ -36,22 +36,23 @@ Use these files as the real current sources of truth:
 
 Directly verified on Friday, July 17, 2026:
 
-- web tests are green: `234/234`
+- web tests are green: `236/236`
 - mobile tests are green: `22/22`
 - password reset/change token-version bump is implemented
 - CSV formula hardening is implemented
 - signup-token tests already exist
 - mobile order-permission drift away from `MANAGE_ORDERS` was corrected
+- explicit web/mobile `typecheck` scripts exist and CI runs them
+- audit-covered user/session mutations and order lifecycle writes now fail closed atomically
 
 ## What Remains Open
 
 The real remaining work is described in `LETITRAINNEXTSPRIN.md`, especially:
 
 - internal-team launch wiring
-- audit-log failure semantics
 - permission re-sweep
-- CI/typecheck tightening
 - mobile coverage expansion
+- cleanup of other stale historical planning/completion docs
 - future first-paying-customer work
 
 ## Rule Going Forward
