@@ -236,5 +236,19 @@ Until that note exists, this runbook should be treated as **prepared but not exe
   - one smoke order
   - one smoke signup organization
 - Still open:
-  - browser-driven web smoke
   - mobile-app smoke on a real device/build
+
+### 2026-07-17 Protected Web Smoke Note
+
+- Environment: Vercel production `https://let-it-rain-ten.vercel.app`
+- Auth path used: live admin login followed by an authenticated `litr_session` cookie
+- Verified live:
+  - `/` returns `200`
+  - `/items` returns `200`
+  - `/orders` returns `200`
+  - `/reports` returns `200`
+  - `/settings` returns `200`
+  - `/activity` returns `200`
+- Still open:
+  - mobile-app smoke on a real device/build
+  - role-by-role manual UI validation beyond the authenticated admin pass

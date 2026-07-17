@@ -32,6 +32,8 @@ Verified directly in code and tests on Friday, July 17, 2026:
 
 - web tests: `237/237` passing
 - mobile tests: `110/110` passing
+- root web/API `typecheck`: passing
+- mobile `typecheck`: passing
 - password reset and password change both increment `tokenVersion`
 - permissions schema default includes all 11 current permissions
 - the permissions backfill migration already exists
@@ -42,6 +44,7 @@ Verified directly in code and tests on Friday, July 17, 2026:
 - audit-covered user/session mutations and order lifecycle writes fail closed atomically
 - web/mobile permission re-sweep completed; direct-route mobile permission gaps were closed
 - Phase 13 historical docs are explicitly marked as historical context rather than active execution guidance
+- current GitHub Actions CI is green for commit `24496d7` (run `29614610882`)
 
 ## Phase 14 — Internal-Team Go-Live
 
@@ -72,7 +75,8 @@ Goal: make the current system safe and operational for the project's own interna
 - verify web + mobile core flows
 - verify role-based access still matches the intended permission model
 - API-level production smoke already passed on 2026-07-17
-- remaining work is actual browser/mobile UI execution
+- protected web-route production smoke also passed on 2026-07-17 for `/`, `/items`, `/orders`, `/reports`, `/settings`, and `/activity`
+- remaining work is mobile UI/device execution and role-based manual validation beyond the authenticated admin web pass
 
 ### Nice to have, but not launch blockers
 

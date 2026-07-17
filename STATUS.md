@@ -23,6 +23,8 @@ Verified on 2026-07-17:
 
 - web tests are green: `237/237`
 - mobile tests are green: `110/110`
+- root web/API `typecheck` passes (`next typegen && tsc --noEmit`)
+- mobile `typecheck` passes (`tsc --noEmit`)
 - password reset/change increments `tokenVersion`
 - CSV formula-injection hardening is implemented
 - mobile no longer relies on the legacy `MANAGE_ORDERS` permission in the updated order flows
@@ -30,6 +32,7 @@ Verified on 2026-07-17:
 - audit-covered user/session mutations and order lifecycle writes fail closed atomically
 - web/mobile permission re-sweep completed; direct-route mobile permission gaps were closed
 - Phase 13 historical docs are now explicitly marked as historical context, not active execution guidance
+- current GitHub Actions CI is green for commit `24496d7` (run `29614610882`)
 
 ## Read Order
 
@@ -74,11 +77,13 @@ These items were previously described as future work in some docs, but are alrea
   - production login against the seeded admin was verified live
 - Rehearse migrations on a Neon branch before future production schema changes.
 - Run the remaining UI/device-level manual smoke testing on web and mobile.
+- Live protected web-route smoke now passed on 2026-07-17 for `/`, `/items`, `/orders`, `/reports`, `/settings`, and `/activity` against production using an authenticated session.
 - Internal-launch-safe signup posture is repo-backed and now explicitly configured:
   - production public signup is enabled intentionally for this deploy
   - `PLATFORM_ADMIN_TOKEN` gates the separate admin org-provisioning path
   - live checks verified `/login` returns `200`, `/api/v1/admin/organizations` returns `401` without the token and `200` with it, and `POST /api/v1/signup` returns `201`
   - production API smoke also verified admin login, limited-user permission denial on reports, item create/list/detail, order create/list, org/org-settings reads, and reports reads
+  - live protected web-route smoke also verified `200` responses for `/`, `/items`, `/orders`, `/reports`, `/settings`, and `/activity`
 
 ### Phase 16 — Deferred
 
