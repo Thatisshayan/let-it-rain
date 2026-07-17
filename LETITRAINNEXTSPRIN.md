@@ -31,7 +31,7 @@ Deferred until the first-paying-customer phase:
 Verified directly in code and tests on Friday, July 17, 2026:
 
 - web tests: `236/236` passing
-- mobile tests: `33/33` passing
+- mobile tests: `36/36` passing
 - password reset and password change both increment `tokenVersion`
 - permissions schema default includes all 11 current permissions
 - the permissions backfill migration already exists
@@ -82,7 +82,7 @@ Goal: close the remaining correctness and governance gaps without inventing fake
 ### Open correctness work
 
 1. Mobile test expansion
-- cover more than the current 7 files / 33 tests
+- cover more than the current 8 files / 36 tests
 - focus first on API client, auth context, offline queue, and higher-risk permissioned screens
 
 ### Open documentation/governance work
