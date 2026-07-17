@@ -7,7 +7,7 @@ on:
 
 jobs:
   web:
-    name: Web (lint, test, build)
+    name: Web (lint, typecheck, test, build)
     runs-on: ubuntu-latest
     env:
       # Dummy values so module init / next build don't fail; tests mock Prisma,
@@ -25,11 +25,12 @@ jobs:
       - run: npm ci
       - run: npx prisma generate
       - run: npm run lint
+      - run: npm run typecheck
       - run: npm test
       - run: npm run build
 
   mobile:
-    name: Mobile (test)
+    name: Mobile (typecheck, test)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -42,4 +43,5 @@ jobs:
           cache: npm
           cache-dependency-path: mobile/package-lock.json
       - run: npm ci
+      - run: npm run typecheck
       - run: npm test

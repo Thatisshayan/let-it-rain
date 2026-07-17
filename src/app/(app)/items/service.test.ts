@@ -17,6 +17,7 @@ const session = {
   name: "Ada",
   permissions: ["EDIT_ITEMS", "DELETE_ITEMS", "ADJUST_STOCK"],
   tokenVersion: 0,
+  organizationId: "org-1",
 };
 
 beforeEach(() => vi.clearAllMocks());
@@ -99,7 +100,7 @@ describe("deleteItem", () => {
     const result = await deleteItem(session, "item-1");
     expect(result.ok).toBe(true);
     expect(prisma.item.update).toHaveBeenCalledWith({
-      where: { id: "item-1", deletedAt: null },
+      where: { id: "item-1", organizationId: "org-1", deletedAt: null },
       data: { deletedAt: expect.any(Date) },
     });
   });

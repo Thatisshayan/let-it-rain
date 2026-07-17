@@ -12,7 +12,7 @@ const req = () => new Request("http://localhost/api/v1/signup", { method: "POST"
 
 beforeEach(() => {
   vi.clearAllMocks();
-  process.env.NODE_ENV = "test";
+  vi.stubEnv("NODE_ENV", "test");
 });
 
 describe("POST /api/v1/signup", () => {
@@ -40,7 +40,7 @@ describe("POST /api/v1/signup", () => {
   });
 
   it("does not leak the verification token in production", async () => {
-    process.env.NODE_ENV = "production";
+    vi.stubEnv("NODE_ENV", "production");
     (checkRateLimit as any).mockResolvedValue(true);
     (signUpOrganization as any).mockResolvedValue({ ok: true, organizationId: "o1", adminUserId: "u1", verificationToken: "raw-token", emailSent: true });
     const res = await POST(req());

@@ -38,6 +38,7 @@ Verified directly in code and tests on Friday, July 17, 2026:
 - signup-token tests already exist
 - CSV formula-injection hardening is implemented and tested
 - mobile order flows updated on 2026-07-17 no longer depend on `MANAGE_ORDERS`
+- explicit web/mobile `typecheck` scripts exist, and CI runs them
 
 ## Phase 14 — Internal-Team Go-Live
 
@@ -87,11 +88,7 @@ Goal: close the remaining correctness and governance gaps without inventing fake
 - confirm that ownership-based order flows still behave correctly
 - add missing regressions where coverage is weak
 
-3. CI and typechecking
-- add explicit typecheck scripts for web and mobile
-- tighten CI to reflect the actual project expectations
-
-4. Mobile test expansion
+3. Mobile test expansion
 - cover more than the current 4 files / 22 tests
 - focus first on API client, auth context, offline queue, and higher-risk permissioned screens
 

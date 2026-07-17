@@ -27,6 +27,7 @@ const manager = {
   name: "Manager",
   permissions: ["CREATE_ORDERS", "ASSIGN_DRIVERS", "CANCEL_ORDERS"],
   tokenVersion: 0,
+  organizationId: "org-1",
 };
 const driver = {
   userId: "u2",
@@ -34,6 +35,7 @@ const driver = {
   name: "Driver",
   permissions: [] as string[],
   tokenVersion: 0,
+  organizationId: "org-1",
 };
 
 beforeEach(() => vi.clearAllMocks());
@@ -145,7 +147,10 @@ describe("markDelivered", () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(itemUpdate).toHaveBeenCalledWith({ where: { id: "i1" }, data: { quantity: 7 } });
+    expect(itemUpdate).toHaveBeenCalledWith({
+      where: { id: "i1", organizationId: "org-1" },
+      data: { quantity: 7 },
+    });
     expect(movementCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
         itemId: "i1",
@@ -208,13 +213,15 @@ describe("listOrders", () => {
     (prisma.order.findMany as any).mockResolvedValue([]);
     await listOrders(driver);
     expect(prisma.order.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { driverId: "u2" } })
+      expect.objectContaining({ where: { driverId: "u2", organizationId: "org-1" } })
     );
   });
 
   it("returns everything for a CREATE_ORDERS holder", async () => {
     (prisma.order.findMany as any).mockResolvedValue([]);
     await listOrders(manager);
-    expect(prisma.order.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: {} }));
+    expect(prisma.order.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { organizationId: "org-1" } })
+    );
   });
 });

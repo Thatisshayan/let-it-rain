@@ -159,10 +159,18 @@ Web / API:
 npm test
 ```
 
+```bash
+npm run typecheck
+```
+
 Mobile:
 
 ```bash
 npm --prefix mobile test
+```
+
+```bash
+npm --prefix mobile run typecheck
 ```
 
 The root Vitest suite covers the web app and API: stock-movement math
@@ -171,6 +179,10 @@ and `/api/v1/*` route handlers.
 
 The mobile app also has an automated Vitest suite now. It is still much smaller than
 the web suite, but it exists and should be kept green alongside the web tests.
+
+The web typecheck uses the Next 16-supported flow `next typegen && tsc --noEmit`,
+and clears stale `.next/dev/types` first so a corrupted local dev artifact cannot
+poison CI or local type validation.
 
 ## Data model
 

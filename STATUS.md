@@ -26,6 +26,7 @@ Verified on 2026-07-17:
 - password reset/change increments `tokenVersion`
 - CSV formula-injection hardening is implemented
 - mobile no longer relies on the legacy `MANAGE_ORDERS` permission in the updated order flows
+- explicit web/mobile `typecheck` scripts exist, and CI runs them
 
 ## Read Order
 
@@ -49,6 +50,7 @@ These items were previously described as future work in some docs, but are alrea
 - signup-token tests for unknown, consumed, expired, and valid tokens
 - CSV formula-injection hardening
 - mobile order-permission cleanup away from `MANAGE_ORDERS`
+- explicit web/mobile `typecheck` scripts, with CI running both
 
 ## What Is Still Open
 
@@ -56,7 +58,6 @@ These items were previously described as future work in some docs, but are alrea
 
 - Define and implement explicit audit-log failure semantics.
 - Do a full web + mobile permission re-sweep across Phase 1–13 pages/screens.
-- Tighten CI and add explicit typecheck scripts.
 - Expand mobile automated coverage beyond the current 4 files / 22 tests.
 - Add Stripe webhook isolation and negative-path tests when billing work resumes.
 - Clean up historical docs that still blur "planned" vs "completed".
