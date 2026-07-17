@@ -94,7 +94,7 @@ model User {
   // product change, not a refactor.
   email          String       @unique
   passwordHash   String
-  permissions    String[]     @default(["MANAGE_USERS", "DELETE_ITEMS", "EDIT_ITEMS", "ADJUST_STOCK", "CREATE_ORDERS", "ASSIGN_DRIVERS", "CANCEL_ORDERS", "VIEW_REPORTS", "VIEW_COSTS"])
+  permissions    String[]     @default(["MANAGE_USERS", "DELETE_ITEMS", "EDIT_ITEMS", "ADJUST_STOCK", "CREATE_ORDERS", "ASSIGN_DRIVERS", "CANCEL_ORDERS", "VIEW_REPORTS", "VIEW_COSTS", "VIEW_AUDIT_LOG", "MANAGE_SETTINGS"])
   active         Boolean      @default(true)
   tokenVersion   Int          @default(0)
   createdAt      DateTime     @default(now())

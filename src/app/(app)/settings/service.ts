@@ -145,7 +145,7 @@ export async function resetUserPassword(
   if (!targetUser) return { ok: false, error: "User not found." };
 
   const passwordHash = await hashPassword(input.password);
-  await prisma.user.update({ where: { id: userId, organizationId: session.organizationId }, data: { passwordHash } });
+  await prisma.user.update({ where: { id: userId, organizationId: session.organizationId }, data: { passwordHash, tokenVersion: { increment: 1 } } });
 
   await writeAuditLog({
     actor: session,
@@ -219,6 +219,6 @@ export async function changeOwnPassword(
   if (!valid) return { ok: false, error: "Current password is incorrect." };
 
   const passwordHash = await hashPassword(input.newPassword);
-  await prisma.user.update({ where: { id: session.userId, organizationId: session.organizationId }, data: { passwordHash } });
+  await prisma.user.update({ where: { id: session.userId, organizationId: session.organizationId }, data: { passwordHash, tokenVersion: { increment: 1 } } });
   return { ok: true };
 }

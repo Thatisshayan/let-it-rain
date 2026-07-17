@@ -44,3 +44,6 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# local audit reports (agent-generated, not for version control)
+14.07.2026CurrentStateofRepo.md

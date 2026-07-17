@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "fs";
 import { hasPermission, isValidPermission, PERMISSIONS } from "./permissions";
 
 describe("PERMISSIONS", () => {
@@ -16,6 +17,21 @@ describe("PERMISSIONS", () => {
       "VIEW_AUDIT_LOG",
       "MANAGE_SETTINGS",
     ]);
+  });
+
+  it("matches the default permissions in prisma schema", () => {
+    const schemaContent = readFileSync("prisma/schema.prisma", "utf8");
+    const permissionsMatch = schemaContent.match(/permissions\s+String\[\]\s+@default\(\[([^\]]+)\]\)/);
+    expect(permissionsMatch).toBeTruthy();
+    
+    if (permissionsMatch) {
+      const schemaPermissions = permissionsMatch[1]
+        .split(",")
+        .map(p => p.trim().replace(/"/g, ""))
+        .sort();
+      const expectedPermissions = [...PERMISSIONS].sort();
+      expect(schemaPermissions).toEqual(expectedPermissions);
+    }
   });
 });
 
