@@ -34,10 +34,7 @@ export default function OrganizationScreen() {
   const [upgrading, setUpgrading] = useState(false);
 
   useEffect(() => {
-    if (!canManageSettings) {
-      setLoading(false);
-      return;
-    }
+    if (!canManageSettings) return;
     (async () => {
       try {
         const [settings, orgInfo] = await Promise.all([fetchOrgSettings(), fetchOrgInfo()]);

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -27,6 +27,8 @@ export default function AdjustStockScreen() {
   const queryClient = useQueryClient();
   const canAdjustStock = hasPermission(session, "ADJUST_STOCK");
 
+  const total = (Number(cashAmount) || 0) + (Number(interacAmount) || 0);
+
   if (!canAdjustStock) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -34,11 +36,6 @@ export default function AdjustStockScreen() {
       </View>
     );
   }
-
-  const total = useMemo(
-    () => (Number(cashAmount) || 0) + (Number(interacAmount) || 0),
-    [cashAmount, interacAmount]
-  );
 
   async function onSubmit() {
     setError(null);
