@@ -12,6 +12,7 @@ import {
   ListRow,
   ScreenHeader,
   StatTile,
+  StatusMessage,
   Surface,
 } from "../../src/ui/command";
 
@@ -37,24 +38,20 @@ export default function ReportsScreen() {
   if (!canViewReports) {
     return (
       <View style={[styles.container, { paddingTop: insets.top, backgroundColor: theme.background }]}>
-        <Text style={[styles.padded, { color: theme.destructive }]}>You don't have permission to view reports.</Text>
+        <StatusMessage theme={theme} title="Reports unavailable" detail="You don't have permission to view reports." tone="permission" />
       </View>
     );
   }
 
   if (isLoading || !data) {
     return (
-      <Text style={[styles.padded, { color: theme.foreground, backgroundColor: theme.background }]}>
-        Loading...
-      </Text>
+      <View style={[styles.padded, { backgroundColor: theme.background }]}><Text style={{ color: theme.foreground }}>Loading reports…</Text></View>
     );
   }
 
   if (error) {
     return (
-      <Text style={[styles.padded, { color: theme.destructive, backgroundColor: theme.background }]}>
-        Could not load reports.
-      </Text>
+      <View style={[styles.padded, { backgroundColor: theme.background }]}><StatusMessage theme={theme} title="Could not load reports." detail="Check your connection and try again." onRetry={() => refetch()} retryLabel="Retry loading reports" /></View>
     );
   }
 
@@ -91,11 +88,11 @@ export default function ReportsScreen() {
 
           <Surface theme={theme}>
             <View style={styles.header}>
-              <Pressable onPress={() => goToMonth(-1)}>
+              <Pressable onPress={() => goToMonth(-1)} accessibilityRole="button" accessibilityLabel="Show previous month">
                 <Text style={{ color: theme.primary }}>← Prev</Text>
               </Pressable>
               <Text style={[styles.monthLabel, { color: theme.foreground }]}>{data.monthLabel}</Text>
-              <Pressable onPress={() => goToMonth(1)}>
+              <Pressable onPress={() => goToMonth(1)} accessibilityRole="button" accessibilityLabel="Show next month">
                 <Text style={{ color: theme.primary }}>Next →</Text>
               </Pressable>
             </View>

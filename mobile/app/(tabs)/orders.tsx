@@ -11,6 +11,7 @@ import {
   ListRow,
   ScreenHeader,
   StatTile,
+  StatusMessage,
   Surface,
 } from "../../src/ui/command";
 
@@ -48,7 +49,7 @@ export default function OrdersScreen() {
           description={canManage ? "All orders" : "Assigned to you"}
           right={
             canCreateOrders ? (
-              <Pressable style={[styles.newButton, { backgroundColor: theme.primary }]} onPress={() => router.push("/orders/new")}>
+              <Pressable style={[styles.newButton, { backgroundColor: theme.primary }]} onPress={() => router.push("/orders/new")} accessibilityRole="button" accessibilityLabel="Create new order">
                 <Text style={[styles.newButtonText, { color: theme.primaryForeground }]}>+ New</Text>
               </Pressable>
             ) : undefined
@@ -64,10 +65,7 @@ export default function OrdersScreen() {
 
         {error ? (
           <Surface theme={theme}>
-            <EmptyMessage theme={theme} title="Could not load orders." detail="Pull to refresh or retry once connectivity is back." />
-            <Pressable style={[styles.retryButton, { borderColor: theme.border, backgroundColor: theme.surfaceStrong }]} onPress={() => refetch()}>
-              <Text style={[styles.retryText, { color: theme.primary }]}>Retry</Text>
-            </Pressable>
+            <StatusMessage theme={theme} title="Could not load orders." detail="Pull to refresh or retry once connectivity is back." onRetry={() => refetch()} retryLabel="Retry loading orders" />
           </Surface>
         ) : null}
 

@@ -169,9 +169,51 @@ export function ListRow({
   if (!onPress) return content;
 
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityState={{ disabled: false }}
+    >
       {content}
     </Pressable>
+  );
+}
+
+export function StatusMessage({
+  theme,
+  title,
+  detail,
+  tone = "error",
+  onRetry,
+  retryLabel = "Retry",
+}: {
+  theme: Theme;
+  title: string;
+  detail?: string;
+  tone?: "error" | "permission";
+  onRetry?: () => void;
+  retryLabel?: string;
+}) {
+  const color = tone === "error" ? theme.destructive : theme.warning;
+  return (
+    <View
+      accessibilityRole="alert"
+      style={[styles.emptyState, { borderColor: color, backgroundColor: theme.surfaceStrong }]}
+    >
+      <Text style={[styles.emptyTitle, { color: theme.foreground }]}>{title}</Text>
+      {detail ? <Text style={[styles.emptyDetail, { color: theme.mutedForeground }]}>{detail}</Text> : null}
+      {onRetry ? (
+        <Pressable
+          onPress={onRetry}
+          accessibilityRole="button"
+          accessibilityLabel={retryLabel}
+          accessibilityState={{ disabled: false }}
+        >
+          <Text style={[styles.retryText, { color: theme.primary }]}>{retryLabel}</Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
@@ -344,5 +386,10 @@ const styles = StyleSheet.create({
   emptyDetail: {
     fontSize: 13,
     lineHeight: 19,
+  },
+  retryText: {
+    fontSize: 14,
+    fontWeight: "700",
+    paddingVertical: 6,
   },
 });

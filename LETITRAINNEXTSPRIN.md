@@ -22,7 +22,7 @@ Deferred until the first-paying-customer phase:
 
 - live Stripe keys and live billing rollout
 - transactional email provider
-- public signup
+- external paid-customer launch (self-service signup is intentionally enabled for the current internal deployment)
 - public production-domain rollout
 - any claim that the product is customer-ready for paid external use
 

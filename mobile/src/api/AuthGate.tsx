@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Text, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "./AuthContext";
@@ -13,13 +12,6 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const theme = useTheme();
   const { isLocked, unlock } = useAuth();
 
-  useEffect(() => {
-    if (isLocked) {
-      unlock();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLocked]);
-
   if (!isLocked) return <>{children}</>;
 
   return (
@@ -30,7 +22,13 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       <Text style={[styles.subtitle, { color: theme.foreground }]}>
         Re-enter the operations workspace with Face ID to continue.
       </Text>
-      <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={unlock}>
+      <Pressable
+        style={[styles.button, { backgroundColor: theme.primary }]}
+        onPress={unlock}
+        accessibilityRole="button"
+        accessibilityLabel="Unlock with Face ID"
+        accessibilityState={{ disabled: false }}
+      >
         <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>Unlock with Face ID</Text>
       </Pressable>
     </SafeAreaView>

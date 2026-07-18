@@ -89,8 +89,8 @@ These items were previously described as future work in some docs, but are alrea
 
 - live Stripe
 - transactional email provider
-- public signup
-- public-domain app rollout
+- external paid-customer launch (self-service signup is intentionally enabled for the internal deployment)
+- public-domain paid rollout
 - first paying customer runbook execution
 
 ## Repo Rules
