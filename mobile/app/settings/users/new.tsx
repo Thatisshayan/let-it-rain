@@ -62,7 +62,7 @@ export default function NewUserScreen() {
       />
       <Surface theme={theme}>
         <Text style={[styles.label, { color: theme.mutedForeground }]}>Name</Text>
-        <TextInput style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]} placeholder="Name" placeholderTextColor={theme.mutedForeground} value={name} onChangeText={setName} />
+        <TextInput style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]} placeholder="Name" placeholderTextColor={theme.mutedForeground} value={name} onChangeText={setName} accessibilityLabel="User name" textContentType="name" />
         <Text style={[styles.label, { color: theme.mutedForeground }]}>Email</Text>
         <TextInput
           style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]}
@@ -72,6 +72,8 @@ export default function NewUserScreen() {
           keyboardType="email-address"
           value={email}
           onChangeText={setEmail}
+          accessibilityLabel="User email address"
+          textContentType="emailAddress"
         />
         <Text style={[styles.label, { color: theme.mutedForeground }]}>Password</Text>
         <TextInput
@@ -81,6 +83,8 @@ export default function NewUserScreen() {
           secureTextEntry
           value={password}
           onChangeText={setPassword}
+          accessibilityLabel="Temporary password"
+          textContentType="newPassword"
         />
         <Text style={[styles.label, { color: theme.mutedForeground }]}>Permissions</Text>
         <View style={styles.permissions}>
@@ -93,12 +97,15 @@ export default function NewUserScreen() {
                 permissions.includes(p) && { backgroundColor: theme.primary, borderColor: theme.primary },
               ]}
               onPress={() => togglePermission(p)}
+              accessibilityRole="checkbox"
+              accessibilityLabel={p}
+              accessibilityState={{ checked: permissions.includes(p) }}
             >
               <Text style={{ color: permissions.includes(p) ? theme.primaryForeground : theme.foreground }}>{p}</Text>
             </Pressable>
           ))}
         </View>
-        {error ? <Text style={{ color: theme.destructive }}>{error}</Text> : null}
+        {error ? <Text accessibilityRole="alert" style={{ color: theme.destructive }}>{error}</Text> : null}
         <Pressable style={[styles.submit, { backgroundColor: theme.primary }]} onPress={onSubmit} disabled={submitting} accessibilityRole="button" accessibilityLabel="Create user" accessibilityState={{ disabled: submitting }}>
           <Text style={[styles.submitText, { color: theme.primaryForeground }]}>
             {submitting ? "Creating..." : "Create user"}

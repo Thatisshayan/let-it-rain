@@ -88,9 +88,11 @@ function AccountForm({ initialName }: { initialName: string }) {
           style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]}
           value={name}
           onChangeText={setName}
+          accessibilityLabel="Your name"
+          textContentType="name"
         />
-        {nameError ? <Text style={{ color: theme.destructive }}>{nameError}</Text> : null}
-        {nameSuccess ? <Text style={{ color: theme.success }}>{nameSuccess}</Text> : null}
+        {nameError ? <Text accessibilityRole="alert" style={{ color: theme.destructive }}>{nameError}</Text> : null}
+        {nameSuccess ? <Text accessibilityRole="alert" style={{ color: theme.success }}>{nameSuccess}</Text> : null}
         <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={saveName} accessibilityRole="button" accessibilityLabel="Save name">
           <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>Save name</Text>
         </Pressable>
@@ -103,6 +105,8 @@ function AccountForm({ initialName }: { initialName: string }) {
           secureTextEntry
           value={currentPassword}
           onChangeText={setCurrentPassword}
+          accessibilityLabel="Current password"
+          textContentType="password"
         />
         <TextInput
           style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]}
@@ -111,9 +115,11 @@ function AccountForm({ initialName }: { initialName: string }) {
           secureTextEntry
           value={newPassword}
           onChangeText={setNewPassword}
+          accessibilityLabel="New password"
+          textContentType="newPassword"
         />
-        {passwordError ? <Text style={{ color: theme.destructive }}>{passwordError}</Text> : null}
-        {passwordSuccess ? <Text style={{ color: theme.success }}>{passwordSuccess}</Text> : null}
+        {passwordError ? <Text accessibilityRole="alert" style={{ color: theme.destructive }}>{passwordError}</Text> : null}
+        {passwordSuccess ? <Text accessibilityRole="alert" style={{ color: theme.success }}>{passwordSuccess}</Text> : null}
         <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={savePassword} accessibilityRole="button" accessibilityLabel="Change password">
           <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>Change password</Text>
         </Pressable>
@@ -126,6 +132,9 @@ function AccountForm({ initialName }: { initialName: string }) {
           style={[styles.buttonSecondary, { borderColor: theme.border, backgroundColor: theme.surfaceStrong }]}
           onPress={handleSignOutEverywhere}
           disabled={signingOutEverywhere}
+          accessibilityRole="button"
+          accessibilityLabel="Sign out everywhere"
+          accessibilityState={{ disabled: signingOutEverywhere }}
         >
           <Text style={[styles.buttonText, { color: theme.foreground }]}>
             {signingOutEverywhere ? "Signing out…" : "Sign out everywhere"}
