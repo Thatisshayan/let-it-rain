@@ -261,9 +261,9 @@ that made the manual route necessary).
 
 **Everything needed for a build + submit is already in place:**
 
-1. **Build profiles point at the real deployed API.** `eas.json`'s `preview` and
-   `production` profiles set `EXPO_PUBLIC_API_BASE_URL` to the deployed web app's HTTPS
-   URL (`https://letitrain-jade.vercel.app`) — required because iOS App Transport
+1. **Build profiles point at the real deployed API.** `eas.json`'s `production`
+   profile sets `EXPO_PUBLIC_API_BASE_URL` to the deployed web app's HTTPS
+   URL (`https://let-it-rain-ten.vercel.app`) — required because iOS App Transport
    Security blocks plain `http://` requests in a standalone (non-Expo-Go) build.
 2. **EAS project is linked.** `app.json`'s `extra.eas.projectId` and `owner` are set
    (`obsidianmedia/letitrain-mobile`).
