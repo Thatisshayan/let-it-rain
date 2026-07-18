@@ -14,7 +14,7 @@ function MockText({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function MockPressable({ children, onPress }: { children: React.ReactNode; onPress?: () => void }) {
+function MockPressable({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 

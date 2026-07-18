@@ -9,6 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  PageHeader,
+  SectionHeading,
+} from "@/components/app/page-header";
 
 const PAGE_SIZE = 24;
 
@@ -110,76 +114,88 @@ export default async function ItemsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Inventory</h1>
-          <p className="text-sm text-muted-foreground">
-            {totalCount} item{totalCount === 1 ? "" : "s"}
-            {lowOnly && " · low stock only"}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <a
-            href="/items/export.csv"
-            className={cn(buttonVariants({ variant: "outline" }))}
-          >
-            Export CSV
-          </a>
-          {canEdit && (
-            <Link href="/items/new" className={cn(buttonVariants({ variant: "default" }))}>
-              + Add item
-            </Link>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Inventory operations"
+        title="Inventory should read like an operating ledger, not a gallery of cards."
+        description={`${totalCount} item${totalCount === 1 ? "" : "s"} currently visible${lowOnly ? ", filtered to low-stock only" : ""}.`}
+        actions={
+          <>
+            <a href="/items/export.csv" className={cn(buttonVariants({ variant: "outline" }))}>
+              Export CSV
+            </a>
+            {canEdit ? (
+              <Link href="/items/new" className={cn(buttonVariants({ variant: "default" }))}>
+                + Add item
+              </Link>
+            ) : null}
+          </>
+        }
+      />
 
-      <div className="flex flex-wrap items-center gap-2">
-        <form className="max-w-sm flex-1">
-          <Input name="q" placeholder="Search by name or category…" defaultValue={q ?? ""} />
-          {lowOnly && <input type="hidden" name="low" value="1" />}
-        </form>
-        <Link
-          href={lowOnly ? `/items${q ? `?q=${encodeURIComponent(q)}` : ""}` : `/items?low=1`}
-          className={cn(buttonVariants({ variant: lowOnly ? "default" : "outline", size: "sm" }))}
-        >
-          {lowOnly ? "Showing low stock only ✕" : "Low stock only"}
-        </Link>
-      </div>
+      <Card className="editorial-surface rounded-[1.8rem]">
+        <CardContent className="space-y-4 py-6">
+          <SectionHeading
+            title="Find what matters"
+            description="Search by item name or category, then narrow the view to inventory that needs attention."
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <form className="min-w-[16rem] max-w-md flex-1">
+              <Input name="q" placeholder="Search by name or category..." defaultValue={q ?? ""} />
+              {lowOnly && <input type="hidden" name="low" value="1" />}
+            </form>
+            <Link
+              href={lowOnly ? `/items${q ? `?q=${encodeURIComponent(q)}` : ""}` : `/items?low=1`}
+              className={cn(
+                buttonVariants({ variant: lowOnly ? "default" : "outline", size: "sm" })
+              )}
+            >
+              {lowOnly ? "Showing low stock only x" : "Low stock only"}
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
 
       {items.length === 0 ? (
-        <Card>
+        <Card className="editorial-surface rounded-[1.8rem]">
           <CardContent className="py-10 text-center text-muted-foreground">
             No items found.
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="overflow-hidden rounded-[1.8rem] border border-border/80 bg-card shadow-[0_20px_50px_-36px_rgba(31,41,55,0.22)]">
+          <div className="hidden grid-cols-[minmax(0,1.6fr)_12rem_11rem_9rem] gap-4 border-b border-border/80 px-5 py-4 md:grid">
+            <span className="rule-label">Item</span>
+            <span className="rule-label">Status</span>
+            <span className="rule-label">On hand</span>
+            <span className="rule-label text-right">Minimum</span>
+          </div>
           {items.map((item) => {
             const lowStock = item.quantity < item.minStock;
             return (
-              <Link key={item.id} href={`/items/${item.id}`}>
-                <Card className="h-full transition-all hover:-translate-y-0.5 hover:shadow-lg hover:ring-primary/30">
-                  <CardContent className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-heading font-medium leading-tight">{item.name}</h3>
-                      {lowStock && <Badge variant="warning">Low stock</Badge>}
-                    </div>
-                    {item.category && (
-                      <p className="text-xs text-muted-foreground">{item.category}</p>
-                    )}
-                    <p className="text-2xl font-semibold tabular-nums">
-                      {item.quantity}
-                      <span className="ml-1 text-sm font-normal text-muted-foreground">
-                        in stock
-                      </span>
+              <Link
+                key={item.id}
+                href={`/items/${item.id}`}
+                className="grid gap-4 border-b border-border/75 px-5 py-5 transition-colors last:border-b-0 hover:bg-foreground/[0.025] md:grid-cols-[minmax(0,1.6fr)_12rem_11rem_9rem] md:items-center"
+              >
+                <div className="space-y-1">
+                  <h3 className="font-heading text-lg font-medium leading-tight tracking-[-0.03em]">{item.name}</h3>
+                  {item.category && (
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                      {item.category}
                     </p>
-                    {item.minStock > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        Min stock: {item.minStock}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
+                  )}
+                </div>
+                <div>
+                  {lowStock ? <Badge variant="warning">Low stock</Badge> : <Badge variant="outline">Healthy</Badge>}
+                </div>
+                <div className="text-3xl font-semibold tabular-nums tracking-tight">
+                  {item.quantity}
+                  <span className="ml-2 text-sm font-medium text-muted-foreground">units</span>
+                </div>
+                <div className="text-left md:text-right">
+                  <p className="text-sm text-muted-foreground">Minimum</p>
+                  <p className="mt-1 text-lg font-semibold tabular-nums">{item.minStock}</p>
+                </div>
               </Link>
             );
           })}

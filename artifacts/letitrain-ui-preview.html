@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Let It Rain UI Preview</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --surface: rgba(255, 255, 255, 0.72);
+        --surface-strong: rgba(255, 255, 255, 0.9);
+        --surface-dark: #0f1727;
+        --ink: #152033;
+        --muted: #68758a;
+        --line: rgba(23, 33, 57, 0.1);
+        --primary: #3559d8;
+        --primary-2: #4c8fe8;
+        --teal: #4fb1c8;
+        --green: #1d9b72;
+        --amber: #d09b2e;
+        --danger: #c7564b;
+        --shadow-xl: 0 40px 120px -48px rgba(18, 31, 60, 0.38);
+        --shadow-lg: 0 24px 60px -36px rgba(18, 31, 60, 0.28);
+        --radius-xl: 28px;
+        --radius-lg: 22px;
+        --radius-md: 16px;
+        --radius-sm: 12px;
+        --font-sans: "Aptos", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+        --font-display: "Bahnschrift", "Aptos Display", "Segoe UI Variable Display", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: var(--font-sans);
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 15% 0%, rgba(74, 109, 221, 0.18), transparent 28%),
+          radial-gradient(circle at 90% 8%, rgba(74, 176, 215, 0.16), transparent 22%),
+          linear-gradient(180deg, #f8fbff 0%, #eef3fb 55%, #e8eef7 100%);
+      }
+
+      .page {
+        width: min(1480px, calc(100vw - 40px));
+        margin: 24px auto 56px;
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        padding: 42px 42px 36px;
+        border: 1px solid rgba(255, 255, 255, 0.75);
+        border-radius: 36px;
+        background:
+          linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(240, 246, 255, 0.94)),
+          radial-gradient(circle at top right, rgba(53, 89, 216, 0.14), transparent 24%);
+        box-shadow: var(--shadow-xl);
+      }
+
+      .hero::before,
+      .hero::after {
+        content: "";
+        position: absolute;
+        border-radius: 999px;
+        filter: blur(14px);
+        opacity: 0.7;
+      }
+
+      .hero::before {
+        top: -52px;
+        right: 120px;
+        width: 240px;
+        height: 240px;
+        background: radial-gradient(circle, rgba(53, 89, 216, 0.18), transparent 72%);
+      }
+
+      .hero::after {
+        bottom: -56px;
+        left: 160px;
+        width: 280px;
+        height: 180px;
+        background: radial-gradient(circle, rgba(79, 177, 200, 0.16), transparent 72%);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 14px;
+        border: 1px solid rgba(53, 89, 216, 0.18);
+        border-radius: 999px;
+        background: rgba(53, 89, 216, 0.08);
+        color: var(--primary);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(340px, 420px);
+        gap: 32px;
+        margin-top: 22px;
+        align-items: end;
+      }
+
+      .hero h1 {
+        max-width: 12ch;
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: clamp(54px, 6vw, 88px);
+        line-height: 0.95;
+        letter-spacing: -0.045em;
+      }
+
+      .hero p {
+        max-width: 54ch;
+        margin: 22px 0 0;
+        color: var(--muted);
+        font-size: 18px;
+        line-height: 1.75;
+      }
+
+      .hero-stats {
+        display: grid;
+        gap: 14px;
+      }
+
+      .hero-stat {
+        padding: 18px 20px;
+        border: 1px solid rgba(18, 31, 60, 0.08);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.82);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+      }
+
+      .hero-stat-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      .hero-stat-value {
+        margin-top: 10px;
+        font-size: 30px;
+        font-weight: 700;
+        letter-spacing: -0.04em;
+      }
+
+      .canvas {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        gap: 24px;
+        margin-top: 28px;
+        align-items: start;
+      }
+
+      .desktop-frame {
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.74);
+        border-radius: 34px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(240, 244, 252, 0.92));
+        box-shadow: var(--shadow-xl);
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        min-height: 960px;
+      }
+
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        padding: 26px 22px;
+        background:
+          linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(12, 18, 31, 0.98));
+        color: rgba(255, 255, 255, 0.92);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 52px;
+        height: 52px;
+        border-radius: 18px;
+        background: linear-gradient(145deg, #4167e4, #4ba7d1);
+        color: white;
+        font-size: 24px;
+        box-shadow: 0 18px 40px -20px rgba(76, 143, 232, 0.95);
+      }
+
+      .brand-copy h2 {
+        margin: 0;
+        font-size: 20px;
+        letter-spacing: -0.03em;
+      }
+
+      .brand-copy p {
+        margin: 4px 0 0;
+        color: rgba(255, 255, 255, 0.54);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+      }
+
+      .nav {
+        display: grid;
+        gap: 10px;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 12px 14px;
+        border: 1px solid transparent;
+        border-radius: 18px;
+        color: rgba(255, 255, 255, 0.66);
+        font-size: 15px;
+      }
+
+      .nav-item.active {
+        border-color: rgba(92, 134, 255, 0.18);
+        background: rgba(72, 108, 216, 0.16);
+        color: white;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      }
+
+      .nav-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 255, 255, 0.06);
+        font-size: 16px;
+      }
+
+      .nav-item.active .nav-icon {
+        background: linear-gradient(145deg, rgba(80, 118, 231, 0.92), rgba(72, 161, 204, 0.88));
+      }
+
+      .pulse-card,
+      .identity-card {
+        padding: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.045);
+      }
+
+      .sidebar-title {
+        color: rgba(255, 255, 255, 0.46);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      .pulse-list {
+        margin-top: 18px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .pulse-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: rgba(255, 255, 255, 0.74);
+        font-size: 14px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 42px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .pill.amber {
+        background: rgba(208, 155, 46, 0.18);
+        color: #ffd37b;
+      }
+
+      .pill.green {
+        background: rgba(29, 155, 114, 0.18);
+        color: #8fe0c2;
+      }
+
+      .cta {
+        margin-top: 16px;
+        display: inline-flex;
+        width: 100%;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: linear-gradient(145deg, #3b60dd, #4da4cf);
+        color: white;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .identity-card {
+        margin-top: auto;
+      }
+
+      .identity-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .avatar {
+        width: 46px;
+        height: 46px;
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(145deg, #4aa4cb, #3759d8);
+        color: white;
+        font-weight: 700;
+      }
+
+      .identity-copy strong {
+        display: block;
+        font-size: 15px;
+      }
+
+      .identity-copy span {
+        color: rgba(255, 255, 255, 0.52);
+        font-size: 13px;
+      }
+
+      .workspace-main {
+        padding: 22px;
+        display: grid;
+        gap: 22px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 18px 22px;
+        border: 1px solid rgba(255, 255, 255, 0.64);
+        border-radius: 26px;
+        background: rgba(255, 255, 255, 0.72);
+        box-shadow: var(--shadow-lg);
+      }
+
+      .topbar h3 {
+        margin: 0;
+        font-size: 17px;
+        letter-spacing: -0.02em;
+      }
+
+      .topbar p {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .top-actions {
+        display: flex;
+        gap: 10px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 12px 16px;
+        border-radius: 16px;
+        border: 1px solid rgba(23, 33, 57, 0.08);
+        background: rgba(255, 255, 255, 0.74);
+        color: var(--ink);
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .button.primary {
+        border-color: rgba(53, 89, 216, 0.18);
+        background: linear-gradient(145deg, #3559d8, #4fafe0);
+        color: white;
+      }
+
+      .hero-panel {
+        position: relative;
+        overflow: hidden;
+        padding: 26px;
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        border-radius: 30px;
+        background:
+          linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(243, 248, 255, 0.94)),
+          radial-gradient(circle at top right, rgba(53, 89, 216, 0.12), transparent 26%);
+        box-shadow: var(--shadow-lg);
+      }
+
+      .hero-panel .eyebrow {
+        transform: scale(0.9);
+        transform-origin: left center;
+      }
+
+      .hero-panel h2 {
+        max-width: 13ch;
+        margin: 8px 0 0;
+        font-family: var(--font-display);
+        font-size: 46px;
+        line-height: 0.96;
+        letter-spacing: -0.05em;
+      }
+
+      .hero-panel p {
+        max-width: 58ch;
+        margin: 14px 0 0;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.8;
+      }
+
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 22px;
+      }
+
+      .metric-card {
+        padding: 18px;
+        border: 1px solid rgba(18, 31, 60, 0.08);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.78);
+      }
+
+      .metric-card.warning {
+        background: rgba(248, 235, 210, 0.72);
+        border-color: rgba(208, 155, 46, 0.22);
+      }
+
+      .metric-card.success {
+        background: rgba(219, 243, 234, 0.76);
+        border-color: rgba(29, 155, 114, 0.18);
+      }
+
+      .metric-card .label {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      .metric-card .value {
+        margin-top: 14px;
+        font-size: 36px;
+        font-weight: 800;
+        letter-spacing: -0.05em;
+      }
+
+      .metric-card .hint {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .section-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 0.85fr);
+        gap: 18px;
+      }
+
+      .panel {
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.78);
+        box-shadow: var(--shadow-lg);
+      }
+
+      .panel-header {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 22px 22px 0;
+      }
+
+      .panel-header h4 {
+        margin: 0;
+        font-size: 20px;
+        letter-spacing: -0.03em;
+      }
+
+      .panel-header p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .panel-body {
+        padding: 20px 22px 22px;
+      }
+
+      .list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .list-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 16px 18px;
+        border: 1px solid rgba(23, 33, 57, 0.08);
+        border-radius: 20px;
+        background: rgba(248, 250, 255, 0.86);
+      }
+
+      .list-card strong {
+        display: block;
+        font-size: 15px;
+      }
+
+      .list-card span {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .state-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .state-badge.warning {
+        background: rgba(208, 155, 46, 0.16);
+        color: #b17a0a;
+      }
+
+      .activity-item {
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr) auto;
+        gap: 14px;
+        align-items: center;
+        padding: 14px 0;
+        border-bottom: 1px solid rgba(23, 33, 57, 0.08);
+      }
+
+      .activity-item:last-child {
+        border-bottom: 0;
+      }
+
+      .activity-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 15px;
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        color: white;
+      }
+
+      .activity-icon.blue { background: linear-gradient(145deg, #3559d8, #4fafe0); }
+      .activity-icon.teal { background: linear-gradient(145deg, #3298a7, #4fc8b7); }
+      .activity-icon.amber { background: linear-gradient(145deg, #d09930, #ebb84c); }
+
+      .activity-item strong {
+        display: block;
+        font-size: 15px;
+      }
+
+      .activity-item span {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .activity-delta {
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .blueprint {
+        display: grid;
+        gap: 18px;
+      }
+
+      .inventory-toolbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .search {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        border: 1px solid rgba(23, 33, 57, 0.08);
+        border-radius: 18px;
+        background: rgba(248, 250, 255, 0.9);
+        color: var(--muted);
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 15px;
+        border: 1px solid rgba(23, 33, 57, 0.08);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.74);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .chip.active {
+        border-color: rgba(53, 89, 216, 0.18);
+        background: rgba(53, 89, 216, 0.1);
+        color: var(--primary);
+      }
+
+      .inventory-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .inventory-card {
+        padding: 18px;
+        border: 1px solid rgba(23, 33, 57, 0.08);
+        border-radius: 24px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(247, 250, 255, 0.94));
+      }
+
+      .inventory-card h5 {
+        margin: 8px 0 0;
+        font-size: 19px;
+        letter-spacing: -0.03em;
+      }
+
+      .inventory-card .meta {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      .inventory-card .stock {
+        margin-top: 22px;
+        font-size: 36px;
+        font-weight: 800;
+        letter-spacing: -0.05em;
+      }
+
+      .inventory-card .stock small {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .inventory-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .chart {
+        display: grid;
+        gap: 10px;
+      }
+
+      .chart-row {
+        display: grid;
+        grid-template-columns: 70px minmax(0, 1fr) 82px;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .chart-row span {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .track {
+        position: relative;
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(21, 32, 51, 0.08);
+        overflow: hidden;
+      }
+
+      .bar {
+        position: absolute;
+        inset: 0 auto 0 0;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #3559d8, #51aac9);
+      }
+
+      .money {
+        text-align: right;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .sales-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 0;
+        border-bottom: 1px solid rgba(23, 33, 57, 0.08);
+      }
+
+      .sales-row:last-child {
+        border-bottom: 0;
+      }
+
+      .sales-row strong {
+        display: block;
+        font-size: 15px;
+      }
+
+      .sales-row span {
+        display: block;
+        margin-top: 4px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .sales-values {
+        text-align: right;
+      }
+
+      .sales-values strong {
+        font-size: 15px;
+      }
+
+      .sales-values span {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .mobile-column {
+        display: grid;
+        gap: 18px;
+      }
+
+      .mobile-note {
+        padding: 18px 18px 20px;
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.78);
+        box-shadow: var(--shadow-lg);
+      }
+
+      .mobile-note h4 {
+        margin: 0;
+        font-size: 22px;
+        letter-spacing: -0.03em;
+      }
+
+      .mobile-note p {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.75;
+      }
+
+      .phone {
+        position: relative;
+        width: 100%;
+        max-width: 340px;
+        margin: 0 auto;
+        padding: 16px;
+        border-radius: 44px;
+        background: linear-gradient(180deg, #0b1020, #111a2f);
+        box-shadow: 0 44px 120px -58px rgba(11, 16, 32, 0.95);
+      }
+
+      .phone::before {
+        content: "";
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        width: 118px;
+        height: 24px;
+        transform: translateX(-50%);
+        border-radius: 0 0 18px 18px;
+        background: #080d19;
+      }
+
+      .phone-screen {
+        min-height: 720px;
+        padding: 22px 18px 18px;
+        border-radius: 34px;
+        background:
+          radial-gradient(circle at top left, rgba(53, 89, 216, 0.2), transparent 28%),
+          linear-gradient(180deg, #f7fbff 0%, #eef4fb 100%);
+        overflow: hidden;
+      }
+
+      .phone-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .phone-top strong {
+        font-size: 14px;
+      }
+
+      .phone-title {
+        margin-top: 18px;
+      }
+
+      .phone-title h5 {
+        margin: 0;
+        font-size: 30px;
+        letter-spacing: -0.05em;
+      }
+
+      .phone-title p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.7;
+      }
+
+      .phone-card {
+        margin-top: 18px;
+        padding: 16px;
+        border: 1px solid rgba(23, 33, 57, 0.08);
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.82);
+      }
+
+      .phone-card .label {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      .phone-card .value {
+        margin-top: 10px;
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.05em;
+      }
+
+      .phone-section {
+        margin-top: 22px;
+      }
+
+      .phone-section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .phone-section-head h6 {
+        margin: 0;
+        font-size: 17px;
+        letter-spacing: -0.03em;
+      }
+
+      .phone-section-head span {
+        color: var(--primary);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .mini-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .mini-card {
+        padding: 14px;
+        border: 1px solid rgba(23, 33, 57, 0.08);
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.8);
+      }
+
+      .mini-card strong {
+        display: block;
+        font-size: 15px;
+      }
+
+      .mini-card span {
+        display: block;
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .bottom-nav {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 22px;
+        padding: 12px;
+        border: 1px solid rgba(23, 33, 57, 0.08);
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.86);
+      }
+
+      .bottom-nav div {
+        display: grid;
+        justify-items: center;
+        gap: 5px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .bottom-nav .active {
+        color: var(--primary);
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .legend-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        border: 1px solid rgba(23, 33, 57, 0.08);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.82);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+      }
+
+      .dot.blue { background: var(--primary); }
+      .dot.teal { background: var(--teal); }
+      .dot.amber { background: var(--amber); }
+      .dot.green { background: var(--green); }
+
+      @media (max-width: 1220px) {
+        .canvas,
+        .hero-grid,
+        .section-grid,
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+
+        .workspace {
+          min-height: auto;
+        }
+
+        .metric-grid,
+        .inventory-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 860px) {
+        .page {
+          width: min(100vw - 20px, 100%);
+          margin-top: 10px;
+        }
+
+        .hero,
+        .workspace-main,
+        .hero-panel,
+        .panel-body,
+        .panel-header {
+          padding-left: 18px;
+          padding-right: 18px;
+        }
+
+        .hero {
+          padding-top: 28px;
+        }
+
+        .metric-grid,
+        .inventory-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .inventory-toolbar {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <div class="eyebrow">Design artifact · internal preview</div>
+        <div class="hero-grid">
+          <div>
+            <h1>Rainfall as a visual language, not just a logo.</h1>
+            <p>
+              This concept pushes Let It Rain away from generic dashboard chrome into a more
+              premium operational product: cleaner hierarchy, stronger contrast between control
+              and data, and a visual system that feels intentional on both desktop and iPhone.
+            </p>
+            <div class="legend">
+              <div class="legend-chip"><span class="dot blue"></span>Dispatch rhythm</div>
+              <div class="legend-chip"><span class="dot teal"></span>Inventory visibility</div>
+              <div class="legend-chip"><span class="dot amber"></span>Low-stock urgency</div>
+              <div class="legend-chip"><span class="dot green"></span>Healthy margin signal</div>
+            </div>
+          </div>
+          <div class="hero-stats">
+            <div class="hero-stat">
+              <div class="hero-stat-label">Direction</div>
+              <div class="hero-stat-value">Refined industrial clarity</div>
+            </div>
+            <div class="hero-stat">
+              <div class="hero-stat-label">Web posture</div>
+              <div class="hero-stat-value">Operator-grade control surface</div>
+            </div>
+            <div class="hero-stat">
+              <div class="hero-stat-label">iPhone posture</div>
+              <div class="hero-stat-value">Faster field workflow, less clutter</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="canvas">
+        <div class="desktop-frame">
+          <div class="workspace">
+            <aside class="sidebar">
+              <div class="brand">
+                <div class="brand-mark">🌧</div>
+                <div class="brand-copy">
+                  <h2>Let It Rain</h2>
+                  <p>Operations</p>
+                </div>
+              </div>
+
+              <div class="nav">
+                <div class="nav-item active"><div class="nav-icon">◫</div>Dashboard</div>
+                <div class="nav-item"><div class="nav-icon">▣</div>Inventory</div>
+                <div class="nav-item"><div class="nav-icon">↗</div>Orders</div>
+                <div class="nav-item"><div class="nav-icon">◌</div>Activity</div>
+                <div class="nav-item"><div class="nav-icon">◧</div>Reports</div>
+                <div class="nav-item"><div class="nav-icon">⋯</div>Settings</div>
+              </div>
+
+              <div class="pulse-card">
+                <div class="sidebar-title">Quick pulse</div>
+                <div class="pulse-list">
+                  <div class="pulse-row"><span>Low-stock items</span><span class="pill amber">12</span></div>
+                  <div class="pulse-row"><span>Orders out now</span><span class="pill green">08</span></div>
+                  <div class="pulse-row"><span>Dispatch coverage</span><span>Healthy</span></div>
+                </div>
+                <div class="cta">+ Add new item</div>
+              </div>
+
+              <div class="identity-card">
+                <div class="identity-row">
+                  <div class="avatar">SF</div>
+                  <div class="identity-copy">
+                    <strong>Shayan</strong>
+                    <span>admin@letitrain.app</span>
+                  </div>
+                </div>
+                <div class="cta" style="margin-top: 18px; background: rgba(255,255,255,0.08);">Sign out</div>
+              </div>
+            </aside>
+
+            <div class="workspace-main">
+              <div class="topbar">
+                <div>
+                  <h3>Friday operating brief</h3>
+                  <p>Internal launch mode · all organizations healthy · 7:45 AM snapshot</p>
+                </div>
+                <div class="top-actions">
+                  <div class="button">Export board</div>
+                  <div class="button primary">Dispatch summary</div>
+                </div>
+              </div>
+
+              <section class="hero-panel">
+                <div class="eyebrow">Daily brief</div>
+                <h2>See shortages, movement, and margin pressure before the day gets noisy.</h2>
+                <p>
+                  The shell is intentionally calmer than the current app, but more directed:
+                  one strong landing moment, one clear status layer, then disciplined data blocks
+                  underneath.
+                </p>
+                <div class="metric-grid">
+                  <div class="metric-card">
+                    <div class="label">Tracked items</div>
+                    <div class="value">248</div>
+                    <div class="hint">Active inventory records</div>
+                  </div>
+                  <div class="metric-card">
+                    <div class="label">Units in stock</div>
+                    <div class="value">4,920</div>
+                    <div class="hint">All live SKUs combined</div>
+                  </div>
+                  <div class="metric-card warning">
+                    <div class="label">Low-stock items</div>
+                    <div class="value">12</div>
+                    <div class="hint">Restock attention needed today</div>
+                  </div>
+                </div>
+              </section>
+
+              <div class="section-grid">
+                <section class="panel">
+                  <div class="panel-header">
+                    <div>
+                      <h4>Low-stock items</h4>
+                      <p>Items most likely to affect dispatch or same-day fulfillment.</p>
+                    </div>
+                    <div class="button">View all</div>
+                  </div>
+                  <div class="panel-body">
+                    <div class="list">
+                      <div class="list-card">
+                        <div>
+                          <strong>Premium Potting Mix</strong>
+                          <span>28 in stock · minimum target 42</span>
+                        </div>
+                        <div class="state-badge warning">Low stock</div>
+                      </div>
+                      <div class="list-card">
+                        <div>
+                          <strong>Slate Planter 18"</strong>
+                          <span>9 in stock · minimum target 16</span>
+                        </div>
+                        <div class="state-badge warning">Critical</div>
+                      </div>
+                      <div class="list-card">
+                        <div>
+                          <strong>Rain Barrel Kit</strong>
+                          <span>14 in stock · minimum target 20</span>
+                        </div>
+                        <div class="state-badge warning">Monitor</div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="panel">
+                  <div class="panel-header">
+                    <div>
+                      <h4>Recent movement</h4>
+                      <p>Latest activity styled for scannability instead of raw logs.</p>
+                    </div>
+                  </div>
+                  <div class="panel-body">
+                    <div class="activity-item">
+                      <div class="activity-icon blue">+</div>
+                      <div><strong>Premium Potting Mix restocked</strong><span>Received by Maya · East shelf</span></div>
+                      <div class="activity-delta" style="color: var(--green)">+60</div>
+                    </div>
+                    <div class="activity-item">
+                      <div class="activity-icon teal">↗</div>
+                      <div><strong>Delivery route #184 confirmed</strong><span>Driver assigned · 5 line items</span></div>
+                      <div class="activity-delta" style="color: var(--primary)">Out</div>
+                    </div>
+                    <div class="activity-item">
+                      <div class="activity-icon amber">−</div>
+                      <div><strong>Slate Planter 18" sold</strong><span>Two units removed · cash + interac split</span></div>
+                      <div class="activity-delta" style="color: var(--amber)">-2</div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+
+              <div class="blueprint">
+                <section class="panel">
+                  <div class="panel-header">
+                    <div>
+                      <h4>Inventory view concept</h4>
+                      <p>Sharper cards, better search posture, and a more premium low-stock mode.</p>
+                    </div>
+                  </div>
+                  <div class="panel-body">
+                    <div class="inventory-toolbar">
+                      <div class="search">Search by item name, category, or notes...</div>
+                      <div class="chip active">Low stock only</div>
+                      <div class="chip">Export CSV</div>
+                    </div>
+                    <div class="inventory-grid">
+                      <div class="inventory-card">
+                        <div class="state-badge warning">Low stock</div>
+                        <h5>Slate Planter 18"</h5>
+                        <div class="meta">Ceramics · patio line</div>
+                        <div class="stock">9 <small>in stock</small></div>
+                        <div class="inventory-footer"><span>Minimum target</span><strong>16</strong></div>
+                      </div>
+                      <div class="inventory-card">
+                        <div class="state-badge warning">Watch</div>
+                        <h5>Rain Barrel Kit</h5>
+                        <div class="meta">Water systems</div>
+                        <div class="stock">14 <small>in stock</small></div>
+                        <div class="inventory-footer"><span>Minimum target</span><strong>20</strong></div>
+                      </div>
+                      <div class="inventory-card">
+                        <div class="state-badge" style="background: rgba(29,155,114,0.12); color: var(--green);">Healthy</div>
+                        <h5>Premium Potting Mix</h5>
+                        <div class="meta">Soil blend</div>
+                        <div class="stock">88 <small>in stock</small></div>
+                        <div class="inventory-footer"><span>Minimum target</span><strong>42</strong></div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <div class="section-grid">
+                  <section class="panel">
+                    <div class="panel-header">
+                      <div>
+                        <h4>Reports view concept</h4>
+                        <p>Less accounting sludge, more month-level pattern recognition.</p>
+                      </div>
+                    </div>
+                    <div class="panel-body">
+                      <div class="metric-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 0;">
+                        <div class="metric-card">
+                          <div class="label">Month revenue</div>
+                          <div class="value">$18,420</div>
+                          <div class="hint">Cash + interac realized</div>
+                        </div>
+                        <div class="metric-card success">
+                          <div class="label">Gross profit</div>
+                          <div class="value">$8,970</div>
+                          <div class="hint">Healthy margin pacing</div>
+                        </div>
+                      </div>
+                      <div style="margin-top: 20px;" class="chart">
+                        <div class="chart-row">
+                          <span>Jul 12</span>
+                          <div class="track"><div class="bar" style="width: 82%"></div></div>
+                          <div class="money">$1,940</div>
+                        </div>
+                        <div class="chart-row">
+                          <span>Jul 13</span>
+                          <div class="track"><div class="bar" style="width: 53%"></div></div>
+                          <div class="money">$1,240</div>
+                        </div>
+                        <div class="chart-row">
+                          <span>Jul 14</span>
+                          <div class="track"><div class="bar" style="width: 90%"></div></div>
+                          <div class="money">$2,120</div>
+                        </div>
+                        <div class="chart-row">
+                          <span>Jul 15</span>
+                          <div class="track"><div class="bar" style="width: 64%"></div></div>
+                          <div class="money">$1,480</div>
+                        </div>
+                        <div class="chart-row">
+                          <span>Jul 16</span>
+                          <div class="track"><div class="bar" style="width: 74%"></div></div>
+                          <div class="money">$1,760</div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="panel">
+                    <div class="panel-header">
+                      <div>
+                        <h4>Top sellers</h4>
+                        <p>High-signal product rows with revenue and profit together.</p>
+                      </div>
+                    </div>
+                    <div class="panel-body">
+                      <div class="sales-row">
+                        <div><strong>Premium Potting Mix</strong><span>88 units sold</span></div>
+                        <div class="sales-values"><strong>$4,620</strong><span>profit $2,110</span></div>
+                      </div>
+                      <div class="sales-row">
+                        <div><strong>Rain Barrel Kit</strong><span>32 units sold</span></div>
+                        <div class="sales-values"><strong>$3,860</strong><span>profit $1,780</span></div>
+                      </div>
+                      <div class="sales-row">
+                        <div><strong>Slate Planter 18"</strong><span>19 units sold</span></div>
+                        <div class="sales-values"><strong>$2,470</strong><span>profit $1,220</span></div>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mobile-column">
+          <section class="mobile-note">
+            <h4>iPhone direction</h4>
+            <p>
+              The mobile side should feel less like a shrunk admin panel and more like a focused
+              field tool: stronger card rhythm, cleaner bottom nav, and better status communication.
+            </p>
+          </section>
+
+          <div class="phone">
+            <div class="phone-screen">
+              <div class="phone-top">
+                <strong>9:41</strong>
+                <strong>◔ 5G 100%</strong>
+              </div>
+              <div class="phone-title">
+                <h5>Dashboard</h5>
+                <p>Friday dispatch pulse · quickest way to know what needs action before routes start.</p>
+              </div>
+
+              <div class="phone-card">
+                <div class="label">Today's revenue</div>
+                <div class="value">$2,480</div>
+              </div>
+
+              <div class="phone-section">
+                <div class="phone-section-head">
+                  <h6>Needs restocking</h6>
+                  <span>View all</span>
+                </div>
+                <div class="mini-list">
+                  <div class="mini-card">
+                    <strong>Slate Planter 18"</strong>
+                    <span>9 in stock · minimum 16</span>
+                  </div>
+                  <div class="mini-card">
+                    <strong>Rain Barrel Kit</strong>
+                    <span>14 in stock · minimum 20</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="phone-section">
+                <div class="phone-section-head">
+                  <h6>Recent activity</h6>
+                  <span>Timeline</span>
+                </div>
+                <div class="mini-list">
+                  <div class="mini-card">
+                    <strong>Route #184 confirmed</strong>
+                    <span>Driver assigned · 5 items</span>
+                  </div>
+                  <div class="mini-card">
+                    <strong>Premium Potting Mix received</strong>
+                    <span>+60 units · Maya</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bottom-nav">
+                <div class="active">◫<span>Home</span></div>
+                <div>▣<span>Items</span></div>
+                <div>↗<span>Orders</span></div>
+                <div>◧<span>Reports</span></div>
+                <div>⋯<span>Settings</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

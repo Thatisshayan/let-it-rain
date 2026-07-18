@@ -27,6 +27,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated preview/build outputs are separate artifacts, not app source.
+    "artifacts/**/dist/**",
+    "artifacts/**/standalone.html",
   ]),
 ]);
 

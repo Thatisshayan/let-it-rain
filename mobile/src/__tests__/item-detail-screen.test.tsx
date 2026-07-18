@@ -55,7 +55,7 @@ function MockFlatList({
   );
 }
 
-function MockRefreshControl(_: Record<string, unknown>) {
+function MockRefreshControl() {
   return null;
 }
 

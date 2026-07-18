@@ -36,12 +36,12 @@ export async function AuditLogTab({
   });
 
   return (
-    <Card>
+    <Card className="editorial-surface rounded-[1.8rem] overflow-hidden">
       <CardContent className="p-0">
         {entries.length === 0 ? (
           <p className="px-4 py-6 text-sm text-muted-foreground">No audit log entries yet.</p>
         ) : (
-          <ul className="divide-y">
+          <ul className="divide-y divide-border/75">
             {entries.map((e) => (
               <li key={e.id} className="px-4 py-3 text-sm">
                 <AuditEntryRow entry={e as AuditEntry} />
@@ -64,7 +64,7 @@ function AuditEntryRow({ entry }: { entry: AuditEntry }) {
     <div className="space-y-1">
       <div className="flex items-center gap-2">
         <span className="font-mono text-xs text-muted-foreground">{time}</span>
-        <span className="inline-block rounded bg-muted px-2 py-0.5 text-xs font-medium">
+        <span className="inline-block rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
           {entry.action}
         </span>
         {target && (

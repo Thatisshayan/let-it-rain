@@ -55,7 +55,7 @@ function MockText({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function MockTextInput(_: Record<string, unknown>) {
+function MockTextInput() {
   return null;
 }
 
