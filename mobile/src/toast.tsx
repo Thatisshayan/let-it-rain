@@ -1,7 +1,8 @@
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { Animated, Text, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "./theme";
+import { useReducedMotion } from "./useReducedMotion";
 
 type ToastState = { message: string; kind: "success" | "error" } | null;
 type ToastContextValue = { show: (message: string, kind?: "success" | "error") => void };
@@ -13,6 +14,7 @@ const VISIBLE_MS = 2200;
 export function ToastProvider({ children }: { children: ReactNode }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const reducedMotion = useReducedMotion();
   const [toast, setToast] = useState<ToastState>(null);
   const [opacity] = useState(() => new Animated.Value(0));
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -21,13 +23,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (message: string, kind: "success" | "error" = "success") => {
       if (hideTimer.current) clearTimeout(hideTimer.current);
       setToast({ message, kind });
-      Animated.timing(opacity, { toValue: 1, duration: 150, useNativeDriver: true }).start();
+      if (reducedMotion) opacity.setValue(1);
+      else Animated.timing(opacity, { toValue: 1, duration: 150, useNativeDriver: true }).start();
       hideTimer.current = setTimeout(() => {
-        Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => setToast(null));
+        if (reducedMotion) setToast(null);
+        else Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => setToast(null));
       }, VISIBLE_MS);
     },
-    [opacity]
+    [opacity, reducedMotion]
   );
+
+  useEffect(() => () => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+  }, []);
 
   return (
     <ToastContext.Provider value={{ show }}>
@@ -35,6 +43,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {toast ? (
         <Animated.View
           pointerEvents="none"
+          accessibilityRole="alert"
           style={[
             styles.toast,
             {
