@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { HoverLift, Reveal } from "@/components/app/motion";
 
 export function PageHeader({
   eyebrow,
@@ -16,26 +17,28 @@ export function PageHeader({
   className?: string;
 }) {
   return (
-    <section
+    <Reveal
       className={cn(
-        "paper-grid editorial-surface relative overflow-hidden rounded-[1.85rem] p-6 sm:p-8",
+        "command-surface command-grid relative overflow-hidden rounded-[2rem] p-6 sm:p-8",
         className
       )}
     >
-      <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-primary via-rain to-transparent" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/35 to-transparent" />
+      <div className="absolute inset-y-0 left-0 w-px bg-gradient-to-b from-transparent via-white/18 to-transparent" />
+      <div className="absolute inset-y-8 right-8 hidden w-40 rounded-full bg-[radial-gradient(circle,rgba(70,122,255,0.22),transparent_72%)] blur-2xl lg:block" />
       <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-2xl space-y-3">
+        <div className="max-w-3xl space-y-3">
           {eyebrow ? (
             <p className="rule-label pl-2 text-primary/80">
               {eyebrow}
             </p>
           ) : null}
           <div className="space-y-2">
-            <h1 className="max-w-4xl pl-2 font-heading text-3xl font-semibold tracking-[-0.05em] text-foreground sm:text-4xl lg:text-[3.4rem] lg:leading-[0.95]">
+            <h1 className="max-w-4xl pl-2 font-heading text-4xl font-semibold tracking-[-0.07em] text-foreground sm:text-5xl lg:text-[4.6rem] lg:leading-[0.9]">
               {title}
             </h1>
             {description ? (
-              <p className="max-w-2xl pl-2 text-sm leading-6 text-muted-foreground sm:text-base">
+              <p className="max-w-2xl pl-2 text-sm leading-7 text-muted-foreground sm:text-base">
                 {description}
               </p>
             ) : null}
@@ -44,7 +47,7 @@ export function PageHeader({
         {actions ? <div className="flex flex-wrap gap-3">{actions}</div> : null}
       </div>
       {children ? <div className="relative mt-6">{children}</div> : null}
-    </section>
+    </Reveal>
   );
 }
 
@@ -65,19 +68,17 @@ export function MetricCard({
 }) {
   const toneClasses =
     tone === "warning"
-      ? "border-warning/30 bg-warning/10"
+      ? "border-warning/18 bg-warning/10"
       : tone === "success"
-        ? "border-success/30 bg-success/10"
-        : "border-white/70 bg-background/60 dark:border-white/8 dark:bg-white/4";
+        ? "border-success/18 bg-success/10"
+        : "border-white/10 bg-white/[0.035]";
 
   return (
-    <div className={cn("rounded-[1.35rem] border p-4 backdrop-blur-sm", toneClasses)}>
-      <p className="rule-label">
-        {label}
-      </p>
+    <HoverLift className={cn("rounded-[1.5rem] border p-4 backdrop-blur-sm transition-colors", toneClasses)}>
+      <p className="rule-label">{label}</p>
       <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">{value}</p>
-      {hint ? <p className="mt-2 text-sm text-muted-foreground">{hint}</p> : null}
-    </div>
+      {hint ? <p className="mt-2 max-w-[18rem] text-sm leading-6 text-muted-foreground">{hint}</p> : null}
+    </HoverLift>
   );
 }
 

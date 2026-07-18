@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { AppNav } from "@/components/app/app-nav";
 import { BrandLink } from "@/components/app/brand";
+import { Reveal } from "@/components/app/motion";
 
 export default async function AppLayout({
   children,
@@ -39,7 +40,7 @@ export default async function AppLayout({
     <div className="min-h-screen">
       <div className="mx-auto flex min-h-screen w-full max-w-[100rem] flex-col px-3 py-3 lg:grid lg:grid-cols-[18.5rem_minmax(0,1fr)] lg:gap-5 lg:px-4 lg:py-4">
         <aside className="lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)]">
-          <div className="flex h-full flex-col rounded-[1.8rem] border border-sidebar-border bg-sidebar p-4 text-sidebar-foreground shadow-[0_28px_70px_-42px_rgba(15,23,42,0.58)]">
+          <Reveal className="flex h-full flex-col rounded-[1.8rem] border border-sidebar-border bg-sidebar p-4 text-sidebar-foreground shadow-[0_28px_70px_-42px_rgba(15,23,42,0.58)]">
             <div className="pb-5">
               <BrandLink />
             </div>
@@ -48,7 +49,7 @@ export default async function AppLayout({
               <AppNav lowStockCount={lowStockCount} />
             </div>
 
-            <div className="mt-4 hidden rounded-[1.4rem] border border-white/10 bg-white/4 p-4 lg:block">
+            <div className="mt-4 hidden rounded-[1.4rem] border border-white/10 bg-white/[0.035] p-4 lg:block">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/55">
                 Quick pulse
               </p>
@@ -65,10 +66,17 @@ export default async function AppLayout({
                     {canEdit ? "Enabled" : "Limited"}
                   </span>
                 </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-sidebar-foreground/65">Workspace</span>
+                  <span className="font-medium text-sidebar-foreground">Internal</span>
+                </div>
                 {canEdit ? (
                   <Link
                     href="/items/new"
-                    className={cn(buttonVariants({ variant: "secondary" }), "mt-2 w-full")}
+                    className={cn(
+                      buttonVariants({ variant: "secondary" }),
+                      "mt-2 w-full border-white/10 bg-primary/85 text-primary-foreground hover:bg-primary"
+                    )}
                   >
                     Add new item
                   </Link>
@@ -77,10 +85,10 @@ export default async function AppLayout({
             </div>
 
             <div className="mt-auto hidden lg:block">
-              <div className="rounded-[1.4rem] border border-white/10 bg-white/4 p-4">
+              <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.035] p-4">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-11 w-11">
-                    <AvatarFallback className="bg-white/10 text-sidebar-foreground">
+                    <AvatarFallback className="bg-primary/22 text-sidebar-foreground">
                       {initials}
                     </AvatarFallback>
                   </Avatar>
@@ -96,7 +104,7 @@ export default async function AppLayout({
                 </form>
               </div>
             </div>
-          </div>
+          </Reveal>
         </aside>
 
         <div className="flex min-w-0 flex-col">

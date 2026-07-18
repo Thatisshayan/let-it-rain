@@ -11,6 +11,7 @@ import {
   SectionHeading,
 } from "@/components/app/page-header";
 import { BrandIcon } from "@/components/app/brand";
+import { HoverLift, Reveal } from "@/components/app/motion";
 
 const MOVEMENT_LABEL: Record<string, string> = {
   RECEIVE: "Received",
@@ -47,30 +48,31 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Daily brief"
-        title="Operations first. Pressure points, stock posture, and movement in one command surface."
-        description="This dashboard is built for the first two minutes of the day: what is tightening, what changed most recently, and where stock decisions need intervention."
+        eyebrow="Friday operating brief"
+        title="A calmer, harder-edged command surface for real inventory work."
+        description="Start with pressure, then flow, then detail. This surface is tuned for the first two minutes of the day: what is tightening, what changed, and where stock decisions need intervention."
       >
         <MetricGrid>
-          <MetricCard label="Tracked items" value={totalItems} hint="Active inventory records" />
-          <MetricCard label="Units in stock" value={totalUnits} hint="Across all non-deleted items" />
+          <MetricCard label="Tracked items" value={totalItems} hint="Live SKUs in the current organization" />
+          <MetricCard label="Units in stock" value={totalUnits} hint="Total physical quantity on hand" />
           <MetricCard
             label="Low-stock items"
-            value={lowStockItems.length}
-            hint={lowStockItems.length > 0 ? "Restock attention needed" : "No shortages right now"}
+            value={String(lowStockItems.length).padStart(2, "0")}
+            hint={lowStockItems.length > 0 ? "Needs attention before noon" : "No shortages right now"}
             tone={lowStockItems.length > 0 ? "warning" : "success"}
           />
-          <MetricCard label="Receipts today" value={receivedToday} hint="Inbound movement captured" />
+          <MetricCard label="Receipts today" value={String(receivedToday).padStart(2, "0")} hint="Inbound movement captured" />
         </MetricGrid>
       </PageHeader>
 
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.85fr)]">
-        <Card className="editorial-surface rounded-[1.8rem] border-border/80 bg-[linear-gradient(135deg,rgba(252,251,248,0.94),rgba(239,235,228,0.96))]">
+        <Reveal delay={0.08}>
+        <Card className="command-surface overflow-hidden rounded-[1.8rem] border-border/80 bg-[linear-gradient(145deg,rgba(22,29,47,0.92),rgba(16,21,36,0.98))]">
           <CardContent className="grid gap-0 p-0 lg:grid-cols-[minmax(0,1.1fr)_18rem]">
             <div className="p-6 sm:p-8">
               <p className="rule-label">Operating posture</p>
-              <h2 className="mt-4 max-w-xl font-heading text-4xl font-semibold tracking-[-0.06em] text-foreground sm:text-5xl sm:leading-[0.95]">
-                Inventory trust comes from readable movement, not decorative panels.
+              <h2 className="mt-4 max-w-xl font-heading text-4xl font-semibold tracking-[-0.07em] text-foreground sm:text-5xl sm:leading-[0.95]">
+                Inventory trust comes from readable movement, not decorative chrome.
               </h2>
               <p className="serif-accent mt-4 text-2xl leading-none text-primary/78">
                 Daily rhythm. Visible stock. Fewer blind spots.
@@ -90,8 +92,8 @@ export default async function DashboardPage() {
                 </div>
               </div>
             </div>
-            <div className="flex flex-col justify-between border-t border-border/70 bg-foreground/[0.03] p-6 lg:border-t-0 lg:border-l">
-              <div className="w-18 max-w-[5rem] overflow-hidden rounded-[1.4rem]">
+            <div className="flex flex-col justify-between border-t border-border/70 bg-white/[0.035] p-6 lg:border-t-0 lg:border-l">
+              <div className="w-18 max-w-[5rem] overflow-hidden rounded-[1.4rem] border border-white/10 bg-white/[0.045] p-2">
                 <BrandIcon />
               </div>
               <div className="space-y-4">
@@ -113,12 +115,14 @@ export default async function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+        </Reveal>
 
-        <Card className="editorial-surface rounded-[1.8rem] bg-foreground text-white">
+        <Reveal delay={0.14}>
+        <Card className="command-surface rounded-[1.8rem] bg-[linear-gradient(180deg,rgba(15,20,34,0.98),rgba(11,16,28,0.98))] text-white">
           <CardHeader>
             <SectionHeading
-              title="Low-stock items"
-              description="First look at what needs replenishment."
+              title="Attention queue"
+              description="What needs replenishment before it becomes a sales constraint."
             />
           </CardHeader>
           <CardContent>
@@ -128,9 +132,10 @@ export default async function DashboardPage() {
               <ul className="space-y-3">
                 {lowStockItems.map((item) => (
                   <li key={item.id}>
+                    <HoverLift>
                     <Link
                       href={`/items/${item.id}`}
-                      className="flex items-center justify-between gap-3 rounded-[1.2rem] border border-white/10 bg-white/5 px-4 py-4 text-sm transition-all hover:bg-white/8"
+                      className="flex items-center justify-between gap-3 rounded-[1.2rem] border border-white/10 bg-white/[0.045] px-4 py-4 text-sm transition-all hover:bg-white/[0.08]"
                     >
                       <div>
                         <span className="font-medium text-white">{item.name}</span>
@@ -145,19 +150,22 @@ export default async function DashboardPage() {
                         <Badge variant="warning">Low</Badge>
                       </span>
                     </Link>
+                    </HoverLift>
                   </li>
                 ))}
               </ul>
             )}
           </CardContent>
         </Card>
+        </Reveal>
       </section>
 
-      <Card className="editorial-surface rounded-[1.8rem]">
+      <Reveal delay={0.2}>
+      <Card className="command-surface rounded-[1.8rem]">
           <CardHeader>
             <SectionHeading
-              title="Recent activity"
-              description="Latest inventory movements across the organization, arranged as a readable operating log."
+              title="Movement stream"
+              description="Latest inventory changes across the organization, arranged as an operating log instead of a raw dump."
             />
           </CardHeader>
           <CardContent>
@@ -189,6 +197,7 @@ export default async function DashboardPage() {
             )}
           </CardContent>
         </Card>
+      </Reveal>
     </div>
   );
 }
