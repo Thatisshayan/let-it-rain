@@ -12,6 +12,9 @@ export type Theme = {
   background: string;
   foreground: string;
   card: string;
+  surface: string;
+  surfaceStrong: string;
+  surfaceMuted: string;
   border: string;
   muted: string;
   mutedForeground: string;
@@ -22,40 +25,33 @@ export type Theme = {
   warningBackground: string;
   success: string;
   rain: string;
+  shadow: string;
 };
 
 const light: Theme = {
   scheme: "light",
-  background: "#fafafa",
-  foreground: "#1a1a2e",
-  card: "#ffffff",
-  border: "#e5e5ea",
-  muted: "#f0f0f5",
-  mutedForeground: "#6b6b7a",
-  primary: "#3b5fd6",
-  primaryForeground: "#fafafa",
-  destructive: "#dc4444",
-  warning: "#a5690a",
-  warningBackground: "#fdf3e0",
-  success: "#1f9d5c",
-  rain: "#1a9db3",
+  background: "#131824",
+  foreground: "#eef2ff",
+  card: "#1b2332",
+  surface: "#182132",
+  surfaceStrong: "#1f2a3f",
+  surfaceMuted: "#121927",
+  border: "#2f3b53",
+  muted: "#212c42",
+  mutedForeground: "#9aa7bf",
+  primary: "#7b9fff",
+  primaryForeground: "#0f1522",
+  destructive: "#ff7d75",
+  warning: "#e0b15c",
+  warningBackground: "#3b2d17",
+  success: "#68c49b",
+  rain: "#74cfe0",
+  shadow: "rgba(6, 10, 20, 0.42)",
 };
 
 const dark: Theme = {
+  ...light,
   scheme: "dark",
-  background: "#17171f",
-  foreground: "#ececf0",
-  card: "#242434",
-  border: "#33333f",
-  muted: "#2b2b38",
-  mutedForeground: "#a8a8b8",
-  primary: "#7ea0f0",
-  primaryForeground: "#17171f",
-  destructive: "#e2645a",
-  warning: "#dbab5c",
-  warningBackground: "#332711",
-  success: "#6bc79a",
-  rain: "#7fd4e0",
 };
 
 export function useTheme(): Theme {

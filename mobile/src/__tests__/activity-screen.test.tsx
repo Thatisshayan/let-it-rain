@@ -41,7 +41,7 @@ function MockFlatList({
   return <>{renderItem ? data.map((item, index) => <React.Fragment key={index}>{renderItem({ item, index })}</React.Fragment>) : null}</>;
 }
 
-function MockRefreshControl(_: Record<string, unknown>) {
+function MockRefreshControl() {
   return null;
 }
 

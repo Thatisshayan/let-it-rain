@@ -12,6 +12,7 @@ import { ApiError } from "../../src/api/client";
 import { useAuth } from "../../src/api/AuthContext";
 import { hasPermission } from "../../src/lib/permissions";
 import { useTheme } from "../../src/theme";
+import { ScreenHeader, StatTile, Surface } from "../../src/ui/command";
 
 const SUBSCRIPTION_LABEL: Record<OrgInfo["subscriptionStatus"], string> = {
   NONE: "No subscription",
@@ -100,44 +101,73 @@ export default function OrganizationScreen() {
 
   return (
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={styles.container}>
+      <ScreenHeader
+        theme={theme}
+        eyebrow="Organization"
+        title="Control your workspace standards."
+        description="Review plan posture and tune the defaults that shape every operator’s day-to-day inventory workflow."
+      />
       {info ? (
-        <View style={[styles.card, { borderColor: theme.border }]}>
-          <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Plan</Text>
-          <Text style={{ color: theme.foreground, fontSize: 18, fontWeight: "700" }}>{info.planLabel}</Text>
-          <Text style={{ color: theme.mutedForeground, fontSize: 13 }}>
-            {SUBSCRIPTION_LABEL[info.subscriptionStatus]} ·{" "}
-            {info.seatLimit === null ? "Unlimited seats" : `${info.usage.activeUsers}/${info.seatLimit} seats used`}
-          </Text>
-          {info.plan === "FREE" ? (
-            <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={upgrade} disabled={upgrading}>
-              <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>
-                {upgrading ? "Opening checkout…" : "Upgrade to Pro"}
-              </Text>
-            </Pressable>
-          ) : null}
+        <View style={styles.metricGrid}>
+          <StatTile theme={theme} label="Plan" value={info.planLabel} hint={SUBSCRIPTION_LABEL[info.subscriptionStatus]} />
+          <StatTile
+            theme={theme}
+            label="Seats"
+            value={info.seatLimit === null ? "Unlimited" : `${info.usage.activeUsers}/${info.seatLimit}`}
+            hint="Active licensed users"
+          />
         </View>
       ) : null}
+      <Surface theme={theme}>
+        {info ? (
+          <>
+            {info.plan === "FREE" ? (
+              <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={upgrade} disabled={upgrading} accessibilityRole="button" accessibilityLabel="Upgrade organization plan" accessibilityState={{ disabled: upgrading }}>
+                <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>
+                  {upgrading ? "Opening checkout…" : "Upgrade to Pro"}
+                </Text>
+              </Pressable>
+            ) : null}
+            <Text style={[styles.helperText, { color: theme.mutedForeground }]}>
+              {SUBSCRIPTION_LABEL[info.subscriptionStatus]} ·{" "}
+              {info.seatLimit === null ? "Unlimited seats" : `${info.usage.activeUsers}/${info.seatLimit} seats used`}
+            </Text>
+          </>
+        ) : null}
 
-      <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Business name</Text>
-      <TextInput style={inputStyle} value={businessName} onChangeText={setBusinessName} placeholder="Your business name" placeholderTextColor={theme.mutedForeground} />
+        <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Business name</Text>
+        <TextInput
+          style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]}
+          value={businessName}
+          onChangeText={setBusinessName}
+          placeholder="Your business name"
+          placeholderTextColor={theme.mutedForeground}
+        />
 
-      <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Default low-stock threshold</Text>
-      <TextInput style={inputStyle} value={lowStock} onChangeText={setLowStock} keyboardType="number-pad" />
+        <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Default low-stock threshold</Text>
+        <TextInput
+          style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]}
+          value={lowStock}
+          onChangeText={setLowStock}
+          keyboardType="number-pad"
+        />
 
-      {error ? <Text style={{ color: theme.destructive }}>{error}</Text> : null}
-      {success ? <Text style={{ color: theme.success }}>{success}</Text> : null}
-      <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={save}>
-        <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>Save settings</Text>
-      </Pressable>
+        {error ? <Text style={{ color: theme.destructive }}>{error}</Text> : null}
+        {success ? <Text style={{ color: theme.success }}>{success}</Text> : null}
+        <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={save} accessibilityRole="button" accessibilityLabel="Save organization settings">
+          <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>Save settings</Text>
+        </Pressable>
+      </Surface>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, gap: 8 },
-  card: { borderWidth: 1, borderRadius: 12, padding: 16, gap: 4, marginBottom: 8 },
-  sectionTitle: { fontWeight: "600", marginTop: 12 },
-  input: { borderWidth: 1, borderRadius: 8, padding: 12 },
-  button: { padding: 12, borderRadius: 8, alignItems: "center", marginTop: 8 },
-  buttonText: { fontWeight: "600" },
+  container: { padding: 16, gap: 16 },
+  metricGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  helperText: { fontSize: 13, lineHeight: 19, marginTop: 8 },
+  sectionTitle: { fontWeight: "700", fontSize: 16, marginTop: 12, marginBottom: 6 },
+  input: { borderWidth: 1, borderRadius: 16, padding: 14, marginBottom: 12 },
+  button: { padding: 16, borderRadius: 18, alignItems: "center", marginTop: 8 },
+  buttonText: { fontWeight: "700" },
 });

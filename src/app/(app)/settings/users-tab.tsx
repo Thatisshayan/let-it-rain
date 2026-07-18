@@ -191,16 +191,16 @@ function DeactivateButton({ user }: { user: UserRow }) {
 
 export function UsersTab({ users, currentUserId }: { users: UserRow[]; currentUserId: string }) {
   return (
-    <Card>
+    <Card className="editorial-surface rounded-[1.8rem]">
       <CardHeader className="flex-row items-center justify-between">
-        <CardTitle className="text-base">Users</CardTitle>
+        <CardTitle className="font-heading text-xl tracking-[-0.03em]">Users</CardTitle>
         <CreateUserDialog />
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-3">
         {users.map((user) => (
           <div
             key={user.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-[1.2rem] border border-border/75 bg-foreground/[0.02] p-4 text-sm"
           >
             <div>
               <p className="font-medium">
@@ -213,7 +213,7 @@ export function UsersTab({ users, currentUserId }: { users: UserRow[]; currentUs
                 {user.id === currentUserId && <span className="text-xs text-muted-foreground">(you)</span>}
               </p>
               <p className="text-xs text-muted-foreground">{user.email}</p>
-              <div className="mt-1 flex flex-wrap gap-1">
+              <div className="mt-2 flex flex-wrap gap-1">
                 {user.permissions.length === 0 ? (
                   <Badge variant="outline">No permissions</Badge>
                 ) : (

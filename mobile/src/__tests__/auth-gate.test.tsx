@@ -14,7 +14,7 @@ function MockText({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function MockPressable({ children, onPress }: { children: React.ReactNode; onPress?: () => void }) {
+function MockPressable({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
@@ -70,7 +70,7 @@ describe("AuthGate", () => {
     expect(tree!.root.findAllByType(VisibleChild)).toHaveLength(1);
   });
 
-  it("auto-invokes unlock and renders the lock screen when locked", async () => {
+  it("keeps protected content locked until the user explicitly unlocks", async () => {
     const unlock = vi.fn();
     authMocks.useAuth.mockReturnValue({
       isLocked: true,
@@ -87,7 +87,7 @@ describe("AuthGate", () => {
       );
     });
 
-    expect(unlock).toHaveBeenCalledTimes(1);
+    expect(unlock).not.toHaveBeenCalled();
     expect(tree!.root.findAllByProps({ children: "Let It Rain is locked" })).toHaveLength(1);
     expect(tree!.root.findAllByProps({ children: "Unlock with Face ID" })).toHaveLength(1);
     expect(tree!.root.findAllByType(VisibleChild)).toHaveLength(0);
@@ -116,6 +116,6 @@ describe("AuthGate", () => {
       pressable.props.onPress();
     });
 
-    expect(unlock).toHaveBeenCalledTimes(2);
+    expect(unlock).toHaveBeenCalledTimes(1);
   });
 });

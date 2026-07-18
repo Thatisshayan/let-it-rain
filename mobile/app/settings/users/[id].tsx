@@ -13,6 +13,7 @@ import { ApiError } from "../../../src/api/client";
 import { useAuth } from "../../../src/api/AuthContext";
 import { useTheme } from "../../../src/theme";
 import { hasPermission } from "../../../src/lib/permissions";
+import { ScreenHeader, Surface } from "../../../src/ui/command";
 
 type TargetUser = { id: string; name: string; email: string; active: boolean; permissions: string[] };
 
@@ -109,67 +110,71 @@ function UserDetailForm({
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Text style={[styles.title, { color: theme.foreground }]}>{target.name}</Text>
-      <Text style={{ color: theme.mutedForeground }}>{target.email}</Text>
-
-      <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Permissions</Text>
-      <View style={styles.permissions}>
-        {ALL_PERMISSIONS.map((p) => (
-          <Pressable
-            key={p}
-            style={[
-              styles.permButton,
-              { borderColor: theme.border },
-              permissions.includes(p) && { backgroundColor: theme.primary, borderColor: theme.primary },
-            ]}
-            onPress={() => togglePermission(p)}
-          >
-            <Text style={{ color: permissions.includes(p) ? theme.primaryForeground : theme.foreground }}>{p}</Text>
-          </Pressable>
-        ))}
-      </View>
-      <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={savePermissions} disabled={saving}>
-        <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>
-          {saving ? "Saving..." : "Save permissions"}
-        </Text>
-      </Pressable>
-
-      <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Status</Text>
-      <Pressable
-        style={[styles.buttonSecondary, { borderColor: theme.border }]}
-        onPress={toggleActive}
-        disabled={isSelf && target.active}
-      >
-        <Text style={{ color: theme.foreground }}>{target.active ? "Deactivate" : "Activate"}</Text>
-      </Pressable>
-
-      <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Reset password</Text>
-      <TextInput
-        style={[styles.input, { borderColor: theme.border, color: theme.foreground }]}
-        placeholder="New password"
-        placeholderTextColor={theme.mutedForeground}
-        secureTextEntry
-        value={newPassword}
-        onChangeText={setNewPassword}
+      <ScreenHeader
+        theme={theme}
+        eyebrow="User profile"
+        title={target.name}
+        description={target.email}
       />
-      <Pressable style={[styles.buttonSecondary, { borderColor: theme.border }]} onPress={submitResetPassword}>
-        <Text style={{ color: theme.foreground }}>Reset password</Text>
-      </Pressable>
+      <Surface theme={theme}>
+        <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Permissions</Text>
+        <View style={styles.permissions}>
+          {ALL_PERMISSIONS.map((p) => (
+            <Pressable
+              key={p}
+              style={[
+                styles.permButton,
+                { borderColor: theme.border, backgroundColor: theme.surfaceStrong },
+                permissions.includes(p) && { backgroundColor: theme.primary, borderColor: theme.primary },
+              ]}
+              onPress={() => togglePermission(p)}
+            >
+              <Text style={{ color: permissions.includes(p) ? theme.primaryForeground : theme.foreground }}>{p}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={savePermissions} disabled={saving} accessibilityRole="button" accessibilityLabel="Save user permissions" accessibilityState={{ disabled: saving }}>
+          <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>
+            {saving ? "Saving..." : "Save permissions"}
+          </Text>
+        </Pressable>
 
-      {error ? <Text style={{ color: theme.destructive }}>{error}</Text> : null}
+        <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Status</Text>
+        <Pressable
+          style={[styles.buttonSecondary, { borderColor: theme.border, backgroundColor: theme.surfaceStrong }]}
+          onPress={toggleActive}
+          disabled={isSelf && target.active}
+        >
+          <Text style={{ color: theme.foreground }}>{target.active ? "Deactivate" : "Activate"}</Text>
+        </Pressable>
+
+        <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Reset password</Text>
+        <TextInput
+          style={[styles.input, { borderColor: theme.border, color: theme.foreground, backgroundColor: theme.surfaceStrong }]}
+          placeholder="New password"
+          placeholderTextColor={theme.mutedForeground}
+          secureTextEntry
+          value={newPassword}
+          onChangeText={setNewPassword}
+        />
+        <Pressable style={[styles.buttonSecondary, { borderColor: theme.border, backgroundColor: theme.surfaceStrong }]} onPress={submitResetPassword} accessibilityRole="button" accessibilityLabel="Reset user password">
+          <Text style={{ color: theme.foreground }}>Reset password</Text>
+        </Pressable>
+
+        {error ? <Text style={{ color: theme.destructive }}>{error}</Text> : null}
+      </Surface>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, gap: 8 },
+  container: { flex: 1, padding: 16, gap: 16 },
   padded: { padding: 16, flex: 1 },
-  title: { fontSize: 22, fontWeight: "600" },
-  sectionTitle: { fontWeight: "600", marginTop: 12 },
+  sectionTitle: { fontWeight: "700", fontSize: 16, marginTop: 12, marginBottom: 6 },
   permissions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  permButton: { padding: 8, borderRadius: 8, borderWidth: 1 },
-  button: { padding: 12, borderRadius: 8, alignItems: "center", marginTop: 8 },
-  buttonText: { fontWeight: "600" },
-  buttonSecondary: { padding: 12, borderRadius: 8, borderWidth: 1, alignItems: "center" },
-  input: { borderWidth: 1, borderRadius: 8, padding: 12 },
+  permButton: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 14, borderWidth: 1 },
+  button: { padding: 16, borderRadius: 18, alignItems: "center", marginTop: 8 },
+  buttonText: { fontWeight: "700" },
+  buttonSecondary: { padding: 14, borderRadius: 18, borderWidth: 1, alignItems: "center", marginTop: 8 },
+  input: { borderWidth: 1, borderRadius: 16, padding: 14, marginBottom: 12 },
 });

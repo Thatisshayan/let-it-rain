@@ -7,6 +7,14 @@ import { adjacentMonthParam } from "../../src/api/activity";
 import { useTheme } from "../../src/theme";
 import { useAuth } from "../../src/api/AuthContext";
 import { hasPermission } from "../../src/lib/permissions";
+import {
+  EmptyMessage,
+  ListRow,
+  ScreenHeader,
+  StatTile,
+  StatusMessage,
+  Surface,
+} from "../../src/ui/command";
 
 export default function ReportsScreen() {
   const theme = useTheme();
@@ -30,21 +38,22 @@ export default function ReportsScreen() {
   if (!canViewReports) {
     return (
       <View style={[styles.container, { paddingTop: insets.top, backgroundColor: theme.background }]}>
-        <Text style={[styles.padded, { color: theme.destructive }]}>
-          You don&apos;t have permission to view reports.
-        </Text>
+        <StatusMessage theme={theme} title="Reports unavailable" detail="You don't have permission to view reports." tone="permission" />
       </View>
     );
   }
 
-  if (isLoading || !data)
-    return <Text style={[styles.padded, { color: theme.foreground, backgroundColor: theme.background }]}>Loading...</Text>;
-  if (error)
+  if (isLoading || !data) {
     return (
-      <Text style={[styles.padded, { color: theme.destructive, backgroundColor: theme.background }]}>
-        Could not load reports.
-      </Text>
+      <View style={[styles.padded, { backgroundColor: theme.background }]}><Text style={{ color: theme.foreground }}>Loading reports…</Text></View>
     );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.padded, { backgroundColor: theme.background }]}><StatusMessage theme={theme} title="Could not load reports." detail="Check your connection and try again." onRetry={() => refetch()} retryLabel="Retry loading reports" /></View>
+    );
+  }
 
   const cards: { label: string; value: string; negative?: boolean }[] = [
     { label: "Today's revenue", value: formatMoney(data.todayRevenue) },
@@ -62,72 +71,111 @@ export default function ReportsScreen() {
   return (
     <FlatList
       style={[styles.container, { paddingTop: insets.top, backgroundColor: theme.background }]}
+      contentContainerStyle={styles.content}
       data={[]}
       keyExtractor={() => "x"}
       renderItem={null}
       onRefresh={refetch}
       refreshing={isRefetching}
       ListHeaderComponent={
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <Pressable onPress={() => goToMonth(-1)}>
-              <Text style={{ color: theme.primary }}>← Prev</Text>
-            </Pressable>
-            <Text style={[styles.monthLabel, { color: theme.foreground }]}>{data.monthLabel}</Text>
-            <Pressable onPress={() => goToMonth(1)}>
-              <Text style={{ color: theme.primary }}>Next →</Text>
-            </Pressable>
-          </View>
+        <>
+          <ScreenHeader
+            theme={theme}
+            eyebrow="Accounting snapshot"
+            title="Revenue, margin, and stock value without leaving the field view."
+            description={`Operating economics for ${data.monthLabel}.`}
+          />
 
-          <View style={styles.cardsGrid}>
-            {cards.map((c) => (
-              <View key={c.label} style={[styles.card, { borderColor: theme.border, backgroundColor: theme.card }]}>
-                <Text style={[styles.cardLabel, { color: theme.mutedForeground }]}>{c.label}</Text>
-                <Text style={[styles.cardValue, { color: c.negative ? theme.destructive : theme.foreground }]}>
-                  {c.value}
-                </Text>
-              </View>
-            ))}
-          </View>
+          <Surface theme={theme}>
+            <View style={styles.header}>
+              <Pressable onPress={() => goToMonth(-1)} accessibilityRole="button" accessibilityLabel="Show previous month">
+                <Text style={{ color: theme.primary }}>← Prev</Text>
+              </Pressable>
+              <Text style={[styles.monthLabel, { color: theme.foreground }]}>{data.monthLabel}</Text>
+              <Pressable onPress={() => goToMonth(1)} accessibilityRole="button" accessibilityLabel="Show next month">
+                <Text style={{ color: theme.primary }}>Next →</Text>
+              </Pressable>
+            </View>
+            <View style={styles.metricGrid}>
+              {cards.slice(0, 4).map((card) => (
+                <StatTile
+                  key={card.label}
+                  theme={theme}
+                  label={card.label}
+                  value={card.value}
+                  tone={card.negative ? "warning" : "default"}
+                />
+              ))}
+            </View>
+          </Surface>
 
-          <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Revenue by day</Text>
-          {data.revenueByDay.length === 0 ? (
-            <Text style={[styles.empty, { color: theme.mutedForeground }]}>No sales recorded this month.</Text>
-          ) : (
-            data.revenueByDay.map((d) => (
-              <View key={d.date} style={styles.chartRow}>
-                <Text style={[styles.chartLabel, { color: theme.mutedForeground }]}>{d.date.slice(5)}</Text>
-                <View style={[styles.chartTrack, { backgroundColor: theme.muted }]}>
-                  <View
-                    style={[
-                      styles.chartBar,
-                      { width: `${Math.max(4, (d.revenue / maxRevenue) * 100)}%`, backgroundColor: theme.primary },
-                    ]}
-                  />
-                </View>
-                <Text style={[styles.chartValue, { color: theme.foreground }]}>{formatMoney(d.revenue)}</Text>
-              </View>
-            ))
-          )}
+          <Surface theme={theme}>
+            <View style={styles.metricGrid}>
+              {cards.slice(4).map((card) => (
+                <StatTile
+                  key={card.label}
+                  theme={theme}
+                  label={card.label}
+                  value={card.value}
+                  tone={card.negative ? "warning" : card.label === "Gross profit" ? "success" : "default"}
+                />
+              ))}
+            </View>
+          </Surface>
 
-          <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Sales by item</Text>
-          {data.salesByItem.length === 0 ? (
-            <Text style={[styles.empty, { color: theme.mutedForeground }]}>No sales recorded this month.</Text>
-          ) : (
-            data.salesByItem.map((row) => (
-              <View key={row.itemId} style={[styles.row, { borderColor: theme.border }]}>
-                <View>
-                  <Text style={[styles.rowName, { color: theme.foreground }]}>{row.itemName}</Text>
-                  <Text style={[styles.rowMeta, { color: theme.mutedForeground }]}>{row.unitsSold} units sold</Text>
-                </View>
-                <View style={styles.rowRight}>
-                  <Text style={[styles.rowValue, { color: theme.foreground }]}>{formatMoney(row.revenue)}</Text>
-                  <Text style={[styles.rowMeta, { color: theme.mutedForeground }]}>profit {formatMoney(row.profit)}</Text>
-                </View>
+          <Surface theme={theme}>
+            <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Revenue by day</Text>
+            {data.revenueByDay.length === 0 ? (
+              <EmptyMessage theme={theme} title="No sales recorded this month." detail="Revenue bars will appear once sales are logged." />
+            ) : (
+              <View style={styles.chartList}>
+                {data.revenueByDay.map((d) => (
+                  <View key={d.date} style={styles.chartRow}>
+                    <Text style={[styles.chartLabel, { color: theme.mutedForeground }]}>{d.date.slice(5)}</Text>
+                    <View style={[styles.chartTrack, { backgroundColor: theme.muted }]}>
+                      <View
+                        style={[
+                          styles.chartBar,
+                          {
+                            width: `${Math.max(4, (d.revenue / maxRevenue) * 100)}%`,
+                            backgroundColor: theme.primary,
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={[styles.chartValue, { color: theme.foreground }]}>{formatMoney(d.revenue)}</Text>
+                  </View>
+                ))}
               </View>
-            ))
-          )}
-        </View>
+            )}
+          </Surface>
+
+          <Surface theme={theme}>
+            <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Sales by item</Text>
+            {data.salesByItem.length === 0 ? (
+              <EmptyMessage theme={theme} title="No sales recorded this month." detail="Item-level performance appears here once sales are logged." />
+            ) : (
+              <View style={styles.rowStack}>
+                {data.salesByItem.map((row) => (
+                  <View key={row.itemId} style={styles.salesRow}>
+                    <ListRow
+                      theme={theme}
+                      title={row.itemName}
+                      detail={`${row.unitsSold} units sold`}
+                      meta={formatMoney(row.revenue)}
+                    />
+                    <Text style={{ color: theme.mutedForeground, fontSize: 12 }}>
+                      {row.unitsSold} units sold
+                    </Text>
+                    <Text style={{ color: theme.mutedForeground, fontSize: 12 }}>
+                      profit {formatMoney(row.profit)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </Surface>
+        </>
       }
     />
   );
@@ -135,29 +183,18 @@ export default function ReportsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 16, gap: 8 },
+  content: { padding: 16, gap: 16, paddingBottom: 32 },
   padded: { padding: 16, flex: 1 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  monthLabel: { fontWeight: "600" },
-  cardsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 },
-  card: { flexBasis: "47%", borderWidth: 1, borderRadius: 8, padding: 12 },
-  cardLabel: { fontSize: 11 },
-  cardValue: { fontSize: 18, fontWeight: "700", marginTop: 4 },
-  sectionTitle: { fontWeight: "600", marginTop: 16 },
-  empty: { fontSize: 13 },
-  chartRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4 },
-  chartLabel: { width: 48, fontSize: 11 },
-  chartTrack: { flex: 1, height: 8, borderRadius: 4, overflow: "hidden" },
-  chartBar: { height: "100%", borderRadius: 4 },
-  chartValue: { width: 64, textAlign: "right", fontSize: 11, fontWeight: "600" },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-  },
-  rowName: { fontWeight: "500" },
-  rowMeta: { fontSize: 11 },
-  rowValue: { fontWeight: "600" },
-  rowRight: { alignItems: "flex-end" },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
+  monthLabel: { fontWeight: "700", fontSize: 15 },
+  metricGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  sectionTitle: { fontSize: 20, fontWeight: "700", marginBottom: 14 },
+  chartList: { gap: 10 },
+  chartRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  chartLabel: { width: 48, fontSize: 11, fontWeight: "600" },
+  chartTrack: { flex: 1, height: 10, borderRadius: 999, overflow: "hidden" },
+  chartBar: { height: "100%", borderRadius: 999 },
+  chartValue: { width: 72, textAlign: "right", fontSize: 11, fontWeight: "700" },
+  rowStack: { gap: 10 },
+  salesRow: { gap: 6 },
 });

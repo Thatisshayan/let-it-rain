@@ -31,9 +31,21 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <Text style={[styles.eyebrow, { color: theme.primary }]}>Internal workspace</Text>
       <Text style={[styles.title, { color: theme.foreground }]}>Let It Rain</Text>
+      <Text style={[styles.subtitle, { color: theme.mutedForeground }]}>
+        Sign in to access the mobile command surface for inventory, dispatch, activity, and reporting.
+      </Text>
+      <Text style={[styles.sectionLabel, { color: theme.mutedForeground }]}>Email</Text>
       <TextInput
-        style={[styles.input, { borderColor: theme.border, color: theme.foreground }]}
+        style={[
+          styles.input,
+          {
+            borderColor: theme.border,
+            color: theme.foreground,
+            backgroundColor: theme.surfaceStrong,
+          },
+        ]}
         placeholder="Email"
         placeholderTextColor={theme.mutedForeground}
         autoCapitalize="none"
@@ -43,8 +55,16 @@ export default function LoginScreen() {
         accessibilityLabel="Email address"
         accessibilityRole="none"
       />
+      <Text style={[styles.sectionLabel, { color: theme.mutedForeground }]}>Password</Text>
       <TextInput
-        style={[styles.input, { borderColor: theme.border, color: theme.foreground }]}
+        style={[
+          styles.input,
+          {
+            borderColor: theme.border,
+            color: theme.foreground,
+            backgroundColor: theme.surfaceStrong,
+          },
+        ]}
         placeholder="Password"
         placeholderTextColor={theme.mutedForeground}
         secureTextEntry
@@ -70,15 +90,22 @@ export default function LoginScreen() {
           {loading ? "Signing in..." : "Sign in"}
         </Text>
       </Pressable>
+      <Text style={[styles.helper, { color: theme.mutedForeground }]}>
+        Permissions and organization scope are applied immediately after sign-in.
+      </Text>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", padding: 24, gap: 12 },
-  title: { fontSize: 24, fontWeight: "600", marginBottom: 12 },
-  input: { borderWidth: 1, borderRadius: 8, padding: 12 },
-  error: {},
-  button: { padding: 14, borderRadius: 8, alignItems: "center" },
-  buttonText: { fontWeight: "600" },
+  eyebrow: { fontSize: 11, fontWeight: "700", letterSpacing: 1.6, textTransform: "uppercase" },
+  title: { fontSize: 34, fontWeight: "800", marginBottom: 4, letterSpacing: -1 },
+  subtitle: { fontSize: 14, lineHeight: 22, marginBottom: 6 },
+  sectionLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase" },
+  input: { borderWidth: 1, borderRadius: 16, padding: 14 },
+  error: { fontSize: 13, fontWeight: "600" },
+  button: { padding: 16, borderRadius: 18, alignItems: "center", marginTop: 4 },
+  buttonText: { fontWeight: "700" },
+  helper: { fontSize: 12, lineHeight: 18 },
 });

@@ -241,9 +241,11 @@ Useful after a device loss or "I forgot to sign out somewhere."
 - **No staging environment** was a Phase 11 gap. `eas.json` now has a `staging` build
   profile pointing at a separate Vercel deployment + database, alongside the existing
   `development`/`preview`/`production` profiles.
-- **No accessibility labels** was a Phase 11 gap. Every interactive element across all
-  screens now has `accessibilityRole`, `accessibilityLabel`, and `accessibilityState`
-  set, verified against WCAG AA/AAA contrast ratios.
+- **Accessibility coverage is actively being polished.** The tab shell, login, item-list,
+  and shared command surfaces expose accessibility metadata, and the current audit is
+  extending the same treatment to every remaining form and action. Device-level VoiceOver,
+  Dynamic Type, target-size, contrast, and reduced-motion validation is tracked in
+  `docs/qa/2026-07-18-mobile-device-qa-matrix.md`.
 
 ## Shipping to TestFlight
 

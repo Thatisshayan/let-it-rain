@@ -9,6 +9,7 @@ import { useAuth } from "../../../src/api/AuthContext";
 import { hasPermission } from "../../../src/lib/permissions";
 import { useTheme } from "../../../src/theme";
 import { useToast } from "../../../src/toast";
+import { ScreenHeader, Surface } from "../../../src/ui/command";
 
 const TYPES = ["RECEIVE", "REMOVE", "ADJUST"] as const;
 
@@ -76,81 +77,99 @@ export default function AdjustStockScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={styles.typeRow}>
-        {TYPES.map((t) => (
-          <Pressable
-            key={t}
-            style={[
-              styles.typeButton,
-              { borderColor: theme.border },
-              type === t && { backgroundColor: theme.primary, borderColor: theme.primary },
-            ]}
-            onPress={() => setType(t)}
-          >
-            <Text style={{ color: type === t ? theme.primaryForeground : theme.foreground }}>{t}</Text>
-          </Pressable>
-        ))}
-      </View>
-      <TextInput
-        style={inputStyle}
-        placeholder={type === "ADJUST" ? "Counted quantity" : "Amount"}
-        placeholderTextColor={theme.mutedForeground}
-        keyboardType="numeric"
-        value={amount}
-        onChangeText={setAmount}
+      <ScreenHeader
+        theme={theme}
+        eyebrow="Stock movement"
+        title="Update inventory with audit-ready detail."
+        description="Switch between receiving, removing, or reconciling stock counts without breaking the flow."
       />
-      {type === "REMOVE" && (
-        <View style={styles.paymentBox}>
-          <View style={styles.paymentRow}>
-            <TextInput
-              style={[...inputStyle, styles.paymentInput]}
-              placeholder="Cash received"
-              placeholderTextColor={theme.mutedForeground}
-              keyboardType="decimal-pad"
-              value={cashAmount}
-              onChangeText={setCashAmount}
-            />
-            <TextInput
-              style={[...inputStyle, styles.paymentInput]}
-              placeholder="Interac received"
-              placeholderTextColor={theme.mutedForeground}
-              keyboardType="decimal-pad"
-              value={interacAmount}
-              onChangeText={setInteracAmount}
-            />
-          </View>
-          <Text style={[styles.paymentTotal, { color: theme.mutedForeground }]}>
-            Total: ${total.toFixed(2)}
-            {total === 0 && " — leave blank for a non-sale removal"}
-          </Text>
+      <Surface theme={theme}>
+        <Text style={[styles.label, { color: theme.mutedForeground }]}>Movement type</Text>
+        <View style={styles.typeRow}>
+          {TYPES.map((t) => (
+            <Pressable
+              key={t}
+              style={[
+                styles.typeButton,
+                { borderColor: theme.border, backgroundColor: theme.surfaceStrong },
+                type === t && { backgroundColor: theme.primary, borderColor: theme.primary },
+              ]}
+              onPress={() => setType(t)}
+            >
+              <Text style={[styles.typeButtonText, { color: type === t ? theme.primaryForeground : theme.foreground }]}>
+                {t}
+              </Text>
+            </Pressable>
+          ))}
         </View>
-      )}
-      <TextInput
-        style={inputStyle}
-        placeholder="Reason (optional)"
-        placeholderTextColor={theme.mutedForeground}
-        value={reason}
-        onChangeText={setReason}
-      />
-      {error ? <Text style={{ color: theme.destructive }}>{error}</Text> : null}
-      <Pressable style={[styles.submit, { backgroundColor: theme.primary }]} onPress={onSubmit} disabled={submitting}>
-        <Text style={[styles.submitText, { color: theme.primaryForeground }]}>
-          {submitting ? "Saving..." : "Save"}
+        <Text style={[styles.label, { color: theme.mutedForeground }]}>
+          {type === "ADJUST" ? "Counted quantity" : "Amount"}
         </Text>
-      </Pressable>
+        <TextInput
+          style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]}
+          placeholder={type === "ADJUST" ? "Counted quantity" : "Amount"}
+          placeholderTextColor={theme.mutedForeground}
+          keyboardType="numeric"
+          value={amount}
+          onChangeText={setAmount}
+        />
+        {type === "REMOVE" && (
+          <View style={styles.paymentBox}>
+            <Text style={[styles.label, { color: theme.mutedForeground }]}>Sale capture</Text>
+            <View style={styles.paymentRow}>
+              <TextInput
+                style={[...inputStyle, styles.paymentInput, { backgroundColor: theme.surfaceStrong }]}
+                placeholder="Cash received"
+                placeholderTextColor={theme.mutedForeground}
+                keyboardType="decimal-pad"
+                value={cashAmount}
+                onChangeText={setCashAmount}
+              />
+              <TextInput
+                style={[...inputStyle, styles.paymentInput, { backgroundColor: theme.surfaceStrong }]}
+                placeholder="Interac received"
+                placeholderTextColor={theme.mutedForeground}
+                keyboardType="decimal-pad"
+                value={interacAmount}
+                onChangeText={setInteracAmount}
+              />
+            </View>
+            <Text style={[styles.paymentTotal, { color: theme.mutedForeground }]}>
+              Total: ${total.toFixed(2)}
+              {total === 0 && " — leave blank for a non-sale removal"}
+            </Text>
+          </View>
+        )}
+        <Text style={[styles.label, { color: theme.mutedForeground }]}>Reason</Text>
+        <TextInput
+          style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]}
+          placeholder="Reason (optional)"
+          placeholderTextColor={theme.mutedForeground}
+          value={reason}
+          onChangeText={setReason}
+        />
+        {error ? <Text style={{ color: theme.destructive }}>{error}</Text> : null}
+        <Pressable style={[styles.submit, { backgroundColor: theme.primary }]} onPress={onSubmit} disabled={submitting} accessibilityRole="button" accessibilityLabel="Save stock adjustment" accessibilityState={{ disabled: submitting }}>
+          <Text style={[styles.submitText, { color: theme.primaryForeground }]}>
+            {submitting ? "Saving..." : "Save"}
+          </Text>
+        </Pressable>
+      </Surface>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, gap: 12 },
+  container: { flex: 1, padding: 16, gap: 16 },
+  label: { fontSize: 11, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 6 },
   typeRow: { flexDirection: "row", gap: 8 },
-  typeButton: { padding: 10, borderRadius: 8, borderWidth: 1 },
-  input: { borderWidth: 1, borderRadius: 8, padding: 12 },
-  paymentBox: { gap: 8 },
+  typeButton: { paddingHorizontal: 14, paddingVertical: 12, borderRadius: 16, borderWidth: 1, flex: 1, alignItems: "center" },
+  typeButtonText: { fontWeight: "700", letterSpacing: 0.4 },
+  input: { borderWidth: 1, borderRadius: 16, padding: 14, marginBottom: 12 },
+  paymentBox: { gap: 8, marginTop: 4 },
   paymentRow: { flexDirection: "row", gap: 8 },
   paymentInput: { flex: 1 },
   paymentTotal: { fontSize: 12 },
-  submit: { padding: 14, borderRadius: 8, alignItems: "center" },
-  submitText: { fontWeight: "600" },
+  submit: { padding: 16, borderRadius: 18, alignItems: "center", marginTop: 6 },
+  submitText: { fontWeight: "700" },
 });

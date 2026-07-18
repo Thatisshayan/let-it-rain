@@ -9,6 +9,7 @@ import { useTheme } from "../../src/theme";
 import { useToast } from "../../src/toast";
 import { useAuth } from "../../src/api/AuthContext";
 import { hasPermission } from "../../src/lib/permissions";
+import { ScreenHeader, Surface } from "../../src/ui/command";
 
 export default function NewItemScreen() {
   const theme = useTheme();
@@ -63,69 +64,84 @@ export default function NewItemScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <TextInput
-        style={inputStyle}
-        placeholder="Item name"
-        placeholderTextColor={theme.mutedForeground}
-        value={name}
-        onChangeText={setName}
+      <ScreenHeader
+        theme={theme}
+        eyebrow="New item"
+        title="Add inventory with a cleaner setup flow."
+        description="Create the stock record, opening quantity, and optional cost metadata in one step."
       />
-      <TextInput
-        style={inputStyle}
-        placeholder="Min stock"
-        placeholderTextColor={theme.mutedForeground}
-        keyboardType="numeric"
-        value={minStock}
-        onChangeText={setMinStock}
-      />
-      <TextInput
-        style={inputStyle}
-        placeholder="Initial quantity"
-        placeholderTextColor={theme.mutedForeground}
-        keyboardType="numeric"
-        value={initialQuantity}
-        onChangeText={setInitialQuantity}
-      />
-      <TextInput
-        style={inputStyle}
-        placeholder="Location (optional, e.g. Shelf A-3)"
-        placeholderTextColor={theme.mutedForeground}
-        value={location}
-        onChangeText={setLocation}
-      />
-      {canViewCosts && (
-        <>
-          <TextInput
-            style={inputStyle}
-            placeholder="Unit cost"
-            placeholderTextColor={theme.mutedForeground}
-            keyboardType="numeric"
-            value={unitCost}
-            onChangeText={setUnitCost}
-          />
-          <TextInput
-            style={inputStyle}
-            placeholder="Unit price"
-            placeholderTextColor={theme.mutedForeground}
-            keyboardType="numeric"
-            value={unitPrice}
-            onChangeText={setUnitPrice}
-          />
-        </>
-      )}
-      {error ? <Text style={{ color: theme.destructive }}>{error}</Text> : null}
-      <Pressable style={[styles.submit, { backgroundColor: theme.primary }]} onPress={onSubmit} disabled={submitting}>
-        <Text style={[styles.submitText, { color: theme.primaryForeground }]}>
-          {submitting ? "Saving..." : "Create item"}
-        </Text>
-      </Pressable>
+      <Surface theme={theme}>
+        <Text style={[styles.label, { color: theme.mutedForeground }]}>Item name</Text>
+        <TextInput
+          style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]}
+          placeholder="Item name"
+          placeholderTextColor={theme.mutedForeground}
+          value={name}
+          onChangeText={setName}
+        />
+        <Text style={[styles.label, { color: theme.mutedForeground }]}>Minimum stock</Text>
+        <TextInput
+          style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]}
+          placeholder="Min stock"
+          placeholderTextColor={theme.mutedForeground}
+          keyboardType="numeric"
+          value={minStock}
+          onChangeText={setMinStock}
+        />
+        <Text style={[styles.label, { color: theme.mutedForeground }]}>Opening quantity</Text>
+        <TextInput
+          style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]}
+          placeholder="Initial quantity"
+          placeholderTextColor={theme.mutedForeground}
+          keyboardType="numeric"
+          value={initialQuantity}
+          onChangeText={setInitialQuantity}
+        />
+        <Text style={[styles.label, { color: theme.mutedForeground }]}>Location</Text>
+        <TextInput
+          style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]}
+          placeholder="Location (optional, e.g. Shelf A-3)"
+          placeholderTextColor={theme.mutedForeground}
+          value={location}
+          onChangeText={setLocation}
+        />
+        {canViewCosts && (
+          <>
+            <Text style={[styles.label, { color: theme.mutedForeground }]}>Unit cost</Text>
+            <TextInput
+              style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]}
+              placeholder="Unit cost"
+              placeholderTextColor={theme.mutedForeground}
+              keyboardType="numeric"
+              value={unitCost}
+              onChangeText={setUnitCost}
+            />
+            <Text style={[styles.label, { color: theme.mutedForeground }]}>Unit price</Text>
+            <TextInput
+              style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]}
+              placeholder="Unit price"
+              placeholderTextColor={theme.mutedForeground}
+              keyboardType="numeric"
+              value={unitPrice}
+              onChangeText={setUnitPrice}
+            />
+          </>
+        )}
+        {error ? <Text style={{ color: theme.destructive }}>{error}</Text> : null}
+        <Pressable style={[styles.submit, { backgroundColor: theme.primary }]} onPress={onSubmit} disabled={submitting} accessibilityRole="button" accessibilityLabel="Create item" accessibilityState={{ disabled: submitting }}>
+          <Text style={[styles.submitText, { color: theme.primaryForeground }]}>
+            {submitting ? "Saving..." : "Create item"}
+          </Text>
+        </Pressable>
+      </Surface>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, gap: 12 },
-  input: { borderWidth: 1, borderRadius: 8, padding: 12 },
-  submit: { padding: 14, borderRadius: 8, alignItems: "center" },
-  submitText: { fontWeight: "600" },
+  container: { flex: 1, padding: 16, gap: 16 },
+  label: { fontSize: 11, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 6 },
+  input: { borderWidth: 1, borderRadius: 16, padding: 14, marginBottom: 12 },
+  submit: { padding: 16, borderRadius: 18, alignItems: "center", marginTop: 6 },
+  submitText: { fontWeight: "700" },
 });

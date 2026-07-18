@@ -8,6 +8,9 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { AppNav } from "@/components/app/app-nav";
+import { BrandLink } from "@/components/app/brand";
+import { Reveal } from "@/components/app/motion";
 
 export default async function AppLayout({
   children,
@@ -34,65 +37,96 @@ export default async function AppLayout({
     .toUpperCase();
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-10 border-b border-border/60 bg-background/70 backdrop-blur-xl">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-2 font-heading font-semibold">
-            <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-rain text-sm shadow-sm">
-              🌧️
-            </span>
-            <span>Let It Rain</span>
-          </Link>
-          <nav className="flex items-center gap-1 text-sm">
-            <Link href="/" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
-              Dashboard
-            </Link>
-            <Link href="/items" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
-              Inventory
-            </Link>
-            <Link href="/activity" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
-              Activity
-            </Link>
-            <Link href="/reports" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
-              Reports
-            </Link>
-            <Link href="/orders" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
-              Orders
-            </Link>
-            {lowStockCount > 0 && (
-              <Link href="/items?low=1" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
-                Low stock <Badge variant="warning" className="ml-1">{lowStockCount}</Badge>
-              </Link>
-            )}
-            {canEdit && (
-              <Link
-                href="/items/new"
-                className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-              >
-                Add item
-              </Link>
-            )}
-            <Link href="/settings" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
-              Settings
-            </Link>
-          </nav>
-          <div className="flex items-center gap-3">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-gradient-to-br from-rain to-primary text-primary-foreground">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <form action={logoutAction}>
-              <Button variant="outline" size="sm" type="submit">
-                Sign out
-              </Button>
-            </form>
-          </div>
+    <div className="min-h-screen">
+      <div className="mx-auto flex min-h-screen w-full max-w-[100rem] flex-col px-3 py-3 lg:grid lg:grid-cols-[18.5rem_minmax(0,1fr)] lg:gap-5 lg:px-4 lg:py-4">
+        <aside className="lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)]">
+          <Reveal className="flex h-full flex-col rounded-[1.8rem] border border-sidebar-border bg-sidebar p-4 text-sidebar-foreground shadow-[0_28px_70px_-42px_rgba(15,23,42,0.58)]">
+            <div className="pb-5">
+              <BrandLink />
+            </div>
+
+            <div className="overflow-x-auto pb-3 lg:overflow-visible">
+              <AppNav lowStockCount={lowStockCount} />
+            </div>
+
+            <div className="mt-4 hidden rounded-[1.4rem] border border-white/10 bg-white/[0.035] p-4 lg:block">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/55">
+                Quick pulse
+              </p>
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-sidebar-foreground/65">Low-stock items</span>
+                  <Badge variant={lowStockCount > 0 ? "warning" : "secondary"}>
+                    {lowStockCount}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-sidebar-foreground/65">Edit access</span>
+                  <span className="font-medium text-sidebar-foreground">
+                    {canEdit ? "Enabled" : "Limited"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-sidebar-foreground/65">Workspace</span>
+                  <span className="font-medium text-sidebar-foreground">Internal</span>
+                </div>
+                {canEdit ? (
+                  <Link
+                    href="/items/new"
+                    className={cn(
+                      buttonVariants({ variant: "secondary" }),
+                      "mt-2 w-full border-white/10 bg-primary/85 text-primary-foreground hover:bg-primary"
+                    )}
+                  >
+                    Add new item
+                  </Link>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="mt-auto hidden lg:block">
+              <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.035] p-4">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-11 w-11">
+                    <AvatarFallback className="bg-primary/22 text-sidebar-foreground">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-sidebar-foreground">{session.name}</p>
+                    <p className="truncate text-sm text-sidebar-foreground/60">{session.email}</p>
+                  </div>
+                </div>
+                <form action={logoutAction} className="mt-4">
+                  <Button variant="outline" className="w-full border-white/15 bg-transparent text-sidebar-foreground hover:bg-white/6 hover:text-sidebar-foreground" type="submit">
+                    Sign out
+                  </Button>
+                </form>
+              </div>
+            </div>
+          </Reveal>
+        </aside>
+
+        <div className="flex min-w-0 flex-col">
+          <header className="sticky top-0 z-10 mb-4 rounded-[1.4rem] border border-border/80 bg-card/95 px-4 py-3 backdrop-blur-xl lg:hidden">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <BrandLink compact />
+                <p className="mt-2 truncate pl-14 text-xs text-muted-foreground">{session.name}</p>
+              </div>
+              <form action={logoutAction}>
+                <Button variant="outline" size="sm" type="submit">
+                  Sign out
+                </Button>
+              </form>
+            </div>
+          </header>
+
+          <main className="min-w-0 flex-1 pb-8">
+            {children}
+          </main>
         </div>
-      </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
-        {children}
-      </main>
+      </div>
     </div>
   );
 }

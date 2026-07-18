@@ -22,10 +22,10 @@ export function OrgSettingsTab({ settings }: { settings: OrgSettings }) {
   );
 
   return (
-    <div className="space-y-6 max-w-lg">
-      <Card>
+    <div className="max-w-2xl space-y-6">
+      <Card className="editorial-surface rounded-[1.8rem]">
         <CardHeader>
-          <CardTitle className="text-base">Organization</CardTitle>
+          <CardTitle className="font-heading text-xl tracking-[-0.03em]">Organization</CardTitle>
         </CardHeader>
         <CardContent>
           <form action={action} className="space-y-3">

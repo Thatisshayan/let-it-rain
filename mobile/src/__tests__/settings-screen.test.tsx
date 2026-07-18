@@ -46,7 +46,7 @@ function MockView({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function MockSwitch(_: Record<string, unknown>) {
+function MockSwitch() {
   return null;
 }
 

@@ -58,10 +58,10 @@ export function AccountTab({ name }: { name: string }) {
   }
 
   return (
-    <div className="space-y-6 max-w-lg">
-      <Card>
+    <div className="max-w-2xl space-y-6">
+      <Card className="editorial-surface rounded-[1.8rem]">
         <CardHeader>
-          <CardTitle className="text-base">Profile</CardTitle>
+          <CardTitle className="font-heading text-xl tracking-[-0.03em]">Profile</CardTitle>
         </CardHeader>
         <CardContent>
           <form action={profileAction} className="space-y-3">
@@ -77,9 +77,9 @@ export function AccountTab({ name }: { name: string }) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="editorial-surface rounded-[1.8rem]">
         <CardHeader>
-          <CardTitle className="text-base">Change password</CardTitle>
+          <CardTitle className="font-heading text-xl tracking-[-0.03em]">Change password</CardTitle>
         </CardHeader>
         <CardContent>
           <form action={pwAction} className="space-y-3">
@@ -99,9 +99,9 @@ export function AccountTab({ name }: { name: string }) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="editorial-surface rounded-[1.8rem]">
         <CardHeader>
-          <CardTitle className="text-base">Sessions</CardTitle>
+          <CardTitle className="font-heading text-xl tracking-[-0.03em]">Sessions</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           <p className="text-sm text-muted-foreground">

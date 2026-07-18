@@ -43,7 +43,7 @@ function MockView({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function MockRefreshControl(_: Record<string, unknown>) {
+function MockRefreshControl() {
   return null;
 }
 

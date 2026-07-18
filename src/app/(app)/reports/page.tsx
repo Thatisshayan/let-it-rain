@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { parseMonthParam, monthLabel, adjacentMonth, monthRange } from "../activity/calendar";
@@ -16,6 +16,12 @@ import {
   revenueByDay,
   salesByItem,
 } from "./reports";
+import {
+  MetricCard,
+  MetricGrid,
+  PageHeader,
+  SectionHeading,
+} from "@/components/app/page-header";
 
 function monthParam(year: number, month: number) {
   return `${year}-${String(month).padStart(2, "0")}`;
@@ -106,121 +112,111 @@ export default async function ReportsPage({
   const byItem = salesByItem(monthSales);
 
   const daysWithSales = [...byDay.entries()].sort(([a], [b]) => (a < b ? 1 : a > b ? -1 : 0));
+  const topItem = byItem[0];
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Reports</h1>
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/reports?month=${monthParam(prev.year, prev.month)}`}
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-          >
-            ← Prev
-          </Link>
-          <span className="w-40 text-center text-sm font-medium">{monthLabel(year, month)}</span>
-          <Link
-            href={`/reports?month=${monthParam(next.year, next.month)}`}
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-          >
-            Next →
-          </Link>
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Today&apos;s revenue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold tabular-nums">{money(todayRevenue)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Cash this month</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold tabular-nums">{money(monthCash)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Interac this month</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold tabular-nums">{money(monthInterac)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">
-              {monthLabel(year, month)} revenue
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold tabular-nums">{money(monthRevenue)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Cost of goods sold</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold tabular-nums">{money(monthCogs)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Gross profit</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p
-              className={cn(
-                "text-2xl font-semibold tabular-nums",
-                monthProfit < 0 && "text-destructive"
-              )}
+      <PageHeader
+        eyebrow="Accounting snapshot"
+        title={`Read the operating economics of ${monthLabel(year, month)} before you drill into detail.`}
+        description={`Revenue, payment mix, profitability, restock spend, and valuation for ${monthLabel(year, month)}.`}
+        actions={
+          <div className="flex max-w-full flex-wrap items-center gap-2">
+            <Link
+              href={`/reports?month=${monthParam(prev.year, prev.month)}`}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
             >
-              {money(monthProfit)}
+              ← Prev
+            </Link>
+            <span className="order-first w-full text-center text-sm font-medium sm:order-none sm:w-auto sm:min-w-40">{monthLabel(year, month)}</span>
+            <Link
+              href={`/reports?month=${monthParam(next.year, next.month)}`}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              Next →
+            </Link>
+          </div>
+        }
+      >
+        <MetricGrid>
+          <MetricCard label="Today's revenue" value={money(todayRevenue)} />
+          <MetricCard label="Month revenue" value={money(monthRevenue)} />
+          <MetricCard label="Gross profit" value={money(monthProfit)} tone={monthProfit < 0 ? "warning" : "success"} />
+          <MetricCard
+            label="Top seller"
+            value={topItem ? topItem.itemName : "No sales"}
+            hint={topItem ? `${topItem.unitsSold} units sold` : "No sales recorded this month"}
+          />
+        </MetricGrid>
+      </PageHeader>
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_20rem]">
+        <Card className="editorial-surface rounded-[1.8rem]">
+          <CardHeader>
+            <SectionHeading
+              title="Payment and margin ledger"
+              description="Revenue composition, direct cost, and reinvestment pressure for the selected month."
+            />
+          </CardHeader>
+          <CardContent className="grid gap-0 divide-y divide-border/75">
+            {[
+              { label: "Cash this month", value: money(monthCash), note: "Physical tender collected" },
+              { label: "Interac this month", value: money(monthInterac), note: "Electronic payment total" },
+              { label: "Cost of goods sold", value: money(monthCogs), note: "Recognized cost on sold units" },
+              { label: "Restock cost", value: money(monthRestockCost), note: "Inbound inventory spend" },
+            ].map((row) => (
+              <div
+                key={row.label}
+                className="grid gap-2 py-4 md:grid-cols-[minmax(0,1fr)_auto]"
+              >
+                <div>
+                  <p className="rule-label">{row.label}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{row.note}</p>
+                </div>
+                <p className="text-2xl font-semibold tabular-nums text-foreground md:text-right">
+                  {row.value}
+                </p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card className="editorial-surface rounded-[1.8rem]">
+          <CardHeader>
+            <SectionHeading
+              title="Inventory valuation"
+              description="Current on-hand stock value."
+            />
+          </CardHeader>
+          <CardContent>
+            <p className="text-4xl font-semibold tabular-nums">{money(inventoryValuation)}</p>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">
+              Based on current quantity multiplied by current weighted unit cost across all non-deleted items.
             </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Restock cost</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold tabular-nums">{money(monthRestockCost)}</p>
-          </CardContent>
-        </Card>
-      </div>
+      </section>
 
-      <Card>
+      <Card className="editorial-surface rounded-[1.8rem]">
         <CardHeader>
-          <CardTitle className="text-base">
-            Inventory valuation <span className="text-muted-foreground">(current, all items)</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-semibold tabular-nums">{money(inventoryValuation)}</p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Revenue by day</CardTitle>
+          <SectionHeading
+            title="Revenue by day"
+            description="Spot spikes, flat days, and month pacing without leaving the page."
+          />
         </CardHeader>
         <CardContent>
           {daysWithSales.length === 0 ? (
             <p className="text-sm text-muted-foreground">No sales recorded this month.</p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-3">
               {(() => {
                 const maxRevenue = Math.max(...daysWithSales.map(([, revenue]) => revenue), 0.01);
                 return daysWithSales.map(([day, revenue]) => (
-                  <li key={day} className="flex items-center gap-3 py-1 text-sm">
-                    <span className="w-24 shrink-0 text-muted-foreground">
+                  <li
+                    key={day}
+                    className="grid items-center gap-3 text-sm md:grid-cols-[8rem_minmax(0,1fr)_7rem]"
+                  >
+                    <span className="text-muted-foreground">
                       {new Date(`${day}T00:00:00.000Z`).toLocaleDateString("en-US", {
                         weekday: "short",
                         month: "short",
@@ -228,13 +224,13 @@ export default async function ReportsPage({
                         timeZone: "UTC",
                       })}
                     </span>
-                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                    <div className="relative h-10 overflow-hidden rounded-full border border-border/75 bg-muted/55 px-3">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-primary to-rain"
+                        className="absolute inset-y-1 left-1 rounded-full bg-gradient-to-r from-primary to-rain"
                         style={{ width: `${Math.max(4, (revenue / maxRevenue) * 100)}%` }}
                       />
                     </div>
-                    <span className="w-20 shrink-0 text-right tabular-nums font-medium">{money(revenue)}</span>
+                    <span className="text-right tabular-nums font-medium">{money(revenue)}</span>
                   </li>
                 ));
               })()}
@@ -243,9 +239,12 @@ export default async function ReportsPage({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="editorial-surface rounded-[1.8rem]">
         <CardHeader>
-          <CardTitle className="text-base">Sales by item</CardTitle>
+          <SectionHeading
+            title="Sales by item"
+            description="Which products are driving revenue and where profit is actually coming from."
+          />
         </CardHeader>
         <CardContent>
           {byItem.length === 0 ? (

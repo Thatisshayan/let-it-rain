@@ -18,6 +18,7 @@ import { useAuth } from "../../src/api/AuthContext";
 import { canManageOrders, hasPermission } from "../../src/lib/permissions";
 import { useTheme } from "../../src/theme";
 import { useToast } from "../../src/toast";
+import { ScreenHeader, StatTile, Surface } from "../../src/ui/command";
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
   PENDING: "Pending",
@@ -141,115 +142,141 @@ export default function OrderDetailScreen() {
 
   return (
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={styles.container}>
-      <Text style={[styles.title, { color: theme.foreground }]}>{order.customerName}</Text>
-      {order.customerAddress ? <Text style={{ color: theme.mutedForeground }}>{order.customerAddress}</Text> : null}
-      {order.customerPhone ? <Text style={{ color: theme.mutedForeground }}>{order.customerPhone}</Text> : null}
-      <Text style={{ color: theme.primary, fontWeight: "600" }}>{STATUS_LABEL[order.status]}</Text>
+      <ScreenHeader
+        theme={theme}
+        eyebrow="Order detail"
+        title={order.customerName}
+        description={order.customerAddress ?? order.customerPhone ?? "Delivery order"}
+      />
+      <View style={styles.metricGrid}>
+        <StatTile theme={theme} label="Status" value={STATUS_LABEL[order.status]} hint="Current delivery stage" />
+        <StatTile
+          theme={theme}
+          label="Items"
+          value={order.lineItems.length}
+          hint={`${order.lineItems.reduce((sum, li) => sum + li.quantity, 0)} total units`}
+        />
+      </View>
 
-      <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Items</Text>
-      {order.lineItems.map((li) => (
-        <View key={li.id} style={[styles.itemRow, { borderColor: theme.border }]}>
-          <Text style={{ color: theme.foreground }}>{li.itemName}</Text>
-          <Text style={{ color: theme.mutedForeground }}>× {li.quantity}</Text>
-        </View>
-      ))}
-
-      {canAssignDrivers && isActive && (
-        <>
-          <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Driver</Text>
-          <View style={styles.driverRow}>
-            {(drivers ?? []).map((d) => (
-              <Pressable
-                key={d.id}
-                style={[
-                  styles.chip,
-                  { borderColor: theme.border },
-                  order.driver?.id === d.id && { backgroundColor: theme.primary, borderColor: theme.primary },
-                ]}
-                onPress={() => onAssignDriver(d.id)}
-                disabled={busy}
-              >
-                <Text style={{ color: order.driver?.id === d.id ? theme.primaryForeground : theme.foreground }}>
-                  {d.name}
-                </Text>
-              </Pressable>
-            ))}
+      <Surface theme={theme}>
+        {order.customerPhone ? <Text style={[styles.metaText, { color: theme.mutedForeground }]}>{order.customerPhone}</Text> : null}
+        <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Items</Text>
+        {order.lineItems.map((li) => (
+          <View key={li.id} style={[styles.itemRow, { borderColor: theme.border, backgroundColor: theme.surfaceStrong }]}>
+            <Text style={{ color: theme.foreground }}>{li.itemName}</Text>
+            <Text style={{ color: theme.mutedForeground }}>× {li.quantity}</Text>
           </View>
-        </>
-      )}
-      {!canAssignDrivers && order.driver && (
-        <Text style={{ color: theme.mutedForeground }}>Assigned to {order.driver.name}</Text>
-      )}
+        ))}
 
-      {canAct && order.status === "PENDING" && (
-        <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={onOutForDelivery} disabled={busy}>
-          <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>Mark out for delivery</Text>
-        </Pressable>
-      )}
-
-      {canAct && isActive && (
-        <>
-          <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Mark delivered</Text>
-          <Text style={{ color: theme.mutedForeground, fontSize: 12 }}>
-            Enter what the customer paid per item, if anything.
-          </Text>
-          {order.lineItems.map((li) => (
-            <View key={li.id} style={styles.paymentRow}>
-              <Text style={{ color: theme.foreground, flexBasis: "100%" }}>{li.itemName}</Text>
-              <TextInput
-                style={[styles.input, styles.paymentInput, { borderColor: theme.border, color: theme.foreground }]}
-                placeholder="Cash"
-                placeholderTextColor={theme.mutedForeground}
-                keyboardType="decimal-pad"
-                value={payments[li.id]?.cash ?? ""}
-                onChangeText={(v) =>
-                  setPayments((prev) => ({ ...prev, [li.id]: { cash: v, interac: prev[li.id]?.interac ?? "" } }))
-                }
-              />
-              <TextInput
-                style={[styles.input, styles.paymentInput, { borderColor: theme.border, color: theme.foreground }]}
-                placeholder="Interac"
-                placeholderTextColor={theme.mutedForeground}
-                keyboardType="decimal-pad"
-                value={payments[li.id]?.interac ?? ""}
-                onChangeText={(v) =>
-                  setPayments((prev) => ({ ...prev, [li.id]: { cash: prev[li.id]?.cash ?? "", interac: v } }))
-                }
-              />
+        {canAssignDrivers && isActive && (
+          <>
+            <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Driver</Text>
+            <View style={styles.driverRow}>
+              {(drivers ?? []).map((d) => (
+                <Pressable
+                  key={d.id}
+                  style={[
+                    styles.chip,
+                    { borderColor: theme.border, backgroundColor: theme.surfaceStrong },
+                    order.driver?.id === d.id && { backgroundColor: theme.primary, borderColor: theme.primary },
+                  ]}
+                  onPress={() => onAssignDriver(d.id)}
+                  disabled={busy}
+                >
+                  <Text style={{ color: order.driver?.id === d.id ? theme.primaryForeground : theme.foreground }}>
+                    {d.name}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
-          ))}
-          <Pressable style={[styles.button, { backgroundColor: theme.success }]} onPress={onDeliver} disabled={busy}>
-            <Text style={styles.buttonText}>Confirm delivered</Text>
-          </Pressable>
-        </>
-      )}
+          </>
+        )}
+        {!canAssignDrivers && order.driver && (
+          <Text style={{ color: theme.mutedForeground }}>Assigned to {order.driver.name}</Text>
+        )}
 
-      {canCancelOrders && isActive && (
-        <Pressable style={[styles.buttonSecondary, { borderColor: theme.border }]} onPress={onCancel} disabled={busy}>
-          <Text style={{ color: theme.destructive }}>Cancel order</Text>
-        </Pressable>
-      )}
+        {canAct && order.status === "PENDING" && (
+          <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={onOutForDelivery} disabled={busy} accessibilityRole="button" accessibilityLabel="Mark order out for delivery" accessibilityState={{ disabled: busy }}>
+            <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>Mark out for delivery</Text>
+          </Pressable>
+        )}
+
+        {canAct && isActive && (
+          <>
+            <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Mark delivered</Text>
+            <Text style={{ color: theme.mutedForeground, fontSize: 12 }}>
+              Enter what the customer paid per item, if anything.
+            </Text>
+            {order.lineItems.map((li) => (
+              <View key={li.id} style={[styles.paymentRow, { backgroundColor: theme.surfaceStrong, borderColor: theme.border }]}>
+                <Text style={{ color: theme.foreground, flexBasis: "100%" }}>{li.itemName}</Text>
+                <TextInput
+                  style={[styles.input, styles.paymentInput, { borderColor: theme.border, color: theme.foreground, backgroundColor: theme.surface }]}
+                  placeholder="Cash"
+                  placeholderTextColor={theme.mutedForeground}
+                  keyboardType="decimal-pad"
+                  value={payments[li.id]?.cash ?? ""}
+                  onChangeText={(v) =>
+                    setPayments((prev) => ({ ...prev, [li.id]: { cash: v, interac: prev[li.id]?.interac ?? "" } }))
+                  }
+                />
+                <TextInput
+                  style={[styles.input, styles.paymentInput, { borderColor: theme.border, color: theme.foreground, backgroundColor: theme.surface }]}
+                  placeholder="Interac"
+                  placeholderTextColor={theme.mutedForeground}
+                  keyboardType="decimal-pad"
+                  value={payments[li.id]?.interac ?? ""}
+                  onChangeText={(v) =>
+                    setPayments((prev) => ({ ...prev, [li.id]: { cash: prev[li.id]?.cash ?? "", interac: v } }))
+                  }
+                />
+              </View>
+            ))}
+            <Pressable style={[styles.button, { backgroundColor: theme.success }]} onPress={onDeliver} disabled={busy} accessibilityRole="button" accessibilityLabel="Mark order delivered" accessibilityState={{ disabled: busy }}>
+              <Text style={styles.buttonText}>Confirm delivered</Text>
+            </Pressable>
+          </>
+        )}
+
+        {canCancelOrders && isActive && (
+          <Pressable style={[styles.buttonSecondary, { borderColor: theme.border, backgroundColor: theme.surfaceStrong }]} onPress={onCancel} disabled={busy} accessibilityRole="button" accessibilityLabel="Cancel order" accessibilityState={{ disabled: busy }}>
+            <Text style={{ color: theme.destructive }}>Cancel order</Text>
+          </Pressable>
+        )}
+      </Surface>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, gap: 8 },
+  container: { padding: 16, gap: 16 },
   padded: { padding: 16, flex: 1 },
-  title: { fontSize: 22, fontWeight: "700" },
-  sectionTitle: { fontWeight: "600", marginTop: 12 },
+  metricGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  metaText: { marginBottom: 8 },
+  sectionTitle: { fontWeight: "700", fontSize: 17, marginTop: 12, marginBottom: 10 },
   itemRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
+    padding: 14,
+    borderWidth: 1,
+    borderRadius: 18,
+    marginBottom: 10,
   },
   driverRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, borderWidth: 1 },
-  input: { borderWidth: 1, borderRadius: 8, padding: 10 },
-  paymentRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center" },
+  chip: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 16, borderWidth: 1 },
+  input: { borderWidth: 1, borderRadius: 14, padding: 12 },
+  paymentRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 12,
+    marginTop: 10,
+  },
   paymentInput: { flex: 1 },
-  button: { padding: 14, borderRadius: 8, alignItems: "center", marginTop: 8 },
-  buttonText: { fontWeight: "600", color: "#fff" },
-  buttonSecondary: { padding: 12, borderRadius: 8, borderWidth: 1, alignItems: "center", marginTop: 8 },
+  button: { padding: 16, borderRadius: 18, alignItems: "center", marginTop: 12 },
+  buttonText: { fontWeight: "700", color: "#fff" },
+  buttonSecondary: { padding: 14, borderRadius: 18, borderWidth: 1, alignItems: "center", marginTop: 12 },
 });

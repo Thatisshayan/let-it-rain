@@ -8,6 +8,7 @@ import { useToast } from "../../../src/toast";
 import { useTheme } from "../../../src/theme";
 import { useAuth } from "../../../src/api/AuthContext";
 import { hasPermission } from "../../../src/lib/permissions";
+import { ScreenHeader, Surface } from "../../../src/ui/command";
 
 export default function NewUserScreen() {
   const theme = useTheme();
@@ -53,54 +54,74 @@ export default function NewUserScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <TextInput style={inputStyle} placeholder="Name" placeholderTextColor={theme.mutedForeground} value={name} onChangeText={setName} />
-      <TextInput
-        style={inputStyle}
-        placeholder="Email"
-        placeholderTextColor={theme.mutedForeground}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
+      <ScreenHeader
+        theme={theme}
+        eyebrow="New user"
+        title="Provision a new operator account."
+        description="Set identity, credentials, and permission scope in one tighter administrative flow."
       />
-      <TextInput
-        style={inputStyle}
-        placeholder="Password"
-        placeholderTextColor={theme.mutedForeground}
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-      <View style={styles.permissions}>
-        {ALL_PERMISSIONS.map((p) => (
-          <Pressable
-            key={p}
-            style={[
-              styles.permButton,
-              { borderColor: theme.border },
-              permissions.includes(p) && { backgroundColor: theme.primary, borderColor: theme.primary },
-            ]}
-            onPress={() => togglePermission(p)}
-          >
-            <Text style={{ color: permissions.includes(p) ? theme.primaryForeground : theme.foreground }}>{p}</Text>
-          </Pressable>
-        ))}
-      </View>
-      {error ? <Text style={{ color: theme.destructive }}>{error}</Text> : null}
-      <Pressable style={[styles.submit, { backgroundColor: theme.primary }]} onPress={onSubmit} disabled={submitting}>
-        <Text style={[styles.submitText, { color: theme.primaryForeground }]}>
-          {submitting ? "Creating..." : "Create user"}
-        </Text>
-      </Pressable>
+      <Surface theme={theme}>
+        <Text style={[styles.label, { color: theme.mutedForeground }]}>Name</Text>
+        <TextInput style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]} placeholder="Name" placeholderTextColor={theme.mutedForeground} value={name} onChangeText={setName} accessibilityLabel="User name" textContentType="name" />
+        <Text style={[styles.label, { color: theme.mutedForeground }]}>Email</Text>
+        <TextInput
+          style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]}
+          placeholder="Email"
+          placeholderTextColor={theme.mutedForeground}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+          accessibilityLabel="User email address"
+          textContentType="emailAddress"
+        />
+        <Text style={[styles.label, { color: theme.mutedForeground }]}>Password</Text>
+        <TextInput
+          style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]}
+          placeholder="Password"
+          placeholderTextColor={theme.mutedForeground}
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+          accessibilityLabel="Temporary password"
+          textContentType="newPassword"
+        />
+        <Text style={[styles.label, { color: theme.mutedForeground }]}>Permissions</Text>
+        <View style={styles.permissions}>
+          {ALL_PERMISSIONS.map((p) => (
+            <Pressable
+              key={p}
+              style={[
+                styles.permButton,
+                { borderColor: theme.border, backgroundColor: theme.surfaceStrong },
+                permissions.includes(p) && { backgroundColor: theme.primary, borderColor: theme.primary },
+              ]}
+              onPress={() => togglePermission(p)}
+              accessibilityRole="checkbox"
+              accessibilityLabel={p}
+              accessibilityState={{ checked: permissions.includes(p) }}
+            >
+              <Text style={{ color: permissions.includes(p) ? theme.primaryForeground : theme.foreground }}>{p}</Text>
+            </Pressable>
+          ))}
+        </View>
+        {error ? <Text accessibilityRole="alert" style={{ color: theme.destructive }}>{error}</Text> : null}
+        <Pressable style={[styles.submit, { backgroundColor: theme.primary }]} onPress={onSubmit} disabled={submitting} accessibilityRole="button" accessibilityLabel="Create user" accessibilityState={{ disabled: submitting }}>
+          <Text style={[styles.submitText, { color: theme.primaryForeground }]}>
+            {submitting ? "Creating..." : "Create user"}
+          </Text>
+        </Pressable>
+      </Surface>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, gap: 12 },
-  input: { borderWidth: 1, borderRadius: 8, padding: 12 },
+  container: { flex: 1, padding: 16, gap: 16 },
+  label: { fontSize: 11, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 6 },
+  input: { borderWidth: 1, borderRadius: 16, padding: 14, marginBottom: 12 },
   permissions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  permButton: { padding: 8, borderRadius: 8, borderWidth: 1 },
-  submit: { padding: 14, borderRadius: 8, alignItems: "center" },
-  submitText: { fontWeight: "600" },
+  permButton: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 14, borderWidth: 1 },
+  submit: { padding: 16, borderRadius: 18, alignItems: "center", marginTop: 8 },
+  submitText: { fontWeight: "700" },
 });
