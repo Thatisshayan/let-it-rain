@@ -14,6 +14,7 @@ If you're new to this repo, read these first:
 1. [`STATUS.md`](STATUS.md) — current verified state and repo rules
 2. [`LETITRAINNEXTSPRIN.md`](LETITRAINNEXTSPRIN.md) — active roadmap
 3. [`RUNBOOK-INTERNAL-LAUNCH.md`](RUNBOOK-INTERNAL-LAUNCH.md) — launch operations for the internal-team phase
+4. [`docs/USER_MANUAL.md`](docs/USER_MANUAL.md) — day-to-day guide for end users
 
 As of **2026-07-17**, the current verified test state is:
 
