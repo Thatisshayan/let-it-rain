@@ -27,7 +27,11 @@ export default async function DashboardPage() {
   if (!session) redirect("/login");
   const orgId = session.organizationId;
 
-  const [totalItems, items, recentMovements] = await Promise.all([
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const tomorrowStart = new Date(todayStart);
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+  const [totalItems, items, recentMovements, todayReceipts] = await Promise.all([
     prisma.item.count({ where: { deletedAt: null, organizationId: orgId } }),
     prisma.item.findMany({
       where: { deletedAt: null, organizationId: orgId },
@@ -39,16 +43,17 @@ export default async function DashboardPage() {
       take: 10,
       include: { item: { select: { name: true, id: true } }, user: { select: { name: true } } },
     }),
+    prisma.movement.count({ where: { organizationId: orgId, type: "RECEIVE", createdAt: { gte: todayStart, lt: tomorrowStart } } }),
   ]);
 
   const lowStockItems = items.filter((i) => i.quantity < i.minStock);
   const totalUnits = items.reduce((sum, i) => sum + i.quantity, 0);
-  const receivedToday = recentMovements.filter((m) => m.type === "RECEIVE").length;
+  const receivedToday = todayReceipts;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Friday operating brief"
+        eyebrow="Daily operating brief"
         title="A calmer, harder-edged command surface for real inventory work."
         description="Start with pressure, then flow, then detail. This surface is tuned for the first two minutes of the day: what is tightening, what changed, and where stock decisions need intervention."
       >

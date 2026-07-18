@@ -144,7 +144,7 @@ export default async function ItemsPage({
               {lowOnly && <input type="hidden" name="low" value="1" />}
             </form>
             <Link
-              href={lowOnly ? `/items${q ? `?q=${encodeURIComponent(q)}` : ""}` : `/items?low=1`}
+              href={lowOnly ? `/items${q ? `?q=${encodeURIComponent(q)}` : ""}` : `/items?${new URLSearchParams(q ? { q, low: "1" } : { low: "1" }).toString()}`}
               className={cn(
                 buttonVariants({ variant: lowOnly ? "default" : "outline", size: "sm" })
               )}

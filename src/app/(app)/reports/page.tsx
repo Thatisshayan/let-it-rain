@@ -121,14 +121,14 @@ export default async function ReportsPage({
         title={`Read the operating economics of ${monthLabel(year, month)} before you drill into detail.`}
         description={`Revenue, payment mix, profitability, restock spend, and valuation for ${monthLabel(year, month)}.`}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex max-w-full flex-wrap items-center gap-2">
             <Link
               href={`/reports?month=${monthParam(prev.year, prev.month)}`}
               className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
             >
               ← Prev
             </Link>
-            <span className="min-w-40 text-center text-sm font-medium">{monthLabel(year, month)}</span>
+            <span className="order-first w-full text-center text-sm font-medium sm:order-none sm:w-auto sm:min-w-40">{monthLabel(year, month)}</span>
             <Link
               href={`/reports?month=${monthParam(next.year, next.month)}`}
               className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
@@ -181,7 +181,7 @@ export default async function ReportsPage({
           </CardContent>
         </Card>
 
-        <Card className="editorial-surface rounded-[1.8rem] bg-foreground text-white">
+        <Card className="editorial-surface rounded-[1.8rem]">
           <CardHeader>
             <SectionHeading
               title="Inventory valuation"
@@ -190,7 +190,7 @@ export default async function ReportsPage({
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-semibold tabular-nums">{money(inventoryValuation)}</p>
-            <p className="mt-3 text-sm leading-6 text-white/68">
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">
               Based on current quantity multiplied by current weighted unit cost across all non-deleted items.
             </p>
           </CardContent>

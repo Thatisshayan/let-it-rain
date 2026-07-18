@@ -133,6 +133,7 @@ export default async function SettingsPage({
                 <Link
                   key={tab.id}
                   href={tab.href}
+                  aria-current={allowed === tab.id ? "page" : undefined}
                   className={cn(
                     "block rounded-[1.15rem] border px-4 py-3 transition-colors",
                     allowed === tab.id

@@ -90,14 +90,14 @@ export default async function ActivityPage({
         title={`See the operational rhythm of ${monthLabel(year, month)} without losing the day-level detail.`}
         description="Calendar density shows whether stock moved, in what direction, and when to drill down into the ledger."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex max-w-full flex-wrap items-center gap-2">
             <Link
               href={`/activity?month=${monthParam(prev.year, prev.month)}`}
               className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
             >
               ← Prev
             </Link>
-            <span className="min-w-40 text-center text-sm font-medium">{monthLabel(year, month)}</span>
+            <span className="order-first w-full text-center text-sm font-medium sm:order-none sm:w-auto sm:min-w-40">{monthLabel(year, month)}</span>
             <Link
               href={`/activity?month=${monthParam(next.year, next.month)}`}
               className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
