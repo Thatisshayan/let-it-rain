@@ -99,7 +99,7 @@ export default function NewUserScreen() {
           ))}
         </View>
         {error ? <Text style={{ color: theme.destructive }}>{error}</Text> : null}
-        <Pressable style={[styles.submit, { backgroundColor: theme.primary }]} onPress={onSubmit} disabled={submitting}>
+        <Pressable style={[styles.submit, { backgroundColor: theme.primary }]} onPress={onSubmit} disabled={submitting} accessibilityRole="button" accessibilityLabel="Create user" accessibilityState={{ disabled: submitting }}>
           <Text style={[styles.submitText, { color: theme.primaryForeground }]}>
             {submitting ? "Creating..." : "Create user"}
           </Text>

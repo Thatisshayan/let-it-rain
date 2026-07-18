@@ -133,7 +133,7 @@ function UserDetailForm({
             </Pressable>
           ))}
         </View>
-        <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={savePermissions} disabled={saving}>
+        <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={savePermissions} disabled={saving} accessibilityRole="button" accessibilityLabel="Save user permissions" accessibilityState={{ disabled: saving }}>
           <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>
             {saving ? "Saving..." : "Save permissions"}
           </Text>
@@ -157,7 +157,7 @@ function UserDetailForm({
           value={newPassword}
           onChangeText={setNewPassword}
         />
-        <Pressable style={[styles.buttonSecondary, { borderColor: theme.border, backgroundColor: theme.surfaceStrong }]} onPress={submitResetPassword}>
+        <Pressable style={[styles.buttonSecondary, { borderColor: theme.border, backgroundColor: theme.surfaceStrong }]} onPress={submitResetPassword} accessibilityRole="button" accessibilityLabel="Reset user password">
           <Text style={{ color: theme.foreground }}>Reset password</Text>
         </Pressable>
 

@@ -50,13 +50,13 @@ export default function ItemDetailScreen() {
         <StatTile theme={theme} label="Minimum" value={data.item.minStock} hint="Restock threshold" />
       </View>
       <View style={styles.actions}>
-        <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={() => router.push(`/items/${id}/adjust`)}>
+        <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={() => router.push(`/items/${id}/adjust`)} accessibilityRole="button" accessibilityLabel="Adjust stock">
           <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>Adjust stock</Text>
         </Pressable>
-        <Pressable style={[styles.buttonSecondary, { borderColor: theme.border, backgroundColor: theme.surfaceStrong }]} onPress={() => router.push(`/items/${id}/edit`)}>
+        <Pressable style={[styles.buttonSecondary, { borderColor: theme.border, backgroundColor: theme.surfaceStrong }]} onPress={() => router.push(`/items/${id}/edit`)} accessibilityRole="button" accessibilityLabel="Edit item">
           <Text style={{ color: theme.foreground }}>Edit item</Text>
         </Pressable>
-        <Pressable style={[styles.buttonSecondary, { borderColor: theme.border, backgroundColor: theme.surfaceStrong }]} onPress={onExport} disabled={exporting}>
+        <Pressable style={[styles.buttonSecondary, { borderColor: theme.border, backgroundColor: theme.surfaceStrong }]} onPress={onExport} disabled={exporting} accessibilityRole="button" accessibilityLabel={exporting ? "Exporting movement history" : "Export movement history"} accessibilityState={{ disabled: exporting }}>
           <Text style={{ color: theme.foreground }}>{exporting ? "Exporting…" : "Export CSV"}</Text>
         </Pressable>
       </View>

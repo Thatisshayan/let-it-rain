@@ -151,7 +151,7 @@ export default function NewOrderScreen() {
             <Text style={[styles.rowLabel, { color: theme.mutedForeground }]}>Line {rowIndex + 1}</Text>
           </View>
         ))}
-        <Pressable onPress={addRow} style={[styles.addRowButton, { borderColor: theme.border, backgroundColor: theme.surfaceStrong }]}>
+        <Pressable onPress={addRow} style={[styles.addRowButton, { borderColor: theme.border, backgroundColor: theme.surfaceStrong }]} accessibilityRole="button" accessibilityLabel="Add order item">
           <Text style={{ color: theme.foreground }}>+ Add item</Text>
         </Pressable>
 

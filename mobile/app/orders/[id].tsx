@@ -196,7 +196,7 @@ export default function OrderDetailScreen() {
         )}
 
         {canAct && order.status === "PENDING" && (
-          <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={onOutForDelivery} disabled={busy}>
+          <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={onOutForDelivery} disabled={busy} accessibilityRole="button" accessibilityLabel="Mark order out for delivery" accessibilityState={{ disabled: busy }}>
             <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>Mark out for delivery</Text>
           </Pressable>
         )}
@@ -232,14 +232,14 @@ export default function OrderDetailScreen() {
                 />
               </View>
             ))}
-            <Pressable style={[styles.button, { backgroundColor: theme.success }]} onPress={onDeliver} disabled={busy}>
+            <Pressable style={[styles.button, { backgroundColor: theme.success }]} onPress={onDeliver} disabled={busy} accessibilityRole="button" accessibilityLabel="Mark order delivered" accessibilityState={{ disabled: busy }}>
               <Text style={styles.buttonText}>Confirm delivered</Text>
             </Pressable>
           </>
         )}
 
         {canCancelOrders && isActive && (
-          <Pressable style={[styles.buttonSecondary, { borderColor: theme.border, backgroundColor: theme.surfaceStrong }]} onPress={onCancel} disabled={busy}>
+          <Pressable style={[styles.buttonSecondary, { borderColor: theme.border, backgroundColor: theme.surfaceStrong }]} onPress={onCancel} disabled={busy} accessibilityRole="button" accessibilityLabel="Cancel order" accessibilityState={{ disabled: busy }}>
             <Text style={{ color: theme.destructive }}>Cancel order</Text>
           </Pressable>
         )}

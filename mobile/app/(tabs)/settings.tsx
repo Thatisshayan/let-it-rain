@@ -122,7 +122,7 @@ export default function SettingsScreen() {
             </View>
           </View>
         </Surface>
-        <Pressable style={[styles.signOutButton, { borderColor: theme.destructive, backgroundColor: theme.surfaceMuted }]} onPress={onSignOut}>
+        <Pressable style={[styles.signOutButton, { borderColor: theme.destructive, backgroundColor: theme.surfaceMuted }]} onPress={onSignOut} accessibilityRole="button" accessibilityLabel="Sign out">
           <Text style={[styles.signOutText, { color: theme.destructive }]}>Sign out</Text>
         </Pressable>
       </View>

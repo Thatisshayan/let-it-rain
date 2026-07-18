@@ -91,7 +91,7 @@ function AccountForm({ initialName }: { initialName: string }) {
         />
         {nameError ? <Text style={{ color: theme.destructive }}>{nameError}</Text> : null}
         {nameSuccess ? <Text style={{ color: theme.success }}>{nameSuccess}</Text> : null}
-        <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={saveName}>
+        <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={saveName} accessibilityRole="button" accessibilityLabel="Save name">
           <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>Save name</Text>
         </Pressable>
 
@@ -114,7 +114,7 @@ function AccountForm({ initialName }: { initialName: string }) {
         />
         {passwordError ? <Text style={{ color: theme.destructive }}>{passwordError}</Text> : null}
         {passwordSuccess ? <Text style={{ color: theme.success }}>{passwordSuccess}</Text> : null}
-        <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={savePassword}>
+        <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={savePassword} accessibilityRole="button" accessibilityLabel="Change password">
           <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>Change password</Text>
         </Pressable>
 

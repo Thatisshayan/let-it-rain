@@ -122,7 +122,7 @@ export default function OrganizationScreen() {
         {info ? (
           <>
             {info.plan === "FREE" ? (
-              <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={upgrade} disabled={upgrading}>
+              <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={upgrade} disabled={upgrading} accessibilityRole="button" accessibilityLabel="Upgrade organization plan" accessibilityState={{ disabled: upgrading }}>
                 <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>
                   {upgrading ? "Opening checkout…" : "Upgrade to Pro"}
                 </Text>
@@ -154,7 +154,7 @@ export default function OrganizationScreen() {
 
         {error ? <Text style={{ color: theme.destructive }}>{error}</Text> : null}
         {success ? <Text style={{ color: theme.success }}>{success}</Text> : null}
-        <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={save}>
+        <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={save} accessibilityRole="button" accessibilityLabel="Save organization settings">
           <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>Save settings</Text>
         </Pressable>
       </Surface>

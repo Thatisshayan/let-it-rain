@@ -135,7 +135,7 @@ function EditItemForm({
           </>
         )}
         {error ? <Text style={{ color: theme.destructive }}>{error}</Text> : null}
-        <Pressable style={[styles.submit, { backgroundColor: theme.primary }]} onPress={onSubmit} disabled={submitting}>
+        <Pressable style={[styles.submit, { backgroundColor: theme.primary }]} onPress={onSubmit} disabled={submitting} accessibilityRole="button" accessibilityLabel="Save item changes" accessibilityState={{ disabled: submitting }}>
           <Text style={[styles.submitText, { color: theme.primaryForeground }]}>
             {submitting ? "Saving..." : "Save changes"}
           </Text>
