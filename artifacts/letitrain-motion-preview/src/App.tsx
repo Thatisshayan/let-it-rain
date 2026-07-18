@@ -1,4 +1,4 @@
-import { AnimatePresence, LayoutGroup, motion } from 'framer-motion'
+import { AnimatePresence, LayoutGroup, MotionConfig, motion } from 'framer-motion'
 import { useMemo, useState } from 'react'
 
 type ViewMode = 'command' | 'inventory' | 'reports'
@@ -457,6 +457,7 @@ function App() {
   }, [view])
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="app-shell">
       <motion.section
         className="intro-shell"
@@ -518,6 +519,7 @@ function App() {
                       key={item.id}
                       type="button"
                       className={`nav-button ${active ? 'active' : ''}`}
+                      aria-pressed={active}
                       onClick={() => setView(item.id)}
                     >
                       {active ? <motion.div layoutId="nav-glow" className="nav-glow" /> : null}
@@ -608,6 +610,7 @@ function App() {
         <PhonePreview />
       </div>
     </div>
+    </MotionConfig>
   )
 }
 
