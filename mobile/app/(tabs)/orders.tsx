@@ -2,17 +2,24 @@ import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl } from "rea
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { fetchOrders, type Order, type OrderStatus } from "../../src/api/orders";
+import { fetchOrders, type Order } from "../../src/api/orders";
 import { useAuth } from "../../src/api/AuthContext";
 import { canManageOrders, hasPermission } from "../../src/lib/permissions";
 import { useTheme } from "../../src/theme";
+import {
+  EmptyMessage,
+  ListRow,
+  ScreenHeader,
+  StatTile,
+  Surface,
+} from "../../src/ui/command";
 
-const STATUS_LABEL: Record<OrderStatus, string> = {
+const STATUS_LABEL = {
   PENDING: "Pending",
   OUT_FOR_DELIVERY: "Out for delivery",
   DELIVERED: "Delivered",
   CANCELLED: "Cancelled",
-};
+} as const;
 
 export default function OrdersScreen() {
   const theme = useTheme();
@@ -26,79 +33,99 @@ export default function OrdersScreen() {
     queryFn: fetchOrders,
   });
 
-  function statusColor(status: OrderStatus) {
-    if (status === "DELIVERED") return theme.success;
-    if (status === "CANCELLED") return theme.destructive;
-    if (status === "OUT_FOR_DELIVERY") return theme.warning;
-    return theme.mutedForeground;
-  }
+  const visibleOrders = orders ?? [];
+  const pendingCount = visibleOrders.filter((order) => order.status === "PENDING").length;
+  const enRouteCount = visibleOrders.filter((order) => order.status === "OUT_FOR_DELIVERY").length;
+  const deliveredCount = visibleOrders.filter((order) => order.status === "DELIVERED").length;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 16, backgroundColor: theme.background }]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.foreground }]}>Orders</Text>
-        {canCreateOrders && (
-          <Pressable style={[styles.newButton, { backgroundColor: theme.primary }]} onPress={() => router.push("/orders/new")}>
-            <Text style={[styles.newButtonText, { color: theme.primaryForeground }]}>+ New</Text>
-          </Pressable>
-        )}
-      </View>
-      <Text style={{ color: theme.mutedForeground, marginBottom: 8 }}>
-        {canManage ? "All orders" : "Assigned to you"}
-      </Text>
+      <View style={styles.content}>
+        <ScreenHeader
+          theme={theme}
+          eyebrow="Dispatch board"
+          title={canManage ? "Assignment, movement, and completion pressure in one lane." : "Your assigned delivery lane at a glance."}
+          description={canManage ? "All orders" : "Assigned to you"}
+          right={
+            canCreateOrders ? (
+              <Pressable style={[styles.newButton, { backgroundColor: theme.primary }]} onPress={() => router.push("/orders/new")}>
+                <Text style={[styles.newButtonText, { color: theme.primaryForeground }]}>+ New</Text>
+              </Pressable>
+            ) : undefined
+          }
+        />
 
-      {isLoading ? <Text style={{ color: theme.foreground }}>Loading...</Text> : null}
-      {error ? (
-        <View>
-          <Text style={{ color: theme.destructive }}>Could not load orders.</Text>
-          <Pressable onPress={() => refetch()}>
-            <Text style={{ color: theme.primary }}>Retry</Text>
-          </Pressable>
+        <View style={styles.metricGrid}>
+          <StatTile theme={theme} label="Visible orders" value={String(visibleOrders.length).padStart(2, "0")} hint={canManage ? "Dispatch queue scope" : "Driver queue scope"} />
+          <StatTile theme={theme} label="Pending" value={String(pendingCount).padStart(2, "0")} hint="Awaiting action" />
+          <StatTile theme={theme} label="En route" value={String(enRouteCount).padStart(2, "0")} hint="Out in the field" tone={enRouteCount > 0 ? "warning" : "default"} />
+          <StatTile theme={theme} label="Delivered" value={String(deliveredCount).padStart(2, "0")} hint="Completed flow" tone={deliveredCount > 0 ? "success" : "default"} />
         </View>
-      ) : null}
 
-      <FlatList
-        data={orders ?? []}
-        keyExtractor={(o: Order) => o.id}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={theme.primary} />}
-        ListEmptyComponent={
-          !isLoading ? (
-            <Text style={{ color: theme.mutedForeground, marginTop: 16 }}>
-              {canManage ? "No orders yet." : "No orders assigned to you yet."}
-            </Text>
-          ) : null
-        }
-        renderItem={({ item }) => (
-          <Pressable style={[styles.row, { borderColor: theme.border }]} onPress={() => router.push(`/orders/${item.id}`)}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.rowName, { color: theme.foreground }]}>{item.customerName}</Text>
-              <Text style={{ color: theme.mutedForeground, fontSize: 12 }}>
-                {item.lineItems.length} item{item.lineItems.length === 1 ? "" : "s"}
-                {item.driver ? ` · ${item.driver.name}` : ""}
-              </Text>
-            </View>
-            <Text style={{ color: statusColor(item.status), fontWeight: "600", fontSize: 12 }}>
-              {STATUS_LABEL[item.status]}
-            </Text>
-          </Pressable>
-        )}
-      />
+        {error ? (
+          <Surface theme={theme}>
+            <EmptyMessage theme={theme} title="Could not load orders." detail="Pull to refresh or retry once connectivity is back." />
+            <Pressable style={[styles.retryButton, { borderColor: theme.border, backgroundColor: theme.surfaceStrong }]} onPress={() => refetch()}>
+              <Text style={[styles.retryText, { color: theme.primary }]}>Retry</Text>
+            </Pressable>
+          </Surface>
+        ) : null}
+
+        {isLoading ? (
+          <Surface theme={theme}>
+            <Text style={[styles.loading, { color: theme.mutedForeground }]}>Loading dispatch queue…</Text>
+          </Surface>
+        ) : null}
+
+        <FlatList
+          data={visibleOrders}
+          keyExtractor={(o: Order) => o.id}
+          contentContainerStyle={styles.listContent}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={theme.primary} />}
+          ListEmptyComponent={
+            !isLoading ? (
+              <Surface theme={theme}>
+                <EmptyMessage
+                  theme={theme}
+                  title={canManage ? "No orders yet." : "No orders assigned to you yet."}
+                  detail={canManage ? "New customer orders will appear here as they are created." : "Orders assigned to you will appear here as soon as dispatch routes them."}
+                />
+              </Surface>
+            ) : null
+          }
+          renderItem={({ item }) => (
+            <ListRow
+              theme={theme}
+              title={item.customerName}
+              detail={`${item.lineItems.length} item${item.lineItems.length === 1 ? "" : "s"}${item.driver ? ` · ${item.driver.name}` : ""}`}
+              meta={STATUS_LABEL[item.status]}
+              tone={
+                item.status === "DELIVERED"
+                  ? "success"
+                  : item.status === "OUT_FOR_DELIVERY"
+                    ? "warning"
+                    : item.status === "CANCELLED"
+                      ? "destructive"
+                      : "default"
+              }
+              onPress={() => router.push(`/orders/${item.id}`)}
+            />
+          )}
+          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  title: { fontSize: 22, fontWeight: "700" },
-  newButton: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
+  container: { flex: 1 },
+  content: { flex: 1, padding: 16, gap: 16, paddingBottom: 32 },
+  metricGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  loading: { fontSize: 14, fontWeight: "600" },
+  listContent: { gap: 10, paddingBottom: 24 },
+  newButton: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 16 },
   newButtonText: { fontWeight: "600" },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  rowName: { fontWeight: "500" },
+  retryButton: { marginTop: 12, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12 },
+  retryText: { fontSize: 14, fontWeight: "700" },
 });

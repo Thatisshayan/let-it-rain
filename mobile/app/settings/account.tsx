@@ -6,6 +6,7 @@ import { updateOwnProfile, changeOwnPassword, revokeOwnSessions } from "../../sr
 import { ApiError } from "../../src/api/client";
 import { useAuth } from "../../src/api/AuthContext";
 import { useTheme } from "../../src/theme";
+import { ScreenHeader, Surface } from "../../src/ui/command";
 
 export default function AccountScreen() {
   const { user } = useAuth();
@@ -75,58 +76,72 @@ function AccountForm({ initialName }: { initialName: string }) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Name</Text>
-      <TextInput style={inputStyle} value={name} onChangeText={setName} />
-      {nameError ? <Text style={{ color: theme.destructive }}>{nameError}</Text> : null}
-      {nameSuccess ? <Text style={{ color: theme.success }}>{nameSuccess}</Text> : null}
-      <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={saveName}>
-        <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>Save name</Text>
-      </Pressable>
-
-      <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Change password</Text>
-      <TextInput
-        style={inputStyle}
-        placeholder="Current password"
-        placeholderTextColor={theme.mutedForeground}
-        secureTextEntry
-        value={currentPassword}
-        onChangeText={setCurrentPassword}
+      <ScreenHeader
+        theme={theme}
+        eyebrow="Account"
+        title="Manage your identity and device access."
+        description="Keep profile, password, and active sessions under tight control from one surface."
       />
-      <TextInput
-        style={inputStyle}
-        placeholder="New password"
-        placeholderTextColor={theme.mutedForeground}
-        secureTextEntry
-        value={newPassword}
-        onChangeText={setNewPassword}
-      />
-      {passwordError ? <Text style={{ color: theme.destructive }}>{passwordError}</Text> : null}
-      {passwordSuccess ? <Text style={{ color: theme.success }}>{passwordSuccess}</Text> : null}
-      <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={savePassword}>
-        <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>Change password</Text>
-      </Pressable>
+      <Surface theme={theme}>
+        <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Name</Text>
+        <TextInput
+          style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]}
+          value={name}
+          onChangeText={setName}
+        />
+        {nameError ? <Text style={{ color: theme.destructive }}>{nameError}</Text> : null}
+        {nameSuccess ? <Text style={{ color: theme.success }}>{nameSuccess}</Text> : null}
+        <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={saveName}>
+          <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>Save name</Text>
+        </Pressable>
 
-      <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Sessions</Text>
-      <Text style={{ color: theme.mutedForeground, fontSize: 13 }}>
-        Sign out of every device. You&apos;ll need to sign in again.
-      </Text>
-      <Pressable
-        style={[styles.button, { borderWidth: 1, borderColor: theme.border }]}
-        onPress={handleSignOutEverywhere}
-        disabled={signingOutEverywhere}
-      >
-        <Text style={{ color: theme.foreground, fontWeight: "600" }}>
-          {signingOutEverywhere ? "Signing out…" : "Sign out everywhere"}
+        <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Change password</Text>
+        <TextInput
+          style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]}
+          placeholder="Current password"
+          placeholderTextColor={theme.mutedForeground}
+          secureTextEntry
+          value={currentPassword}
+          onChangeText={setCurrentPassword}
+        />
+        <TextInput
+          style={[...inputStyle, { backgroundColor: theme.surfaceStrong }]}
+          placeholder="New password"
+          placeholderTextColor={theme.mutedForeground}
+          secureTextEntry
+          value={newPassword}
+          onChangeText={setNewPassword}
+        />
+        {passwordError ? <Text style={{ color: theme.destructive }}>{passwordError}</Text> : null}
+        {passwordSuccess ? <Text style={{ color: theme.success }}>{passwordSuccess}</Text> : null}
+        <Pressable style={[styles.button, { backgroundColor: theme.primary }]} onPress={savePassword}>
+          <Text style={[styles.buttonText, { color: theme.primaryForeground }]}>Change password</Text>
+        </Pressable>
+
+        <Text style={[styles.sectionTitle, { color: theme.foreground }]}>Sessions</Text>
+        <Text style={[styles.helperText, { color: theme.mutedForeground }]}>
+          Sign out of every device. You&apos;ll need to sign in again.
         </Text>
-      </Pressable>
+        <Pressable
+          style={[styles.buttonSecondary, { borderColor: theme.border, backgroundColor: theme.surfaceStrong }]}
+          onPress={handleSignOutEverywhere}
+          disabled={signingOutEverywhere}
+        >
+          <Text style={[styles.buttonText, { color: theme.foreground }]}>
+            {signingOutEverywhere ? "Signing out…" : "Sign out everywhere"}
+          </Text>
+        </Pressable>
+      </Surface>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, gap: 8 },
-  sectionTitle: { fontWeight: "600", marginTop: 12 },
-  input: { borderWidth: 1, borderRadius: 8, padding: 12 },
-  button: { padding: 12, borderRadius: 8, alignItems: "center", marginTop: 4 },
-  buttonText: { fontWeight: "600" },
+  container: { flex: 1, padding: 16, gap: 16 },
+  sectionTitle: { fontWeight: "700", fontSize: 16, marginTop: 12, marginBottom: 6 },
+  helperText: { fontSize: 13, lineHeight: 19 },
+  input: { borderWidth: 1, borderRadius: 16, padding: 14, marginBottom: 12 },
+  button: { padding: 16, borderRadius: 18, alignItems: "center", marginTop: 4 },
+  buttonSecondary: { padding: 16, borderRadius: 18, borderWidth: 1, alignItems: "center", marginTop: 4 },
+  buttonText: { fontWeight: "700" },
 });
