@@ -106,7 +106,8 @@ describe("login screen", () => {
 
     const tree = await renderLoginScreen();
     const inputs = tree.root.findAllByType(MockTextInput);
-    const button = tree.root.findByType(MockPressable);
+    const buttons = tree.root.findAllByType(MockPressable);
+    const button = buttons.find((b) => b.props.children.props.children === "Sign in");
 
     await act(async () => {
       inputs[0].props.onChangeText("a@example.com");
@@ -127,7 +128,8 @@ describe("login screen", () => {
 
     const tree = await renderLoginScreen();
     const inputs = tree.root.findAllByType(MockTextInput);
-    const button = tree.root.findByType(MockPressable);
+    const buttons = tree.root.findAllByType(MockPressable);
+    const button = buttons.find((b) => b.props.children.props.children === "Sign in");
 
     await act(async () => {
       inputs[0].props.onChangeText("a@example.com");
@@ -146,7 +148,8 @@ describe("login screen", () => {
     authApiMocks.login.mockRejectedValue(new Error("boom"));
 
     const tree = await renderLoginScreen();
-    const button = tree.root.findByType(MockPressable);
+    const buttons = tree.root.findAllByType(MockPressable);
+    const button = buttons.find((b) => b.props.children.props.children === "Sign in");
 
     await act(async () => {
       await button.props.onPress();

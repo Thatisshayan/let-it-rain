@@ -90,6 +90,14 @@ export default function LoginScreen() {
           {loading ? "Signing in..." : "Sign in"}
         </Text>
       </Pressable>
+      <Pressable
+        style={styles.forgotButton}
+        onPress={() => router.push("/forgot-password")}
+        accessibilityRole="link"
+        accessibilityLabel="Forgot password"
+      >
+        <Text style={[styles.forgotText, { color: theme.primary }]}>Forgot password?</Text>
+      </Pressable>
       <Text style={[styles.helper, { color: theme.mutedForeground }]}>
         Permissions and organization scope are applied immediately after sign-in.
       </Text>
@@ -107,5 +115,7 @@ const styles = StyleSheet.create({
   error: { fontSize: 13, fontWeight: "600" },
   button: { padding: 16, borderRadius: 18, alignItems: "center", marginTop: 4 },
   buttonText: { fontWeight: "700" },
+  forgotButton: { alignItems: "center", marginTop: 8 },
+  forgotText: { fontSize: 14, fontWeight: "500" },
   helper: { fontSize: 12, lineHeight: 18 },
 });
