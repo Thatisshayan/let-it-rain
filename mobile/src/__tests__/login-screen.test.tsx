@@ -31,6 +31,10 @@ function MockText({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function MockView({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
+}
+
 function MockTextInput() {
   return null;
 }
@@ -53,6 +57,7 @@ vi.mock("expo-router", () => ({
   router: routerMocks,
 }));
 vi.mock("react-native", () => ({
+  View: MockView,
   Text: MockText,
   TextInput: MockTextInput,
   Pressable: MockPressable,
