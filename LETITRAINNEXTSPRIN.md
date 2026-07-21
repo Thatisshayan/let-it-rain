@@ -1,6 +1,6 @@
 # Let It Rain — Active Roadmap
 
-Last updated: 2026-07-17
+Last updated: 2026-07-21
 
 This is the active roadmap for Let It Rain. It should describe:
 
@@ -26,9 +26,9 @@ Deferred until the first-paying-customer phase:
 - public production-domain rollout
 - any claim that the product is customer-ready for paid external use
 
-## Verified Repo State — 2026-07-17
+## Verified Repo State — 2026-07-21
 
-Verified directly in code and tests on Friday, July 17, 2026:
+Verified directly in code and tests on Friday, July 21, 2026:
 
 - web tests: `237/237` passing
 - mobile tests: `110/110` passing
@@ -43,8 +43,29 @@ Verified directly in code and tests on Friday, July 17, 2026:
 - explicit web/mobile `typecheck` scripts exist, and CI runs them
 - audit-covered user/session mutations and order lifecycle writes fail closed atomically
 - web/mobile permission re-sweep completed; direct-route mobile permission gaps were closed
-- Phase 13 historical docs are explicitly marked as historical context rather than active execution guidance
 - current GitHub Actions CI is green for commit `24496d7` (run `29614610882`)
+
+### Phase 0 — Design System Foundation (COMPLETE)
+
+The mobile app now has a token-driven design system:
+
+- `design-tokens.ts` — single source of truth for colors, spacing, typography, motion, shadows
+- `useAccessibility()` hook — reduced motion, dynamic type scale, high contrast detection
+- `haptics.ts` — haptic feedback system that respects accessibility preferences
+- `motion.ts` — animation utilities respecting reduced motion
+- `primitives/` — accessible UI primitives (Box, Text, Pressable, Input, Card, State)
+
+### Phase 1 — Login & Dashboard Redesign (IN PROGRESS)
+
+1. Login screen redesign
+   - [x] Design system integration
+   - [ ] "Forgot password?" link
+   - [ ] Better visual hierarchy
+
+2. Dashboard screen redesign
+   - [ ] Design system integration
+   - [ ] Improved information density
+   - [ ] Better low-stock identification
 
 ## Phase 14 — Internal-Team Go-Live
 
@@ -91,33 +112,25 @@ Goal: close the remaining correctness and governance gaps without inventing fake
 ### Open correctness work
 
 1. Mobile test expansion
-- cover more than the current 27 files / 110 tests
-- focus first on API client, auth context, offline queue, and higher-risk permissioned screens
+   - cover more than the current 27 files / 110 tests
+   - focus first on API client, auth context, offline queue, and higher-risk permissioned screens
 
-2. Mobile UI/UX polish (Phase 0 complete)
-- design system foundation: `design-tokens.ts`, `useAccessibility` hook, `haptics.ts`, `motion.ts`
-- UI primitives: Box, Text, Pressable, Input, Card, State
-- reduced-motion support for skeleton/toast animations
-- dynamic type scaling support
-- haptic feedback integration
+2. Login screen redesign
+   - [ ] "Forgot password?" link
+   - [ ] Better visual hierarchy
 
-3. Login screen redesign
-- improve accessibility labels and error handling
-- add "Forgot password?" link
-- better visual hierarchy for the login form
-
-4. Dashboard screen redesign
-- improve information density and actionability
-- clearer stat tile presentation
-- better low-stock identification
+3. Dashboard screen redesign
+   - [ ] Design system integration
+   - [ ] Improved information density
+   - [ ] Better low-stock identification
 
 ### Open documentation/governance work
 
 1. Keep handoff docs discoverable
-- `README.md`, `STATUS.md`, and this roadmap must remain enough for a new agent to orient itself
+   - `README.md`, `STATUS.md`, and this roadmap must remain enough for a new agent to orient itself
 
 2. Keep docs synced with code
-- changes to behavior require corresponding doc updates in the same change-set
+   - changes to behavior require corresponding doc updates in the same change-set
 
 ## Phase 16 — First Paying Customer
 
