@@ -59,7 +59,7 @@ The mobile app now has a token-driven design system:
 
 1. Login screen redesign
    - [x] Design system integration
-   - [ ] "Forgot password?" link
+   - [x] "Forgot password?" link
    - [ ] Better visual hierarchy
 
 2. Dashboard screen redesign
