@@ -34,6 +34,11 @@ Verified on 2026-07-17:
 - Phase 13 historical docs are now explicitly marked as historical context, not active execution guidance
 - current GitHub Actions CI is green for commit `24496d7` (run `29614610882`)
 
+Verified on 2026-07-21 (design system Phase 0):
+
+- mobile design system foundation complete: `design-tokens.ts`, `useAccessibility` hook, `haptics.ts`, `motion.ts`, UI primitives
+- all primitives typecheck and pass existing 110 tests
+
 ## Read Order
 
 If you are new to the repo, read these in order:

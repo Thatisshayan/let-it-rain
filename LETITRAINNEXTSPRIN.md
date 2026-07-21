@@ -94,6 +94,23 @@ Goal: close the remaining correctness and governance gaps without inventing fake
 - cover more than the current 27 files / 110 tests
 - focus first on API client, auth context, offline queue, and higher-risk permissioned screens
 
+2. Mobile UI/UX polish (Phase 0 complete)
+- design system foundation: `design-tokens.ts`, `useAccessibility` hook, `haptics.ts`, `motion.ts`
+- UI primitives: Box, Text, Pressable, Input, Card, State
+- reduced-motion support for skeleton/toast animations
+- dynamic type scaling support
+- haptic feedback integration
+
+3. Login screen redesign
+- improve accessibility labels and error handling
+- add "Forgot password?" link
+- better visual hierarchy for the login form
+
+4. Dashboard screen redesign
+- improve information density and actionability
+- clearer stat tile presentation
+- better low-stock identification
+
 ### Open documentation/governance work
 
 1. Keep handoff docs discoverable

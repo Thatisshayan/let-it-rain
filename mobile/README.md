@@ -94,7 +94,19 @@ mobile/
 │           ├── new.tsx             # create user
 │           └── [id].tsx            # edit permissions, activate/deactivate, reset password
 ├── src/
-│   ├── theme.ts                    # light/dark color tokens (hand-matched to web's globals.css)
+│   ├── design-tokens.ts               # single source of truth for colors, spacing, typography, motion, shadows
+│   ├── theme.ts                       # light/dark theme with state tokens (pressed, disabled)
+│   ├── theme/index.ts                 # theme provider and hooks
+│   ├── hooks/useAccessibility.ts      # reduced motion, dynamic type, high contrast hooks
+│   ├── haptics.ts                     # haptic feedback system
+│   ├── motion.ts                      # animation utilities respecting reduced motion
+│   ├── primitives/                    # design system primitives
+│   │   ├── Box.tsx                    # styled View with token-based props
+│   │   ├── Text.tsx                   # styled Text with typography variants
+│   │   ├── Pressable.tsx              # accessible Pressable with haptic feedback
+│   │   ├── Input.tsx                  # TextInput with labels, errors, accessibility
+│   │   ├── Card.tsx                   # Card container with variants
+│   │   └── State.tsx                  # unified loading/error/empty/permission states
 │   ├── toast.tsx                   # minimal custom toast (no library — sonner isn't RN-usable)
 │   ├── Skeleton.tsx                 # pulsing loading placeholder
 │   ├── offlineQueue.ts              # persisted queue-and-sync for order delivery actions (see below)
@@ -242,10 +254,16 @@ Useful after a device loss or "I forgot to sign out somewhere."
   profile pointing at a separate Vercel deployment + database, alongside the existing
   `development`/`preview`/`production` profiles.
 - **Accessibility coverage is actively being polished.** The tab shell, login, item-list,
-  and shared command surfaces expose accessibility metadata, and the current audit is
-  extending the same treatment to every remaining form and action. Device-level VoiceOver,
-  Dynamic Type, target-size, contrast, and reduced-motion validation is tracked in
-  `docs/qa/2026-07-18-mobile-device-qa-matrix.md`.
+   and shared command surfaces expose accessibility metadata, and the current audit is
+   extending the same treatment to every remaining form and action. Device-level VoiceOver,
+   Dynamic Type, target-size, contrast, and reduced-motion validation is tracked in
+   `docs/qa/2026-07-18-mobile-device-qa-matrix.md`.
+   
+   **Design System (Phase 0):** The mobile app now has a token-driven design system with:
+   - `design-tokens.ts` — single source of truth for colors, spacing, typography, motion, shadows
+   - `useAccessibility()` hook — reduced motion, dynamic type scale, high contrast detection
+   - `haptics.ts` — haptic feedback system that respects accessibility preferences
+   - `primitives/` — accessible UI primitives (Box, Text, Pressable, Input, Card, State)
 
 ## Shipping to TestFlight
 
