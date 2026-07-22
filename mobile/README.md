@@ -69,7 +69,8 @@ mobile/
 ├── app/                          # screens (file-based routing)
 │   ├── _layout.tsx                # root layout: GestureHandlerRootView, providers, themed Stack
 │   ├── index.tsx                  # redirects to /login or /dashboard depending on auth state
-│   ├── login.tsx
+│   ├── login.tsx                  # sign in screen
+│   ├── forgot-password.tsx        # password reset request screen
 │   ├── (tabs)/                     # bottom tab bar group — none of these segments appear in the URL
 │   │   ├── _layout.tsx               # Tabs navigator: Dashboard/Items/Orders/Activity/Reports/Settings
 │   │   ├── dashboard.tsx             # landing screen: today's revenue, low stock, recent activity
