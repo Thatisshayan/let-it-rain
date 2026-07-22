@@ -106,16 +106,16 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 24, gap: 12 },
+  container: { flex: 1, justifyContent: "center", padding: 24, gap: 16 },
   eyebrow: { fontSize: 11, fontWeight: "700", letterSpacing: 1.6, textTransform: "uppercase" },
-  title: { fontSize: 34, fontWeight: "800", marginBottom: 4, letterSpacing: -1 },
-  subtitle: { fontSize: 14, lineHeight: 22, marginBottom: 6 },
-  sectionLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase" },
-  input: { borderWidth: 1, borderRadius: 16, padding: 14 },
-  error: { fontSize: 13, fontWeight: "600" },
-  button: { padding: 16, borderRadius: 18, alignItems: "center", marginTop: 4 },
-  buttonText: { fontWeight: "700" },
-  forgotButton: { alignItems: "center", marginTop: 8 },
-  forgotText: { fontSize: 14, fontWeight: "500" },
-  helper: { fontSize: 12, lineHeight: 18 },
+  title: { fontSize: 36, fontWeight: "800", marginBottom: 2, letterSpacing: -0.5 },
+  subtitle: { fontSize: 15, lineHeight: 22, marginBottom: 24 },
+  sectionLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 8 },
+  input: { borderWidth: 1, borderRadius: 16, padding: 14, marginBottom: 16 },
+  error: { fontSize: 13, fontWeight: "600", marginBottom: 16 },
+  button: { padding: 16, borderRadius: 18, alignItems: "center", marginTop: 8 },
+  buttonText: { fontSize: 17, fontWeight: "700" },
+  forgotButton: { alignItems: "center", marginTop: 12 },
+  forgotText: { fontSize: 15, fontWeight: "500" },
+  helper: { fontSize: 13, lineHeight: 18, marginTop: 24, textAlign: "center" },
 });
