@@ -61,6 +61,7 @@ The mobile app now has a token-driven design system:
    - [x] Design system integration
    - [x] "Forgot password?" link
    - [x] Visual hierarchy improvements
+   - [x] Tests for forgot-password screen
 
 2. Dashboard screen redesign
    - [x] Design system integration (already using UI command components)
