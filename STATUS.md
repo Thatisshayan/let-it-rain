@@ -2,7 +2,7 @@
 
 > Single-link snapshot for any incoming agent, session, or human. If you were only told "we're working on Let It Rain", start here.
 >
-> Last refreshed: 2026-07-17
+> Last refreshed: 2026-07-21
 
 ## Current State
 
@@ -13,13 +13,13 @@ Let It Rain is a multi-tenant inventory and order-tracking product with:
 - an Expo mobile app
 - Prisma 7 on PostgreSQL
 
-As of **Friday, July 17, 2026**, the codebase is functionally at **Phase 13 complete** and moving into:
+As of **Friday, July 21, 2026**, the codebase is functionally at Phase 13 complete and moving into:
 
 - **Phase 14**: internal-team go-live
 - **Phase 15**: hardening and cleanup
 - **Phase 16**: first paying customer, explicitly deferred
 
-Verified on 2026-07-17:
+Verified on 2026-07-21:
 
 - web tests are green: `237/237`
 - mobile tests are green: `110/110`
@@ -37,7 +37,9 @@ Verified on 2026-07-17:
 Verified on 2026-07-21 (design system Phase 0 + Login redesign Phase 1):
 
 - mobile design system foundation complete: `design-tokens.ts`, `useAccessibility` hook, `haptics.ts`, `motion.ts`, UI primitives
-- Login screen redesigned using new design system primitives
+- Login screen redesigned using new design system primitives with forgot password link
+- Dashboard screen uses UI command components from design system
+- Visual hierarchy improvements on login screens
 - all primitives typecheck and pass existing 110 tests
 - tests run and pass: `110/110`
 
