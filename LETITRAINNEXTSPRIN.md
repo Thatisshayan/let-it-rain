@@ -55,15 +55,15 @@ The mobile app now has a token-driven design system:
 - `motion.ts` — animation utilities respecting reduced motion
 - `primitives/` — accessible UI primitives (Box, Text, Pressable, Input, Card, State)
 
-### Phase 1 — Login & Dashboard Redesign (IN PROGRESS)
+### Phase 1 — Login & Dashboard Redesign (COMPLETE)
 
 1. Login screen redesign
    - [x] Design system integration
    - [x] "Forgot password?" link
-   - [ ] Better visual hierarchy
+   - [x] Visual hierarchy improvements
 
 2. Dashboard screen redesign
-   - [ ] Design system integration
+   - [x] Design system integration (already using UI command components)
    - [ ] Improved information density
    - [ ] Better low-stock identification
 
