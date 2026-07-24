@@ -48,3 +48,19 @@ next-env.d.ts
 # local audit reports (agent-generated, not for version control)
 14.07.2026CurrentStateofRepo.md
 .vercel.production.env
+# --- Repo Governance additions (merged into .gitignore by apply script) ---
+.env
+.env.*
+!.env.example
+*.p8
+*.p12
+*_credential*
+*credential*
+node_modules/
+dist/
+build/
+.next/
+.turbo/
+.vs/
+desktop.ini
+audits/private/
