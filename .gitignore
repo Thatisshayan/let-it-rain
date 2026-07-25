@@ -64,3 +64,9 @@ build/
 .vs/
 desktop.ini
 audits/private/
+
+# Build/runtime noise
+.next-preview*.log
+.kilo/
+mobile/eas-production-build*.log
+mobile/.codebase-memory/
