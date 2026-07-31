@@ -35,7 +35,7 @@ if (Get-Command gitleaks -ErrorAction SilentlyContinue) {
     Where-Object { $_.Name -notmatch '\.(test|spec)\.(ts|tsx|js|jsx)$' } |
     Where-Object {
       $m = Select-String -Path $_.FullName -Pattern '(API_KEY|SECRET|PRIVATE_KEY|TOKEN|PASSWORD)\s*[=:]\s*["'']?[A-Za-z0-9/+_-]{8,}' -ErrorAction SilentlyContinue
-      $m -and -not ($m.Line -match 'placeholder|example|dummy')
+      @($m | Where-Object { $_.Line -notmatch 'placeholder|example|dummy' }).Count -gt 0
     }
   if ($hits) { Err "secret-scan" "possible hardcoded secrets in: $($hits.FullName -join ', ')" }
 }
