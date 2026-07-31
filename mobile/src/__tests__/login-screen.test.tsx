@@ -115,7 +115,7 @@ describe("login screen", () => {
     });
 
     await act(async () => {
-      await button.props.onPress();
+      await button!.props.onPress();
     });
 
     expect(authApiMocks.login).toHaveBeenCalledWith("a@example.com", "secret");
@@ -137,7 +137,7 @@ describe("login screen", () => {
     });
 
     await act(async () => {
-      await button.props.onPress();
+      await button!.props.onPress();
     });
 
     expect(tree.root.findAllByProps({ children: "Invalid credentials" })).toHaveLength(1);
@@ -152,7 +152,7 @@ describe("login screen", () => {
     const button = buttons.find((b) => b.props.children.props.children === "Sign in");
 
     await act(async () => {
-      await button.props.onPress();
+      await button!.props.onPress();
     });
 
     expect(tree.root.findAllByProps({ children: "Could not sign in." })).toHaveLength(1);

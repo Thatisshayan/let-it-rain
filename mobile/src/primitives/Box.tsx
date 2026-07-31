@@ -60,6 +60,11 @@ const Box = memo(({
   ...props
 }: BoxProps) => {
   const theme = useTheme();
+  const resolveColor = (value?: string): string | undefined => {
+    if (value === undefined) return value;
+    const resolved = (theme as unknown as Record<string, unknown>)[value];
+    return typeof resolved === 'string' ? resolved : value;
+  };
 
   const containerStyle = [
     styles.base,
@@ -84,8 +89,8 @@ const Box = memo(({
       maxHeight,
       borderRadius,
       borderWidth,
-      borderColor,
-      backgroundColor,
+      borderColor: resolveColor(borderColor),
+      backgroundColor: resolveColor(backgroundColor),
       opacity: opacity ?? 1,
     },
     style,
