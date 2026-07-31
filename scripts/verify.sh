@@ -26,13 +26,23 @@ else
     -not -path '*/build/*' -not -path '*/.cache/*' -not -path '*/coverage/*' 2>/dev/null || true)
   if [ -n "$bad_files" ]; then error "secret-scan" "secret files present: $bad_files"; fi
   # (b) content-based: only scan first-party code/config, require an ASSIGNED VALUE.
-  #     Exclude dependency / generated dirs so library files don't false-positive.
-  hits=$(grep -rIlE "(API_KEY|SECRET|PRIVATE_KEY|TOKEN|PASSWORD)[[:space:]]*[=:][[:space:]]*[\"']?[A-Za-z0-9/+_-]{8,}" \
-    --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=audits/private \
-    --exclude-dir=.venv --exclude-dir=_repo_clone --exclude-dir=dist --exclude-dir=build \
-    --exclude-dir=.cache --exclude-dir=coverage \
-    --include='*.json' --include='*.env' --include='*.ts' --include='*.js' --include='*.py' \
-    --include='*.yml' --include='*.yaml' --include='*.toml' --include='*.sh' . 2>/dev/null || true)
+  #     Exclude dependency / generated dirs, test/spec fixtures (dummy values by
+  #     design), and explicit placeholder/example/dummy values.
+  #     (find -prune + xargs avoids grep's order-sensitive --include/--exclude
+  #     interplay across grep versions.)
+  hits=$(find . \
+    \( -path '*/node_modules' -o -path '*/.git' -o -path '*/audits/private' \
+       -o -path '*/.venv' -o -path '*/_repo_clone' -o -path '*/dist' \
+       -o -path '*/build' -o -path '*/.cache' -o -path '*/coverage' \) -prune -o \
+    -type f \
+    \( -name '*.json' -o -name '*.env' -o -name '*.ts' -o -name '*.js' -o -name '*.py' \
+       -o -name '*.yml' -o -name '*.yaml' -o -name '*.toml' -o -name '*.sh' \) \
+    -not -name '*.test.ts' -not -name '*.test.tsx' -not -name '*.test.js' -not -name '*.test.jsx' \
+    -not -name '*.spec.ts' -not -name '*.spec.tsx' -not -name '*.spec.js' -not -name '*.spec.jsx' \
+    -print0 2>/dev/null \
+    | xargs -0 -r grep -InE "(API_KEY|SECRET|PRIVATE_KEY|TOKEN|PASSWORD)[[:space:]]*[=:][[:space:]]*[\"']?[A-Za-z0-9/+_-]{8,}" \
+    | grep -vE '(placeholder|example|dummy)' \
+    | cut -d: -f1 | sort -u || true)
   if [ -n "$hits" ]; then error "secret-scan" "possible hardcoded secrets in: $hits"; fi
 fi
 

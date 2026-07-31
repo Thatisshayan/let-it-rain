@@ -23,7 +23,7 @@ export default function ForgotPasswordScreen() {
         <Text style={[styles.eyebrow, { color: theme.primary }]}>Check your email</Text>
         <Text style={[styles.title, { color: theme.foreground }]}>Password reset email sent</Text>
         <Text style={[styles.subtitle, { color: theme.mutedForeground }]}>
-          We've sent a password reset link to <Text style={{ fontWeight: "600" }}>{email}</Text>.
+          We&apos;ve sent a password reset link to <Text style={{ fontWeight: "600" }}>{email}</Text>.
           Tap the link in your email to reset your password.
         </Text>
         <Pressable
@@ -43,7 +43,7 @@ export default function ForgotPasswordScreen() {
       <Text style={[styles.eyebrow, { color: theme.primary }]}>Forgot password</Text>
       <Text style={[styles.title, { color: theme.foreground }]}>Reset your password</Text>
       <Text style={[styles.subtitle, { color: theme.mutedForeground }]}>
-        Enter your email address and we'll send you a link to reset your password.
+        Enter your email address and we&apos;ll send you a link to reset your password.
       </Text>
       <Text style={[styles.sectionLabel, { color: theme.mutedForeground }]}>Email</Text>
       <TextInput

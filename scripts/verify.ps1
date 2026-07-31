@@ -24,13 +24,19 @@ if (Get-Command gitleaks -ErrorAction SilentlyContinue) {
     Where-Object { $_.FullName -notmatch $excludeDirs }
   if ($badFiles) { Err "secret-scan" "secret files present: $($badFiles.FullName -join ', ')" }
   # (b) content-based: first-party code/config only, require an assigned value.
-  #     Exclude dependency / generated dirs + *.env.example / *.env.sample templates.
+  #     Exclude dependency / generated dirs, test/spec fixtures (dummy values by
+  #     design), *.env.example / *.env.sample templates, and explicit
+  #     placeholder/example/dummy values.
   $hits = Get-ChildItem -Path $RepoRoot -Recurse -File `
     -Include *.json,*.env,*.ts,*.js,*.py,*.yml,*.yaml,*.toml,*.sh `
     -ErrorAction SilentlyContinue |
     Where-Object { $_.FullName -notmatch $excludeDirs } |
     Where-Object { $_.Name -notmatch '\.env\.(example|sample)$' } |
-    Where-Object { Select-String -Path $_.FullName -Pattern '(API_KEY|SECRET|PRIVATE_KEY|TOKEN|PASSWORD)\s*[=:]\s*["'']?[A-Za-z0-9/+_-]{8,}' -Quiet }
+    Where-Object { $_.Name -notmatch '\.(test|spec)\.(ts|tsx|js|jsx)$' } |
+    Where-Object {
+      $m = Select-String -Path $_.FullName -Pattern '(API_KEY|SECRET|PRIVATE_KEY|TOKEN|PASSWORD)\s*[=:]\s*["'']?[A-Za-z0-9/+_-]{8,}' -ErrorAction SilentlyContinue
+      $m -and -not ($m.Line -match 'placeholder|example|dummy')
+    }
   if ($hits) { Err "secret-scan" "possible hardcoded secrets in: $($hits.FullName -join ', ')" }
 }
 

@@ -91,7 +91,7 @@ describe("forgot password screen", () => {
     const sendButton = buttons.find((b) => b.props.children.props.children === "Send reset link");
 
     await act(async () => {
-      sendButton.props.onPress();
+      sendButton!.props.onPress();
     });
 
     expect(tree.root.findAllByProps({ children: "Check your email" })).toHaveLength(1);
@@ -105,7 +105,7 @@ describe("forgot password screen", () => {
     const backButton = buttons.find((b) => b.props.children.props.children === "Back to sign in");
 
     await act(async () => {
-      backButton.props.onPress();
+      backButton!.props.onPress();
     });
 
     expect(routerMocks.back).toHaveBeenCalled();
